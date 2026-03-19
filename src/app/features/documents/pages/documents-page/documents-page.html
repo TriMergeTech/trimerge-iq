@@ -1,1 +1,42 @@
-<p>documents-page works!</p>
+<section class="feature-page">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Documents Workspace</p>
+      <h1>File handling and document operations</h1>
+      <p class="subtitle">
+        This module is prepared for uploads, previews, parsing, and document-level actions.
+      </p>
+    </div>
+    <button type="button" (click)="uploadMockFile()">Upload File</button>
+  </header>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>File Queue</h2>
+      @for (document of documents; track document.id) {
+        <button
+          type="button"
+          class="file-item"
+          [class.selected]="document.id === selectedDocument.id"
+          (click)="selectDocument(document)"
+        >
+          <strong>{{ document.name }}</strong>
+          <span>{{ document.type }} | {{ document.status }}</span>
+          <p>{{ document.summary }}</p>
+        </button>
+      }
+    </div>
+
+    <div class="panel">
+      <h2>Document Preview</h2>
+      <div class="preview">
+        <div>
+          <h3>{{ selectedDocument.name }}</h3>
+          <p>Status: {{ selectedDocument.status }}</p>
+          <p>Type: {{ selectedDocument.type }}</p>
+          <p>{{ selectedDocument.summary }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>

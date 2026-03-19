@@ -1,1 +1,43 @@
-<p>chat-page works!</p>
+<section class="feature-page">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Chat Workspace</p>
+      <h1>AI interaction surface</h1>
+      <p class="subtitle">
+        This module is ready for conversation threads, prompt entry, and model responses.
+      </p>
+    </div>
+    <button type="button" (click)="startNewChat()">New Chat</button>
+  </header>
+
+  <section class="chat-layout">
+    <aside class="panel history">
+      <h2>Conversation History</h2>
+      @for (session of sessions; track session.id) {
+        <div class="history-item" [class.active]="session.id === 1">
+          <strong>{{ session.title }}</strong>
+          <span>{{ session.updatedAt }}</span>
+        </div>
+      }
+    </aside>
+
+    <div class="panel thread">
+      <h2>AI Thread</h2>
+      @for (message of messages; track $index) {
+        <article class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+          <strong>{{ message.role === 'user' ? 'You' : 'Assistant' }}</strong>
+          <p>{{ message.content }}</p>
+        </article>
+      }
+
+      <div class="composer">
+        <textarea
+          rows="4"
+          placeholder="Ask a question or send a task to the AI"
+          [(ngModel)]="prompt"
+        ></textarea>
+        <button type="button" (click)="send()">Send</button>
+      </div>
+    </div>
+  </section>
+</section>

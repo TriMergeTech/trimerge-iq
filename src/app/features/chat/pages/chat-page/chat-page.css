@@ -1,0 +1,145 @@
+.feature-page {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.hero,
+.panel {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #059669;
+  letter-spacing: 0.08em;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+strong {
+  color: var(--text-title);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  max-width: 48rem;
+  color: var(--text-muted);
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #111827;
+  color: #ffffff;
+}
+
+.chat-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.history {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.history-item {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.history-item.active {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.thread {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.history-item span {
+  color: var(--text-muted);
+}
+
+.message {
+  padding: var(--space-3);
+  border-radius: 14px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.message.user {
+  background: #eff6ff;
+}
+
+.message.assistant {
+  background: var(--surface-muted);
+}
+
+.message p {
+  margin-bottom: 0;
+  color: var(--text-body);
+}
+
+.composer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.composer textarea {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  resize: vertical;
+  background: var(--surface);
+  color: var(--text-body);
+}
+
+.hero:hover,
+.panel:hover,
+.history-item:hover,
+.message:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+@media (max-width: 900px) {
+  .chat-layout {
+    grid-template-columns: 1fr;
+  }
+}

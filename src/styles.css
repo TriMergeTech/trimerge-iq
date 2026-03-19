@@ -1,1 +1,58 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --bg-canvas: #eef2f7;
+  --bg-subtle: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #dbe3ee;
+  --border-strong: #cbd5e1;
+  --text-title: #0f172a;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.06);
+  --shadow-hover: 0 18px 36px rgba(15, 23, 42, 0.1);
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg-canvas);
+  color: var(--text-body);
+  font-family: "Segoe UI", "Inter", Arial, sans-serif;
+}
+
+body {
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+a,
+input,
+textarea {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+}
+
+button:active {
+  transform: translateY(0);
+  opacity: 1;
+}

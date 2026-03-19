@@ -1,1 +1,50 @@
-<p>search-page works!</p>
+<section class="feature-page">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Search Workspace</p>
+      <h1>Query input and result exploration</h1>
+      <p class="subtitle">
+        This module is prepared for search requests, filtering, and ranked result views.
+      </p>
+    </div>
+    <button type="button" (click)="runSearch()">Run Query</button>
+  </header>
+
+  <section class="panel">
+    <h2>Search Input</h2>
+    <div class="search-bar">
+      <input
+        type="text"
+        placeholder="Enter keywords, identifiers, or natural language queries"
+        [(ngModel)]="query"
+      />
+      <button type="button" (click)="runSearch()">Search</button>
+    </div>
+    <div class="filters">
+      <span>Filter: All</span>
+      <span>Sort: Relevance</span>
+      <span>Scope: Global</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Results Preview</h2>
+    <div class="result-list">
+      @for (result of results; track result.id) {
+        <article class="result-card">
+          <div class="result-meta">
+            <span>{{ result.category }}</span>
+            <span>Score {{ result.score }}</span>
+          </div>
+          <h3>{{ result.title }}</h3>
+          <p>{{ result.summary }}</p>
+        </article>
+      } @empty {
+        <article class="result-card empty-state">
+          <h3>No results found</h3>
+          <p>Try a broader query to see the mock search dataset respond.</p>
+        </article>
+      }
+    </div>
+  </section>
+</section>

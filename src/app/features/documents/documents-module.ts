@@ -2,9 +2,9 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { DocumentsRoutingModule } from './documents-routing-module';
+import { DocumentsPage } from './pages/documents-page/documents-page';
 
 @NgModule({
-  declarations: [],
-  imports: [CommonModule, DocumentsRoutingModule],
+  imports: [CommonModule, DocumentsRoutingModule, DocumentsPage],
 })
 export class DocumentsModule {}

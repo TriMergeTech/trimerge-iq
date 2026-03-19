@@ -1,1 +1,42 @@
-<p>admin-page works!</p>
+<section class="feature-page">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Admin Workspace</p>
+      <h1>Management dashboard</h1>
+      <p class="subtitle">
+        This module is ready for system controls, user oversight, and operational reporting.
+      </p>
+    </div>
+    <button type="button">Create Report</button>
+  </header>
+
+  <section class="stats">
+    @for (stat of stats; track stat.label) {
+      <article class="stat-card">
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </article>
+    }
+  </section>
+
+  <section class="panel">
+    <h2>Management Actions</h2>
+    <div class="action-grid">
+      @for (action of actions; track action.title) {
+        <div class="action-card">
+          <h3>{{ action.title }}</h3>
+          <p>{{ action.description }}</p>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>System Alerts</h2>
+    <div class="alerts">
+      @for (alert of alerts; track alert) {
+        <div class="alert-item">{{ alert }}</div>
+      }
+    </div>
+  </section>
+</section>
