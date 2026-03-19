@@ -8,23 +8,19 @@
     "net8.0": []
   },
   "packageFolders": {
-    "/Users/evapomeranceva/.nuget/packages/": {},
-    "/usr/local/share/dotnet/sdk/NuGetFallbackFolder": {}
+    "C:\\Users\\pomer\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/evapomeranceva/Documents/TriMerge Git/trimerge-iq/SimpleAspNetApp/SimpleAspNetApp.csproj",
-      "projectName": "SimpleAspNetApp",
-      "projectPath": "/Users/evapomeranceva/Documents/TriMerge Git/trimerge-iq/SimpleAspNetApp/SimpleAspNetApp.csproj",
-      "packagesPath": "/Users/evapomeranceva/.nuget/packages/",
-      "outputPath": "/Users/evapomeranceva/Documents/TriMerge Git/trimerge-iq/SimpleAspNetApp/obj/",
+      "projectUniqueName": "C:\\Users\\pomer\\OneDrive\\Documents\\TriMergeIQ\\trimerge-iq\\TriMergeIQ\\TriMergeIQ.csproj",
+      "projectName": "TriMergeIQ",
+      "projectPath": "C:\\Users\\pomer\\OneDrive\\Documents\\TriMergeIQ\\trimerge-iq\\TriMergeIQ\\TriMergeIQ.csproj",
+      "packagesPath": "C:\\Users\\pomer\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\pomer\\OneDrive\\Documents\\TriMergeIQ\\trimerge-iq\\TriMergeIQ\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"
-      ],
       "configFilePaths": [
-        "/Users/evapomeranceva/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\pomer\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -47,7 +43,8 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      }
+      },
+      "SdkAnalysisLevel": "10.0.200"
     },
     "frameworks": {
       "net8.0": {
@@ -71,7 +68,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.419/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

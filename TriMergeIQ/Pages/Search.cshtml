@@ -1,0 +1,44 @@
+@page
+@{
+    ViewData["Title"] = "Search Documents";
+}
+
+<style>
+    .page-shell { max-width: 920px; margin: 0 auto; padding: 1rem 0 2rem; }
+    .page-header, .info-panel, .content-card, .placeholder { border: 1px solid #d9d9d9; border-radius: 12px; background: #fff; }
+    .page-header { padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+    .info-panel { padding: 1rem; margin-bottom: 1rem; background: #f7f7f7; }
+    .content-card { padding: 1.25rem; margin-bottom: 1rem; }
+    .search-row { display: flex; gap: 0.75rem; }
+    .search-row input { flex: 1; padding: 0.75rem; border: 1px solid #cfcfcf; border-radius: 8px; }
+    .search-row button { padding: 0.75rem 1rem; border: 1px solid #cfcfcf; border-radius: 8px; background: #fff; }
+    .placeholder { min-height: 180px; padding: 1rem; }
+</style>
+
+<main class="page-shell">
+    <header class="page-header">
+        <h1>Search Documents</h1>
+        <p>Document discovery page skeleton based on the same landing-page pattern.</p>
+    </header>
+
+    <section class="info-panel" aria-label="Search intro">
+        <h2>Knowledge Search</h2>
+        <p>Search across policies, procedures, and internal files.</p>
+    </section>
+
+    <section class="content-card" aria-label="Search form section">
+        <form method="get">
+            <div class="search-row">
+                <input id="query" name="query" type="search" placeholder="Search by keyword..." aria-label="Search documents" />
+                <button type="submit">Search</button>
+            </div>
+        </form>
+    </section>
+
+    <section aria-label="Search results">
+        <h2>Results</h2>
+        <div class="placeholder">
+            <p>Search results placeholder</p>
+        </div>
+    </section>
+</main>

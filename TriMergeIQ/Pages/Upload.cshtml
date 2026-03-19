@@ -1,0 +1,49 @@
+@page
+@{
+    ViewData["Title"] = "Upload Document";
+}
+
+<style>
+    .page-shell { max-width: 920px; margin: 0 auto; padding: 1rem 0 2rem; }
+    .page-header, .info-panel, .content-card, .placeholder { border: 1px solid #d9d9d9; border-radius: 12px; background: #fff; }
+    .page-header { padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+    .info-panel { padding: 1rem; margin-bottom: 1rem; background: #f7f7f7; }
+    .content-card { padding: 1.25rem; margin-bottom: 1rem; }
+    .form-row { margin-bottom: 1rem; }
+    .form-row label { display: block; margin-bottom: 0.4rem; }
+    .form-row input { width: 100%; padding: 0.75rem; border: 1px solid #cfcfcf; border-radius: 8px; }
+    .form-row button { padding: 0.75rem 1rem; border: 1px solid #cfcfcf; border-radius: 8px; background: #fff; }
+    .placeholder { min-height: 160px; padding: 1rem; }
+</style>
+
+<main class="page-shell">
+    <header class="page-header">
+        <h1>Upload Document</h1>
+        <p>File intake skeleton for adding documents to the TriMerge IQ knowledge base.</p>
+    </header>
+
+    <section class="info-panel" aria-label="Upload intro">
+        <h2>Document Intake</h2>
+        <p>Select a file to add it to the internal document library.</p>
+    </section>
+
+    <section class="content-card" aria-label="Upload form section">
+        <form method="post" enctype="multipart/form-data">
+            <div class="form-row">
+                <label for="document">Select file</label>
+                <input id="document" name="document" type="file" />
+            </div>
+
+            <div class="form-row">
+                <button type="submit">Upload</button>
+            </div>
+        </form>
+    </section>
+
+    <section aria-label="Uploaded files">
+        <h2>Uploaded Files</h2>
+        <div class="placeholder">
+            <p>Uploaded files list placeholder</p>
+        </div>
+    </section>
+</main>

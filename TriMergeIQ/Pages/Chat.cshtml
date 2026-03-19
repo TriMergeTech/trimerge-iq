@@ -1,0 +1,42 @@
+@page
+@{
+    ViewData["Title"] = "AI Chat Assistant";
+}
+
+<style>
+    .page-shell { max-width: 920px; margin: 0 auto; padding: 1rem 0 2rem; }
+    .page-header, .info-panel, .chat-window, .composer-card { border: 1px solid #d9d9d9; border-radius: 12px; background: #fff; }
+    .page-header { padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+    .info-panel { padding: 1rem; margin-bottom: 1rem; background: #f7f7f7; }
+    .chat-window { min-height: 260px; padding: 1rem; margin-bottom: 1rem; }
+    .composer-card { padding: 1rem; }
+    .chat-input { display: flex; gap: 0.75rem; }
+    .chat-input input { flex: 1; padding: 0.75rem; border: 1px solid #cfcfcf; border-radius: 8px; }
+    .chat-input button { padding: 0.75rem 1rem; border: 1px solid #cfcfcf; border-radius: 8px; background: #fff; }
+</style>
+
+<main class="page-shell">
+    <header class="page-header">
+        <h1>AI Chat Assistant</h1>
+        <p>Conversation workspace skeleton for internal questions and guidance.</p>
+    </header>
+
+    <section class="info-panel" aria-label="Chat intro">
+        <h2>Assistant Workspace</h2>
+        <p>Ask a question about documents, processes, or internal knowledge.</p>
+    </section>
+
+    <section aria-label="Chat messages">
+        <h2>Messages</h2>
+        <div class="chat-window">
+            <p>Chat messages placeholder</p>
+        </div>
+    </section>
+
+    <section class="composer-card" aria-label="Chat composer">
+        <form method="post" class="chat-input">
+            <input id="message" name="message" type="text" placeholder="Type your message..." aria-label="User message" />
+            <button type="submit">Send</button>
+        </form>
+    </section>
+</main>

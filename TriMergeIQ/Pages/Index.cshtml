@@ -1,10 +1,142 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<style>
+    .home-shell {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 1rem 0 2rem;
+    }
+
+    .hero-header,
+    .feature-card,
+    .hero-visual,
+    .cta-row a {
+        border: 1px solid #d9d9d9;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .hero-header {
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .brand-mark {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1rem;
+        display: grid;
+        place-items: center;
+        border: 1px dashed #999;
+        border-radius: 12px;
+    }
+
+    .hero-copy {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        background: #f7f7f7;
+        border-radius: 12px;
+    }
+
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @@media (max-width: 700px) {
+        .feature-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .feature-card {
+        padding: 1rem;
+    }
+
+    .feature-icon {
+        width: 56px;
+        height: 56px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed #999;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-visual {
+        min-height: 280px;
+        padding: 1rem;
+        display: grid;
+        place-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .cta-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .cta-row a {
+        display: block;
+        padding: 1rem;
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+    }
+</style>
+
+<main class="home-shell">
+    <section class="hero-header">
+        <div class="brand-mark" aria-hidden="true">Logo</div>
+        <h1>TriMerge IQ</h1>
+        <p>In-House AI Knowledge Tool</p>
+    </section>
+
+    <section class="hero-copy" aria-label="Intro section">
+        <h2>Private &amp; Secure AI Assistant for TriMerge</h2>
+    </section>
+
+    <section class="feature-grid" aria-label="Feature overview">
+        <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">Icon</div>
+            <h3>Confidential &amp; In-House AI</h3>
+            <p>Your data never leaves TriMerge.</p>
+        </article>
+
+        <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">Icon</div>
+            <h3>Knowledge Search</h3>
+            <p>Find any document or policy.</p>
+        </article>
+
+        <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">Icon</div>
+            <h3>Process Q&amp;A</h3>
+            <p>Ask about procedures and clients.</p>
+        </article>
+
+        <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">Icon</div>
+            <h3>Content Drafting</h3>
+            <p>Generate proposals and reports.</p>
+        </article>
+    </section>
+
+    <section class="hero-visual" aria-label="Illustration placeholder">
+        <p>Illustration placeholder</p>
+    </section>
+
+    <nav class="cta-row" aria-label="Primary actions">
+        <a asp-page="/Chat">Ask a Question</a>
+        <a asp-page="/Search">Search Documents</a>
+    </nav>
+</main>
