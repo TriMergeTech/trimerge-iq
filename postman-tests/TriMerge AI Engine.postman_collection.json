@@ -1,0 +1,198 @@
+{
+  "info": {
+    "_postman_id": "e3e2a6fa-c59c-471d-8e32-f96e7f5daf6d",
+    "name": "TriMerge AI Engine",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "38491679"
+  },
+  "item": [
+    {
+      "name": "Engine Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:5000/api/engine-check",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "engine-check"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AI Chat",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzczOTQxMTM5LCJleHAiOjE3NzM5NDQ3Mzl9.tK7wMoz34Y0KFnhT1wQO_n1pEtlCoeEyLlTWWTo_Qxo",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"prompt\": \"Hello from Postman!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:5000/api/chat",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "chat"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AI Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:5000/api/search?query=knowledge",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "query",
+              "value": "knowledge"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Document Upload",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "uuid": "a503e793-401b-4365-b968-566b04fe9b25",
+              "src": "/C:/Users/juana/OneDrive/Escritorio/Test.docx"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://127.0.0.1:5000/api/upload",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "upload"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "New Test",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"prompt\": \"Hello through the Gateway!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/ai/chat",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "ai",
+            "chat"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Test #2",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"username\": \"admin\",\r\n  \"password\": \"password\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
