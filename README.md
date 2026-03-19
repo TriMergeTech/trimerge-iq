@@ -2,109 +2,149 @@
 
 ## Overview
 
-This project is a backend AI knowledge engine built using **Python (FastAPI)**. It is designed to securely ingest documents, extract text, and enable AI-powered interactions using a **local Large Language Model (LLM)** for privacy.
+This project is a backend AI knowledge engine built using **Python (FastAPI)**.
 
-The system is structured to evolve into a full **Retrieval-Augmented Generation (RAG)** pipeline, supporting semantic search and document-based question answering.
+It is designed to ingest documents, extract text, and prepare data for AI-powered search and question answering using a **local Large Language Model (LLM)** for privacy.
+
+The system is being developed in structured phases to build a complete **Retrieval-Augmented Generation (RAG)** pipeline.
 
 ---
 
-## Current Features (Phase 1)
+## Current Features
+
+### Phase 1 – Document Upload & DOCX Extraction
 
 * Upload documents via API (`POST /upload-document`)
-* Support for **.docx** files
-* Save uploaded documents to local storage
-* Extract text from Word documents (including paragraphs and tables)
+* Support for **.docx files**
+* Save uploaded documents locally
+* Extract text from Word documents (paragraphs and tables)
 * Preview extracted content
-* Local AI integration using **Ollama (private LLM)** for standalone prompt responses
-* AI endpoint for general question answering (`POST /ask-ai`)
+* Local AI endpoint (`POST /ask-ai`) using Ollama
+
+---
+
+### Phase 2 – PDF Support
+
+* Added support for **.pdf file uploads**
+* Extract text from PDF documents using `pypdf`
+* Unified ingestion pipeline for DOCX and PDF
+
+---
+
+### Phase 3 – Text Chunking
+
+* Split extracted document text into smaller chunks
+* Return:
+
+  * total number of chunks
+  * preview of first chunk
+* Prepares data for embeddings and semantic search
 
 ---
 
 ## Architecture
 
 ```
-Swift (Xcode App / Frontend)
+Swift (Frontend)
         │
         ▼
-FastAPI Backend (Python)
+FastAPI Backend
         │
-        ├── Document Upload & Storage
-        ├── Text Extraction (DOCX)
-        ├── Local LLM Integration (Ollama)
+        ├── Upload Document
+        ├── Save File
+        ├── Detect File Type
+        │
+        ├── DOCX → Extract Text
+        ├── PDF  → Extract Text
         │
         ▼
-JSON Response
+Chunk Text
         │
         ▼
-Displayed in UI
+Return JSON Response
+```
+
+---
+
+## Document Ingestion Flow
+
+```
+User Uploads Document
+        │
+        ▼
+POST /upload-document
+        │
+        ▼
+Save File Locally
+        │
+        ▼
+Check File Type
+   ┌───────────────┬───────────────┐
+   │               │
+   ▼               ▼
+ DOCX             PDF
+   │               │
+   ▼               ▼
+Extract Text     Extract Text
+   │               │
+   └───────┬───────┘
+           ▼
+      Chunk Text
+           │
+           ▼
+Return Chunk Data
 ```
 
 ---
 
 ## API Endpoints
 
-### 1. Upload Document
+### POST /upload-document
 
-`POST /upload-document`
+Uploads and processes documents.
 
-**Description:**
-Uploads a document, saves it locally, and extracts text (currently supports DOCX).
+**Supported file types:**
 
-**Response Example:**
+* `.docx`
+* `.pdf`
+
+**Response:**
 
 ```json
 {
-  "filename": "example.docx",
-  "message": "DOCX uploaded, saved, and text extracted successfully",
-  "path": "uploads/example.docx",
-  "extracted_text_preview": "First portion of extracted text..."
+  "filename": "example.pdf",
+  "message": "File uploaded, text extracted, and chunked successfully",
+  "path": "uploads/example.pdf",
+  "chunk_count": 5,
+  "first_chunk_preview": "First part of extracted text..."
 }
 ```
 
 ---
 
-### 2. Ask AI
+### POST /ask-ai
 
-`POST /ask-ai`
-
-**Description:**
-Sends a prompt to a locally running LLM (Ollama) and returns a response.
-(Currently supports general question answering; document-aware responses will be added in future phases.)
-
-**Example Input:**
-
-```
-What is artificial intelligence?
-```
-
-**Response Example:**
-
-```json
-{
-  "question": "What is artificial intelligence?",
-  "answer": "AI is the simulation of human intelligence in machines..."
-}
-```
+Sends a question to a locally running LLM (Ollama).
 
 ---
 
 ## Technology Stack
 
 * **Backend:** FastAPI (Python)
-* **Document Processing:** python-docx
-* **Local AI Runtime:** Ollama
+* **Document Processing:**
+
+  * python-docx
+  * pypdf
+* **AI Runtime:** Ollama (local LLM)
 * **HTTP Requests:** requests
-* **Frontend (Planned):** Swift (Xcode)
 
 ---
 
 ## Security & Privacy
 
-This system is designed with **data privacy as a priority**:
-
-* Uses **local LLM (Ollama)** instead of external APIs
-* No document data leaves the local environment
-* Suitable for sensitive or internal company documents
+* Uses **local LLM (Ollama)**
+* No document data is sent externally
+* Suitable for private/internal documents
 
 ---
 
@@ -112,72 +152,64 @@ This system is designed with **data privacy as a priority**:
 
 ### Completed
 
-* Backend API setup
-* Document upload and storage
+* Document upload API
 * DOCX text extraction
-* Local AI endpoint connected to Ollama for prompt-based responses
+* PDF text extraction
+* Text chunking
 
 ### In Progress / Next Steps
 
-* PDF text extraction support
-* Text chunking
-* Embedding generation
-* Vector database integration (Chroma / Pinecone)
-* Semantic search (`POST /search`)
-* Context-aware AI responses (RAG pipeline)
+* Generate embeddings
+* Store embeddings in a vector database (Chroma)
+* Build semantic search endpoint (`POST /search`)
+* Implement Retrieval-Augmented Generation (RAG)
 
 ---
 
-## Future Architecture (Planned)
+## Future Architecture
 
 ```
 Upload Document
-   ↓
+      ↓
 Extract Text
-   ↓
+      ↓
 Chunk Text
-   ↓
+      ↓
 Generate Embeddings
-   ↓
+      ↓
 Store in Vector Database
-   ↓
+      ↓
 User Query
-   ↓
+      ↓
 Semantic Search
-   ↓
+      ↓
 Retrieve Relevant Chunks
-   ↓
-Send to Local LLM (Ollama)
-   ↓
-Generate Context-Aware Answer
+      ↓
+Send to LLM
+      ↓
+Generate Answer
 ```
 
 ---
 
 ## How to Run
 
-### 1. Install Dependencies
+### Install dependencies
 
 ```bash
-pip install fastapi uvicorn python-docx requests
+pip install -r requirements.txt
 ```
 
-### 2. Run Backend
+### Run backend
 
 ```bash
 uvicorn main:app --reload
 ```
 
-### 3. Access API Docs
+### Access API docs
 
 ```
 http://127.0.0.1:8000/docs
-```
-
-### 4. Run Ollama (Local AI)
-
-```bash
-ollama run gemma3:4b
 ```
 
 ---
@@ -185,16 +217,5 @@ ollama run gemma3:4b
 ## Author
 
 **Griselda Bassette**
-Innovation Lab Intern – Cohort 2026
-Miami Dade College
-A.S. Applied Artificial Intelligence (Expected Graduation: December 2027)
-
----
-
-## Summary
-
-This project establishes the foundation for a secure, scalable AI knowledge system by implementing document ingestion, local storage, and text extraction.
-
-The current implementation focuses on building a reliable backend pipeline, with future phases introducing embeddings, vector search, and context-aware AI responses using a Retrieval-Augmented Generation (RAG) architecture.
-
-
+Backend Intern – AI Knowledge Engine
+TriMerge Innovation Lab 2026
