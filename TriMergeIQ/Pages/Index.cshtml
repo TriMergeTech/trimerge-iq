@@ -61,6 +61,12 @@
         padding: 1rem;
     }
 
+    .feature-card-horizontal {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
     .feature-icon {
         width: 56px;
         height: 56px;
@@ -69,6 +75,19 @@
         border: 1px dashed #999;
         border-radius: 10px;
         margin-bottom: 0.75rem;
+    }
+
+    .feature-card-horizontal .feature-icon {
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .feature-copy h3 {
+        margin: 0 0 0.35rem;
+    }
+
+    .feature-copy p {
+        margin: 0;
     }
 
     .hero-visual {
@@ -106,28 +125,36 @@
     </section>
 
     <section class="feature-grid" aria-label="Feature overview">
-        <article class="feature-card">
+        <article class="feature-card feature-card-horizontal">
             <div class="feature-icon" aria-hidden="true">Icon</div>
-            <h3>Confidential &amp; In-House AI</h3>
-            <p>Your data never leaves TriMerge.</p>
+            <div class="feature-copy">
+                <h3>Confidential &amp; In-House AI</h3>
+                <p>Your data never leaves TriMerge.</p>
+            </div>
         </article>
 
-        <article class="feature-card">
+        <article class="feature-card feature-card-horizontal">
             <div class="feature-icon" aria-hidden="true">Icon</div>
-            <h3>Knowledge Search</h3>
-            <p>Find any document or policy.</p>
+            <div class="feature-copy">
+                <h3>Knowledge Search</h3>
+                <p>Find any document or policy.</p>
+            </div>
         </article>
 
-        <article class="feature-card">
+        <article class="feature-card feature-card-horizontal">
             <div class="feature-icon" aria-hidden="true">Icon</div>
-            <h3>Process Q&amp;A</h3>
-            <p>Ask about procedures and clients.</p>
+            <div class="feature-copy">
+                <h3>Process Q&amp;A</h3>
+                <p>Ask about procedures and clients.</p>
+            </div>
         </article>
 
-        <article class="feature-card">
+        <article class="feature-card feature-card-horizontal">
             <div class="feature-icon" aria-hidden="true">Icon</div>
-            <h3>Content Drafting</h3>
-            <p>Generate proposals and reports.</p>
+            <div class="feature-copy">
+                <h3>Content Drafting</h3>
+                <p>Generate proposals and reports.</p>
+            </div>
         </article>
     </section>
 

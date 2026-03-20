@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TriMergeIQ")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+42d7378b763785ff82f6587967451464acf20e56")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+058fa5faedb571e91b0360a1da7072d601b852a4")]
 [assembly: System.Reflection.AssemblyProductAttribute("TriMergeIQ")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TriMergeIQ")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
