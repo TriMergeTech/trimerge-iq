@@ -4,3 +4,6 @@ python-docx
 python-multipart
 requests
 pypdf
+sentence-transformers
+chromadb
+pydantic
