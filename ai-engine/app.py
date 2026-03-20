@@ -2,10 +2,15 @@ import os
 from datetime import datetime
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
-from flasgger import Swagger # 1. Import Swagger
+from flasgger import Swagger
 
 app = Flask(__name__)
-swagger = Swagger(app) # 2. Initialize Swagger
+swagger = Swagger(app)
+
+# --- NEW: Define where to save files ---
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 # ---------------------------------------------------------
 # GET /api/search
@@ -77,14 +82,29 @@ def upload():
     """
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
+    
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "Empty filename"}), 400
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0) 
-    print(f"[AI Engine] Successfully received file: {secure_filename(file.filename)} ({file_size} bytes)")
-    return jsonify({"message": "File processed successfully", "filename": file.filename, "size": file_size}), 200
+
+    # 1. Secure the filename and create the path
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+
+    # 2. SAVE the file to the hard drive (This was the missing piece!)
+    file.save(file_path)
+
+    # 3. Get size for the response
+    file_size = os.path.getsize(file_path)
+    
+    print(f"[AI Engine] Successfully saved file to: {file_path} ({file_size} bytes)")
+    
+    return jsonify({
+        "message": "File processed and SAVED successfully", 
+        "filename": filename, 
+        "size": file_size,
+        "location": file_path
+    }), 200
 
 # ---------------------------------------------------------
 # GET /api/engine-check 
