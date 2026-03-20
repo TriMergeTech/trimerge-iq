@@ -3,210 +3,185 @@
 ## Overview
 
 This project is a backend AI knowledge engine built using **Python (FastAPI)**.
+It ingests documents, extracts text, generates embeddings, stores them in a vector database, and enables AI-powered question answering using a **local LLM (Ollama)**.
 
-It is designed to ingest documents, extract text, and prepare data for AI-powered search and question answering using a **local Large Language Model (LLM)** for privacy.
-
-The system is being developed in structured phases to build a complete **Retrieval-Augmented Generation (RAG)** pipeline.
+The system follows a **Retrieval-Augmented Generation (RAG)** architecture, allowing users to query documents and receive context-based answers.
 
 ---
 
-## Current Features
+## Tech Stack
 
-### Phase 1 – Document Upload & DOCX Extraction
+* **Backend Framework:** FastAPI
+* **Language:** Python 3.11
+* **LLM:** Ollama (gemma3:4b)
+* **Embeddings:** SentenceTransformers (all-MiniLM-L6-v2)
+* **Vector Database:** ChromaDB
+* **Document Parsing:** python-docx, pypdf
+* **API Testing:** Swagger UI
 
-* Upload documents via API (`POST /upload-document`)
-* Support for **.docx files**
-* Save uploaded documents locally
-* Extract text from Word documents (paragraphs and tables)
+---
+
+## System Architecture
+
+```
+Upload Document → Extract Text → Chunk Text → Generate Embeddings → Store in Vector DB → Search → AI Answer
+```
+
+---
+
+# Phase 1: Basic Document Upload & DOCX Extraction
+
+### Features:
+
+* Upload `.docx` files
+* Extract text from paragraphs and tables
+* Save files locally
 * Preview extracted content
-* Local AI endpoint (`POST /ask-ai`) using Ollama
+
+### Endpoint:
+
+* `POST /upload-document`
 
 ---
 
-### Phase 2 – PDF Support
+# Phase 2: PDF Support Added
 
-* Added support for **.pdf file uploads**
-* Extract text from PDF documents using `pypdf`
-* Unified ingestion pipeline for DOCX and PDF
+### Features:
 
----
+* Upload `.pdf` files
+* Extract text using PyPDF
+* Unified handling for DOCX + PDF
 
-### Phase 3 – Text Chunking
+### Improvements:
 
-* Split extracted document text into smaller chunks
-* Return:
-
-  * total number of chunks
-  * preview of first chunk
-* Prepares data for embeddings and semantic search
+* Multi-format ingestion
+* Cleaner extraction logic
 
 ---
 
-## Architecture
+# Phase 3: Text Chunking
 
-```
-Swift (Frontend)
-        │
-        ▼
-FastAPI Backend
-        │
-        ├── Upload Document
-        ├── Save File
-        ├── Detect File Type
-        │
-        ├── DOCX → Extract Text
-        ├── PDF  → Extract Text
-        │
-        ▼
-Chunk Text
-        │
-        ▼
-Return JSON Response
-```
+### Features:
+
+* Split extracted text into chunks (default: 500 characters)
+* Prepare data for embeddings
+
+### Why:
+
+* Improves search accuracy
+* Enables semantic matching
 
 ---
 
-## Document Ingestion Flow
+# Phase 4: Embeddings Generation
 
-```
-User Uploads Document
-        │
-        ▼
-POST /upload-document
-        │
-        ▼
-Save File Locally
-        │
-        ▼
-Check File Type
-   ┌───────────────┬───────────────┐
-   │               │
-   ▼               ▼
- DOCX             PDF
-   │               │
-   ▼               ▼
-Extract Text     Extract Text
-   │               │
-   └───────┬───────┘
-           ▼
-      Chunk Text
-           │
-           ▼
-Return Chunk Data
-```
+### Features:
+
+* Convert text chunks into vector embeddings
+* Use SentenceTransformers model
+
+### Output:
+
+* Each chunk → embedding vector
 
 ---
 
-## API Endpoints
+# Phase 5: Vector Database Integration (ChromaDB)
 
-### POST /upload-document
+### Features:
 
-Uploads and processes documents.
+* Store embeddings in ChromaDB
+* Attach metadata (filename, chunk index)
 
-**Supported file types:**
+### Result:
 
-* `.docx`
-* `.pdf`
+* Persistent searchable knowledge base
 
-**Response:**
+---
+
+# Phase 6: Semantic Search API
+
+### Features:
+
+* Accept user query
+* Convert query to embedding
+* Retrieve top matching chunks
+
+### Endpoint:
+
+* `POST /search`
+
+### Example Request:
 
 ```json
 {
-  "filename": "example.pdf",
-  "message": "File uploaded, text extracted, and chunked successfully",
-  "path": "uploads/example.pdf",
-  "chunk_count": 5,
-  "first_chunk_preview": "First part of extracted text..."
+  "query": "practice plans"
 }
 ```
 
 ---
 
-### POST /ask-ai
+# Phase 7: AI-Powered Question Answering (RAG)
 
-Sends a question to a locally running LLM (Ollama).
+### Features:
 
----
+* Retrieve relevant chunks from ChromaDB
+* Build contextual prompt
+* Send to Ollama (local LLM)
+* Return grounded answer
 
-## Technology Stack
+### Endpoint:
 
-* **Backend:** FastAPI (Python)
-* **Document Processing:**
+* `POST /ask-ai`
 
-  * python-docx
-  * pypdf
-* **AI Runtime:** Ollama (local LLM)
-* **HTTP Requests:** requests
+### Example Request:
 
----
-
-## Security & Privacy
-
-* Uses **local LLM (Ollama)**
-* No document data is sent externally
-* Suitable for private/internal documents
-
----
-
-## Project Status
-
-### Completed
-
-* Document upload API
-* DOCX text extraction
-* PDF text extraction
-* Text chunking
-
-### In Progress / Next Steps
-
-* Generate embeddings
-* Store embeddings in a vector database (Chroma)
-* Build semantic search endpoint (`POST /search`)
-* Implement Retrieval-Augmented Generation (RAG)
-
----
-
-## Future Architecture
-
-```
-Upload Document
-      ↓
-Extract Text
-      ↓
-Chunk Text
-      ↓
-Generate Embeddings
-      ↓
-Store in Vector Database
-      ↓
-User Query
-      ↓
-Semantic Search
-      ↓
-Retrieve Relevant Chunks
-      ↓
-Send to LLM
-      ↓
-Generate Answer
+```json
+{
+  "question": "What does this document say about practice plans?"
+}
 ```
 
+### Response Includes:
+
+* AI-generated answer
+* Source chunks
+* Metadata
+
 ---
 
-## How to Run
+## API Endpoints Summary
 
-### Install dependencies
+| Endpoint           | Method | Description                  |
+| ------------------ | ------ | ---------------------------- |
+| `/`                | GET    | Health check                 |
+| `/upload-document` | POST   | Upload and process documents |
+| `/search`          | POST   | Semantic search              |
+| `/ask-ai`          | POST   | AI-powered document Q&A      |
+
+---
+
+## How to Run Locally
+
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Run backend
+### 2. Start Ollama
+
+```bash
+ollama run gemma3:4b
+```
+
+### 3. Run FastAPI
 
 ```bash
 uvicorn main:app --reload
 ```
 
-### Access API docs
+### 4. Open Swagger UI
 
 ```
 http://127.0.0.1:8000/docs
@@ -214,8 +189,47 @@ http://127.0.0.1:8000/docs
 
 ---
 
+## How to Use
+
+### Step 1: Upload a document
+
+Use `/upload-document` and upload a PDF or DOCX file.
+
+### Step 2: Search document
+
+Use `/search` with a query.
+
+### Step 3: Ask AI questions
+
+Use `/ask-ai` to get answers based on document content.
+
+---
+
+## Project Status
+
+✅ Document ingestion
+✅ PDF + DOCX support
+✅ Chunking
+✅ Embeddings
+✅ Vector database (ChromaDB)
+✅ Semantic search
+✅ AI question answering (RAG)
+
+---
+
+## Future Improvements
+
+* Deploy backend to Render
+* Connect frontend (Angular)
+* Add authentication
+* Persistent vector storage
+* Multi-document querying
+* UI for document browsing
+
+---
+
 ## Author
 
-**Griselda Bassette**
-Backend Intern – AI Knowledge Engine
-TriMerge Innovation Lab 2026
+Griselda Bassette – Backend 
+Intern at TriMerge Consulting Group (AI + Knowledge Engine)
+
