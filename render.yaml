@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: ai-ingestion-backend
+    runtime: python
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+
+      - key: CHROMA_DIR
+        value: /var/data/chroma
+
+      - key: ENABLE_OCR
+        value: "true"
+
+      - key: TOKEN_CHUNK_SIZE
+        value: "220"
+
+      - key: TOKEN_CHUNK_OVERLAP
+        value: "40"
+
+      - key: TOP_K
+        value: "3"
+
+      - key: OCR_DPI
+        value: "180"
+
+      - key: OLLAMA_MODEL
+        value: gemma3:4b
+
+      - key: OLLAMA_URL
+        sync: false
+
+    disk:
+      name: ai-data
+      mountPath: /var/data
+      sizeGB: 10
