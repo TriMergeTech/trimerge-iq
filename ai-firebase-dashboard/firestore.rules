@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: userId (Firebase Auth UID)
+    // Fields:
+    //   - displayName: string (optional)
+    //   - email: string (required)
+    //   - photoURL: string (optional)
+    //   - bio: string (optional)
+    //   - notes: string (optional)
+    //
+    // Collection: files
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - url: string (required)
+    //   - type: string (required)
+    //   - size: number (required)
+    //   - ownerId: string (required, must match auth.uid)
+    //   - createdAt: timestamp (required)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerId;
+    }
+
+    function isValidUser(data) {
+      return data.email is string &&
+             (!('displayName' in data) || data.displayName is string) &&
+             (!('photoURL' in data) || data.photoURL is string) &&
+             (!('bio' in data) || data.bio is string) &&
+             (!('notes' in data) || data.notes is string);
+    }
+
+    function isValidFile(data) {
+      return data.name is string && data.name.size() < 255 &&
+             data.url is string &&
+             data.ownerId == request.auth.uid &&
+             data.size is number &&
+             data.createdAt is timestamp;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /files/{fileId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidFile(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+  }
+}

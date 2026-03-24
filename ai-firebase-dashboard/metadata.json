@@ -1,0 +1,5 @@
+{
+  "name": "Firebase Dashboard",
+  "description": "A full-stack React app with Firebase Auth, Firestore, and Storage.",
+  "requestFramePermissions": []
+}
