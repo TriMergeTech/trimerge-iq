@@ -1,6 +1,14 @@
-node_modules/
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Firebase & Local Secrets
 .env
-dist/
-build/
-*.log
+.python-version
+firebase-debug.log
+.runtimeconfig.json
+
+# OneDrive/OS junk
 .DS_Store
+Thumbs.db

@@ -1,10 +1,16 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "IME API Gateway",
-    "version": "1.0.0",
+    "title": "API Gateway",
+    "version": "1.1.0",
     "description": "API for Gemini AI, User Signup, and Login"
   },
+  "servers": [
+    {"url": "https://signup-37bjhplwta-uc.a.run.app", "description": "Production Signup"},
+    {"url": "https://login-37bjhplwta-uc.a.run.app", "description": "Production Login"},
+    {"url": "https://gateway-api-37bjhplwta-uc.a.run.app", "description": "Production AI Gateway"},
+    {"url": "https://forgot-password-37bjhplwta-uc.a.run.app", "description": "Production Password Reset"}
+  ],
   "paths": {
     "/gateway_api": {
       "post": {
@@ -17,9 +23,14 @@
     },
     "/signup": {
       "post": {
-        "summary": "User Signup",
+        "summary": "User Signup (Create Account)",
         "requestBody": {
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } }
+          "content": { "application/json": { "schema": { "type": "object", "properties": { 
+            "fullName": { "type": "string" },
+            "email": { "type": "string" }, 
+            "password": { "type": "string" },
+            "confirmPassword": { "type": "string" }
+          } } } }
         },
         "responses": { "201": { "description": "Created" } }
       }
@@ -29,6 +40,15 @@
         "summary": "User Login",
         "requestBody": {
           "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/forgot_password": {
+      "post": {
+        "summary": "Forgot Password (Reset Email)",
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" } } } } }
         },
         "responses": { "200": { "description": "OK" } }
       }
