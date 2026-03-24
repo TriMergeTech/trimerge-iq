@@ -1,14 +1,14 @@
 @page
 @{
     Layout = null;
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Create Account";
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Log in - TriMerge IQ</title>
+    <title>Create Account - TriMerge IQ</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <style>
@@ -19,6 +19,7 @@
             --tiq-muted: #6c87a7;
             --tiq-border: #d7dfeb;
             --tiq-primary: #2d7ef7;
+            --tiq-primary-dark: #1a5bbf;
         }
 
         html, body {
@@ -32,7 +33,7 @@
             color: var(--tiq-text);
         }
 
-        .li-page {
+        .ca-page {
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -40,24 +41,24 @@
             padding: clamp(1.5rem, 5vh, 3.2rem) 1rem 1.5rem;
         }
 
-        .li-shell {
+        .ca-shell {
             width: 100%;
             max-width: 460px;
         }
 
-        .li-brand {
+        .ca-brand {
             text-align: center;
             margin-bottom: 1.1rem;
         }
 
-        .li-logo {
+        .ca-logo {
             width: 54px;
             height: 54px;
             margin: 0 auto 0.6rem;
             display: block;
         }
 
-        .li-title {
+        .ca-title {
             font-size: clamp(2rem, 6vw, 2.4rem);
             font-weight: 700;
             line-height: 1.1;
@@ -65,17 +66,17 @@
             color: var(--tiq-text);
         }
 
-        .li-title span {
+        .ca-title span {
             color: var(--tiq-primary);
         }
 
-        .li-subtitle {
+        .ca-subtitle {
             font-size: 1.08rem;
             color: var(--tiq-muted);
             margin: 0.45rem 0 0;
         }
 
-        .li-card {
+        .ca-card {
             background: var(--tiq-card);
             border-radius: 18px;
             box-shadow: 0 10px 26px rgba(26, 46, 90, 0.12);
@@ -83,7 +84,7 @@
             padding: 1.45rem 1.3rem 1.35rem;
         }
 
-        .li-card-title {
+        .ca-card-title {
             text-align: center;
             font-size: 1.65rem;
             font-weight: 700;
@@ -92,16 +93,25 @@
             color: var(--tiq-text);
         }
 
-        .li-form {
+        .ca-form {
             display: grid;
             gap: 0.85rem;
         }
 
-        .li-field {
+        .ca-field {
             position: relative;
         }
 
-        .li-input {
+        .ca-field-help {
+            margin-top: calc(6px - 0.85rem);
+            margin-bottom: calc(14px - 0.85rem);
+            color: #6b7280;
+            font-size: 12.5px;
+            line-height: 1.35;
+            padding: 0;
+        }
+
+        .ca-input {
             width: 100%;
             height: 50px;
             border-radius: 11px;
@@ -114,31 +124,31 @@
             transition: border-color .15s, box-shadow .15s;
         }
 
-        .li-input::placeholder {
+        .ca-input::placeholder {
             color: #8a9ab3;
         }
 
-        .li-input:focus {
+        .ca-input:focus {
             border-color: #8fb8f7;
             box-shadow: 0 0 0 3px rgba(45, 126, 247, 0.15);
         }
 
-        .li-input-icon,
-        .li-toggle-btn {
+        .ca-input-icon,
+        .ca-toggle-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
             color: #8a9ab3;
         }
 
-        .li-input-icon {
+        .ca-input-icon {
             left: 0.9rem;
             width: 20px;
             height: 20px;
             pointer-events: none;
         }
 
-        .li-toggle-btn {
+        .ca-toggle-btn {
             right: 0.55rem;
             border: 0;
             background: transparent;
@@ -151,14 +161,14 @@
             cursor: pointer;
         }
 
-        .li-toggle-btn:hover,
-        .li-toggle-btn:focus-visible {
+        .ca-toggle-btn:hover,
+        .ca-toggle-btn:focus-visible {
             background: #edf2fa;
             color: #6c82a1;
             outline: none;
         }
 
-        .li-submit {
+        .ca-submit {
             margin-top: 0.35rem;
             width: 100%;
             height: 50px;
@@ -175,43 +185,28 @@
             box-shadow: 0 5px 14px rgba(45, 126, 247, 0.28);
         }
 
-        .li-submit:hover {
+        .ca-submit:hover {
             opacity: 0.95;
         }
 
-        .li-submit:active {
+        .ca-submit:active {
             transform: translateY(1px);
         }
 
-        .li-forgot {
-            display: inline-block;
-            width: 100%;
-            margin-top: 0.2rem;
-            text-align: center;
-            color: #2d7ef7;
-            font-size: 1rem;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .li-forgot:hover {
-            text-decoration: underline;
-        }
-
-        .li-footer {
-            margin-top: 1rem;
+        .ca-footer {
+            margin-top: 1.3rem;
             padding-top: 1.1rem;
             border-top: 1px solid #e4e9f2;
             text-align: center;
         }
 
-        .li-footer p {
+        .ca-footer p {
             margin: 0;
             color: #7b8da8;
             font-size: 1.15rem;
         }
 
-        .li-footer a {
+        .ca-footer a {
             display: inline-block;
             margin-top: 0.3rem;
             color: #2d7ef7;
@@ -220,88 +215,98 @@
             text-decoration: none;
         }
 
-        .li-footer a:hover {
+        .ca-footer a:hover {
             text-decoration: underline;
         }
 
         @@media (max-width: 480px) {
-            .li-shell {
+            .ca-shell {
                 max-width: 100%;
             }
 
-            .li-page {
+            .ca-page {
                 padding: 1rem 0.9rem 1.25rem;
             }
 
-            .li-title {
+            .ca-title {
                 font-size: 1.8rem;
             }
 
-            .li-subtitle {
+            .ca-subtitle {
                 font-size: 1rem;
             }
 
-            .li-card {
+            .ca-card {
                 border-radius: 14px;
                 padding: 1.1rem 1rem 1.05rem;
             }
 
-            .li-card-title {
+            .ca-card-title {
                 font-size: 1.4rem;
                 margin-bottom: 1rem;
             }
 
-            .li-input {
+            .ca-input {
                 height: 46px;
                 font-size: 1rem;
             }
 
-            .li-submit {
+            .ca-field-help { font-size: 12px; }
+
+            .ca-submit {
                 height: 48px;
                 font-size: 1.06rem;
             }
 
-            .li-footer p,
-            .li-footer a {
+            .ca-footer p,
+            .ca-footer a {
                 font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
-    <main class="li-page" role="main">
-        <div class="li-shell">
-            <header class="li-brand" aria-label="TriMerge IQ heading">
-                <svg class="li-logo" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <main class="ca-page" role="main">
+        <div class="ca-shell">
+            <header class="ca-brand" aria-label="TriMerge IQ heading">
+                <svg class="ca-logo" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <rect width="52" height="52" rx="12" fill="#2d7ef7" opacity=".12" />
                     <path d="M14 20 L26 12 L38 20 L38 32 C38 37 32 41 26 44 C20 41 14 37 14 32 Z"
                           fill="#2d7ef7" stroke="#1a5bbf" stroke-width="1.5" />
                     <path d="M21 26 L24.5 30 L31 22" stroke="#fff" stroke-width="2.2"
                           stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
-                <h1 class="li-title">TriMerge <span>IQ</span></h1>
-                <p class="li-subtitle">In-House AI Knowledge Tool</p>
+                <h1 class="ca-title">TriMerge <span>IQ</span></h1>
+                <p class="ca-subtitle">In-House AI Knowledge Tool</p>
             </header>
 
-            <section class="li-card" aria-label="Log in form">
-                <h2 class="li-card-title">Log in</h2>
+            <section class="ca-card" aria-label="Create account form">
+                <h2 class="ca-card-title">Create Account</h2>
 
-                <form class="li-form" method="post" autocomplete="on">
-                    <div class="li-field">
-                        <svg class="li-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <form class="ca-form" autocomplete="on">
+                    <div class="ca-field">
+                        <svg class="ca-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12 12.5C14.3472 12.5 16.25 10.5972 16.25 8.25C16.25 5.90279 14.3472 4 12 4C9.65279 4 7.75 5.90279 7.75 8.25C7.75 10.5972 9.65279 12.5 12 12.5Z" fill="currentColor" />
+                            <path d="M4 18.5C4 15.7386 7.58172 13.5 12 13.5C16.4183 13.5 20 15.7386 20 18.5V20H4V18.5Z" fill="currentColor" />
+                        </svg>
+                        <input class="ca-input" id="fullName" name="fullName" type="text" placeholder="Full Name" autocomplete="name" />
+                    </div>
+
+                    <div class="ca-field">
+                        <svg class="ca-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <path d="M3.75 7.75C3.75 6.50736 4.75736 5.5 6 5.5H18C19.2426 5.5 20.25 6.50736 20.25 7.75V16.25C20.25 17.4926 19.2426 18.5 18 18.5H6C4.75736 18.5 3.75 17.4926 3.75 16.25V7.75Z" stroke="currentColor" stroke-width="1.5" />
                             <path d="M4.5 8.25L11.0489 12.616C11.6224 12.9983 12.3776 12.9983 12.9511 12.616L19.5 8.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        <input class="li-input" id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
+                        <input class="ca-input" id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
                     </div>
 
-                    <div class="li-field">
-                        <svg class="li-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <div class="ca-field">
+                        <svg class="ca-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <rect x="5.25" y="10.25" width="13.5" height="9.5" rx="2" stroke="currentColor" stroke-width="1.5" />
                             <path d="M8.25 10.25V8.25C8.25 6.17893 9.92893 4.5 12 4.5C14.0711 4.5 15.75 6.17893 15.75 8.25V10.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                         </svg>
-                        <input class="li-input" id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" />
-                        <button class="li-toggle-btn" type="button" data-toggle-password="password" aria-label="Show password">
+                        <input class="ca-input" id="password" name="password" type="password" placeholder="Password" autocomplete="new-password" aria-describedby="passwordHelp" />
+                        <button class="ca-toggle-btn" type="button" data-toggle-password="password" aria-label="Show password">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                 <path d="M1.5 12C3.6 7.5 7.35 5.25 12 5.25C16.65 5.25 20.4 7.5 22.5 12C20.4 16.5 16.65 18.75 12 18.75C7.35 18.75 3.6 16.5 1.5 12Z" stroke="currentColor" stroke-width="1.6" />
                                 <circle cx="12" cy="12" r="3.25" stroke="currentColor" stroke-width="1.6" />
@@ -309,14 +314,28 @@
                         </button>
                     </div>
 
-                    <button class="li-submit" type="submit">Log in</button>
+                    <p class="ca-field-help" id="passwordHelp">Use 8 or more characters with at least one uppercase letter, one number, and one special character.</p>
 
-                    <a class="li-forgot" asp-page="/ForgotPassword">Forgot password?</a>
+                    <div class="ca-field">
+                        <svg class="ca-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <rect x="5.25" y="10.25" width="13.5" height="9.5" rx="2" stroke="currentColor" stroke-width="1.5" />
+                            <path d="M8.25 10.25V8.25C8.25 6.17893 9.92893 4.5 12 4.5C14.0711 4.5 15.75 6.17893 15.75 8.25V10.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                        </svg>
+                        <input class="ca-input" id="confirmPassword" name="confirmPassword" type="password" placeholder="Confirm Password" autocomplete="new-password" />
+                        <button class="ca-toggle-btn" type="button" data-toggle-password="confirmPassword" aria-label="Show confirm password">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M1.5 12C3.6 7.5 7.35 5.25 12 5.25C16.65 5.25 20.4 7.5 22.5 12C20.4 16.5 16.65 18.75 12 18.75C7.35 18.75 3.6 16.5 1.5 12Z" stroke="currentColor" stroke-width="1.6" />
+                                <circle cx="12" cy="12" r="3.25" stroke="currentColor" stroke-width="1.6" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <button class="ca-submit" type="submit">Sign up</button>
                 </form>
 
-                <footer class="li-footer">
-                    <p>Don't have an account?</p>
-                    <a asp-page="/CreateAccount">Sign up</a>
+                <footer class="ca-footer">
+                    <p>Already have an account?</p>
+                    <a asp-page="/Login">Log in</a>
                 </footer>
             </section>
         </div>
@@ -324,21 +343,20 @@
 
     <script>
         (function () {
-            var toggle = document.querySelector('[data-toggle-password]');
-            if (!toggle) {
-                return;
-            }
+            var toggles = document.querySelectorAll('[data-toggle-password]');
 
-            toggle.addEventListener('click', function () {
-                var inputId = toggle.getAttribute('data-toggle-password');
-                var input = document.getElementById(inputId);
-                if (!input) {
-                    return;
-                }
+            toggles.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var inputId = button.getAttribute('data-toggle-password');
+                    var input = document.getElementById(inputId);
+                    if (!input) {
+                        return;
+                    }
 
-                var isPassword = input.type === 'password';
-                input.type = isPassword ? 'text' : 'password';
-                toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                    var isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                });
             });
         })();
     </script>
