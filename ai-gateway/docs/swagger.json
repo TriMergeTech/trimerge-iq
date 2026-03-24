@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "IME API Gateway",
+    "version": "1.0.0",
+    "description": "API for Gemini AI, User Signup, and Login"
+  },
+  "paths": {
+    "/gateway_api": {
+      "post": {
+        "summary": "Gemini AI Prompt",
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "prompt": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/signup": {
+      "post": {
+        "summary": "User Signup",
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/login": {
+      "post": {
+        "summary": "User Login",
+        "requestBody": {
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
