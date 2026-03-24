@@ -1,42 +1,159 @@
-<section class="feature-page">
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Documents Workspace</p>
-      <h1>File handling and document operations</h1>
-      <p class="subtitle">
-        This module is prepared for uploads, previews, parsing, and document-level actions.
-      </p>
-    </div>
-    <button type="button" (click)="uploadMockFile()">Upload File</button>
-  </header>
+<section class="documents-page">
+  <div class="documents-shell">
+    <div
+      class="documents-main"
+      (drop)="handleDrop($event)"
+      (dragover)="handleDragOver($event)"
+      (dragleave)="handleDragLeave($event)"
+    >
+      @if (isDragging) {
+        <div class="drag-overlay">
+          <div class="drag-card">
+            <div class="drag-icon">↑</div>
+            <p>Drop files to upload</p>
+          </div>
+        </div>
+      }
 
-  <section class="grid">
-    <div class="panel">
-      <h2>File Queue</h2>
-      @for (document of documents; track document.id) {
-        <button
-          type="button"
-          class="file-item"
-          [class.selected]="document.id === selectedDocument.id"
-          (click)="selectDocument(document)"
-        >
-          <strong>{{ document.name }}</strong>
-          <span>{{ document.type }} | {{ document.status }}</span>
-          <p>{{ document.summary }}</p>
-        </button>
+      <header class="documents-header">
+        <div>
+          <h1>Documents</h1>
+          <p>{{ totalDocumentsLabel }} · {{ totalSize | number }} bytes total</p>
+        </div>
+        <label class="upload-button upload-label">
+          Upload Files
+          <input type="file" multiple class="hidden-file-input" (change)="handleFiles($event)" />
+        </label>
+      </header>
+
+      <section class="documents-toolbar">
+        <label class="search-field">
+          <span>⌕</span>
+          <input type="text" [(ngModel)]="searchQuery" placeholder="Search documents..." />
+        </label>
+
+        <select [(ngModel)]="filterType">
+          <option value="all">All Types</option>
+          <option value="pdf">PDF</option>
+          <option value="docx">DOCX</option>
+          <option value="txt">TXT</option>
+        </select>
+
+        <div class="view-switch">
+          <button type="button" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">List</button>
+          <button type="button" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">Grid</button>
+        </div>
+      </section>
+
+      @if (!filteredDocuments.length) {
+        <section class="documents-empty">
+          <div class="empty-icon">↑</div>
+          <h2>No documents yet</h2>
+          <p>Drag and drop files here later, or use the upload button to add sample content.</p>
+          <button type="button" class="upload-button" (click)="uploadMockFile()">Add Mock File</button>
+        </section>
+      } @else if (viewMode === 'list') {
+        <section class="documents-list">
+          @for (document of filteredDocuments; track document.id) {
+            <article
+              class="document-row"
+              [class.selected]="document.id === selectedDocument.id"
+              (click)="selectDocument(document)"
+            >
+              <div class="document-icon">{{ document.type }}</div>
+              <div class="document-copy">
+                <h3>{{ document.name }}</h3>
+                <div class="document-meta">
+                  <span>{{ document.type }}</span>
+                  <span>{{ document.status }}</span>
+                  @if (document.size) {
+                    <span>{{ document.size | number }} bytes</span>
+                  }
+                </div>
+                <p>{{ document.summary }}</p>
+              </div>
+              <button
+                type="button"
+                class="remove-button"
+                (click)="$event.stopPropagation(); removeDocument(document.id)"
+              >
+                ×
+              </button>
+            </article>
+          }
+        </section>
+      } @else {
+        <section class="documents-grid">
+          @for (document of filteredDocuments; track document.id) {
+            <article
+              class="document-tile"
+              [class.selected]="document.id === selectedDocument.id"
+              (click)="selectDocument(document)"
+            >
+              <div class="tile-preview">{{ document.type }}</div>
+              <h3>{{ document.name }}</h3>
+              <p>{{ document.summary }}</p>
+            </article>
+          }
+        </section>
       }
     </div>
 
-    <div class="panel">
-      <h2>Document Preview</h2>
-      <div class="preview">
-        <div>
-          <h3>{{ selectedDocument.name }}</h3>
-          <p>Status: {{ selectedDocument.status }}</p>
-          <p>Type: {{ selectedDocument.type }}</p>
+    <aside class="documents-sidebar">
+      <div class="sidebar-header">
+        <h2>File Details</h2>
+        <button type="button" class="icon-close">×</button>
+      </div>
+
+      <div class="sidebar-body">
+        <div class="sidebar-preview">
+          @if (selectedDocument.preview) {
+            <img [src]="selectedDocument.preview" [alt]="selectedDocument.name" class="sidebar-image" />
+          } @else {
+            {{ selectedDocument.type }}
+          }
+        </div>
+
+        <div class="detail-card">
+          <label>File Name</label>
+          <p>{{ selectedDocument.name }}</p>
+        </div>
+
+        <div class="detail-card">
+          <label>Type</label>
+          <span class="detail-pill">{{ selectedDocument.type }}</span>
+        </div>
+
+        <div class="detail-card">
+          <label>Status</label>
+          <p>{{ selectedDocument.status }}</p>
+        </div>
+
+        @if (selectedDocument.uploadDate) {
+          <div class="detail-card">
+            <label>Upload Date</label>
+            <p>{{ selectedDocument.uploadDate | date:'medium' }}</p>
+          </div>
+        }
+
+        @if (selectedDocument.size) {
+          <div class="detail-card">
+            <label>Size</label>
+            <p>{{ selectedDocument.size | number }} bytes</p>
+          </div>
+        }
+
+        <div class="detail-card">
+          <label>Summary</label>
           <p>{{ selectedDocument.summary }}</p>
         </div>
+
+        <div class="sidebar-actions">
+          <button type="button" class="action-primary">Download</button>
+          <button type="button" class="action-secondary">Open</button>
+          <button type="button" class="action-muted" (click)="removeDocument(selectedDocument.id)">Delete File</button>
+        </div>
       </div>
-    </div>
-  </section>
+    </aside>
+  </div>
 </section>

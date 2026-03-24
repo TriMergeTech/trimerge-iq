@@ -1,43 +1,85 @@
-<section class="feature-page">
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Chat Workspace</p>
-      <h1>AI interaction surface</h1>
-      <p class="subtitle">
-        This module is ready for conversation threads, prompt entry, and model responses.
-      </p>
+<section class="chat-page">
+  <header class="chat-header">
+    <div class="chat-header-inner">
+      <div class="chat-badge">✦</div>
+      <div>
+        <h1>TriMerge AI Assistant</h1>
+        <p>Powered by advanced consulting intelligence</p>
+      </div>
+      <div class="chat-status">
+        <span class="status-dot"></span>
+        <span>Online</span>
+      </div>
     </div>
-    <button type="button" (click)="startNewChat()">New Chat</button>
   </header>
 
-  <section class="chat-layout">
-    <aside class="panel history">
-      <h2>Conversation History</h2>
-      @for (session of sessions; track session.id) {
-        <div class="history-item" [class.active]="session.id === 1">
-          <strong>{{ session.title }}</strong>
-          <span>{{ session.updatedAt }}</span>
-        </div>
-      }
-    </aside>
+  <div class="chat-content">
+    @if (messages.length <= 2) {
+      <section class="chat-empty">
+        <div class="chat-empty-icon">✦</div>
+        <h2>How can I assist you today?</h2>
+        <p>
+          Ask about TriMerge services, consulting strategies, or how the platform will
+          support your organization.
+        </p>
 
-    <div class="panel thread">
-      <h2>AI Thread</h2>
+        <div class="prompt-grid">
+          @for (promptOption of suggestedPrompts; track promptOption.label) {
+            <button type="button" class="prompt-card" (click)="applyPrompt(promptOption.label)">
+              <span class="prompt-icon">{{ promptOption.icon }}</span>
+              <span>{{ promptOption.label }}</span>
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="messages">
       @for (message of messages; track $index) {
-        <article class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
-          <strong>{{ message.role === 'user' ? 'You' : 'Assistant' }}</strong>
-          <p>{{ message.content }}</p>
+        <article class="message-row" [class.user-row]="message.role === 'user'">
+          @if (message.role === 'assistant') {
+            <div class="message-avatar assistant-avatar">✦</div>
+          }
+
+          <div class="message-bubble" [class.user-bubble]="message.role === 'user'">
+            <p>{{ message.content }}</p>
+            <span>{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
+          </div>
+
+          @if (message.role === 'user') {
+            <div class="message-avatar user-avatar">U</div>
+          }
         </article>
       }
 
-      <div class="composer">
-        <textarea
-          rows="4"
-          placeholder="Ask a question or send a task to the AI"
-          [(ngModel)]="prompt"
-        ></textarea>
-        <button type="button" (click)="send()">Send</button>
-      </div>
+      @if (isTyping) {
+        <article class="message-row">
+          <div class="message-avatar assistant-avatar">✦</div>
+          <div class="message-bubble typing-bubble">
+            <div class="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </article>
+      }
     </div>
-  </section>
+  </div>
+
+  <footer class="chat-composer">
+    <div class="composer-inner">
+      <textarea
+        rows="2"
+        [(ngModel)]="prompt"
+        (keydown.enter)="handleKeydown($event)"
+        placeholder="Type your message here... (Press Enter to send)"
+      ></textarea>
+
+      <button type="button" class="send-button" [disabled]="!prompt.trim() || isTyping" (click)="send()">
+        ↑
+      </button>
+    </div>
+    <p>AI responses are simulated for demonstration purposes.</p>
+  </footer>
 </section>

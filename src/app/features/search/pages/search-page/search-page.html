@@ -1,50 +1,159 @@
-<section class="feature-page">
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Search Workspace</p>
-      <h1>Query input and result exploration</h1>
-      <p class="subtitle">
-        This module is prepared for search requests, filtering, and ranked result views.
-      </p>
-    </div>
-    <button type="button" (click)="runSearch()">Run Query</button>
-  </header>
+<section class="search-page">
+  <section class="search-hero">
+    <div class="search-hero-inner">
+      <h1>How can we help?</h1>
 
-  <section class="panel">
-    <h2>Search Input</h2>
-    <div class="search-bar">
-      <input
-        type="text"
-        placeholder="Enter keywords, identifiers, or natural language queries"
-        [(ngModel)]="query"
-      />
-      <button type="button" (click)="runSearch()">Search</button>
-    </div>
-    <div class="filters">
-      <span>Filter: All</span>
-      <span>Sort: Relevance</span>
-      <span>Scope: Global</span>
-    </div>
-  </section>
+      <div class="search-shell">
+        <div class="search-bar">
+          <span class="search-icon">⌕</span>
+          <input
+            type="text"
+            [(ngModel)]="query"
+            (keydown.enter)="runSearch()"
+            placeholder="Search for documents, reports, and resources..."
+          />
+          @if (query) {
+            <button type="button" class="icon-button" (click)="clearSearch()">×</button>
+          }
+        </div>
 
-  <section class="panel">
-    <h2>Results Preview</h2>
-    <div class="result-list">
-      @for (result of results; track result.id) {
-        <article class="result-card">
-          <div class="result-meta">
-            <span>{{ result.category }}</span>
-            <span>Score {{ result.score }}</span>
+        @if (hasSearched && query) {
+          <div class="search-dropdown">
+            <div class="search-preview-list">
+              @for (result of previewResults; track result.id) {
+                <article class="search-preview-item">
+                  <div>
+                    <h3>{{ result.title }}</h3>
+                    <p>{{ result.summary }}</p>
+                  </div>
+                  <span>{{ result.category }}</span>
+                </article>
+              }
+            </div>
+
+            <div class="search-dropdown-actions">
+              <button type="button" class="link-button" (click)="toggleFilters()">
+                Advanced Filters
+              </button>
+              <button type="button" class="primary-button" (click)="runSearch()">See All Results</button>
+            </div>
           </div>
-          <h3>{{ result.title }}</h3>
-          <p>{{ result.summary }}</p>
-        </article>
-      } @empty {
-        <article class="result-card empty-state">
-          <h3>No results found</h3>
-          <p>Try a broader query to see the mock search dataset respond.</p>
-        </article>
-      }
+        }
+      </div>
     </div>
   </section>
+
+  @if (showFilters && hasSearched) {
+    <section class="filters-panel">
+      <div class="filters-header">
+        <div>
+          <h2>Filters &amp; Sorting</h2>
+          <p>Refine the result set by type, date, and ranking.</p>
+        </div>
+        <button type="button" class="icon-button subtle" (click)="showFilters = false">×</button>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          <span>Document Type</span>
+          <select [(ngModel)]="filterType">
+            <option value="all">All Types</option>
+            <option value="operations">Operations</option>
+            <option value="knowledge">Knowledge Base</option>
+            <option value="analytics">Analytics</option>
+            <option value="engineering">Engineering</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Date Range</span>
+          <select [(ngModel)]="dateRange">
+            <option value="all">All Time</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="1y">Last Year</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Sort By</span>
+          <select [(ngModel)]="sortBy">
+            <option value="relevance">Relevance</option>
+            <option value="score">Highest Score</option>
+            <option value="title">Title (A-Z)</option>
+          </select>
+        </label>
+      </div>
+    </section>
+  }
+
+  @if (hasSearched && query) {
+    <section class="results-section">
+      <div class="results-header">
+        <div>
+          <h2>Search Results</h2>
+          <p>Found {{ filteredResults.length }} results for "{{ query }}"</p>
+        </div>
+        <span class="results-sort">Sorted by {{ sortBy }}</span>
+      </div>
+
+      <div class="results-list">
+        @for (result of filteredResults; track result.id) {
+          <article class="result-card">
+            <div class="result-meta">
+              <span class="result-type">{{ result.category }}</span>
+              <span class="result-score">{{ result.score }}%</span>
+            </div>
+            <h3>{{ result.title }}</h3>
+            <p>{{ result.summary }}</p>
+          </article>
+        } @empty {
+          <article class="result-card empty-state">
+            <h3>No results found</h3>
+            <p>Try a broader search term or remove filters to explore more content.</p>
+          </article>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="search-empty">
+      <div class="empty-card">
+        <h2>Query Input and Result Exploration</h2>
+        <p>
+          This module is prepared for search requests, filtering, and ranked result views.
+          Use the examples below to preview the experience.
+        </p>
+
+        <div class="empty-grid">
+          <article class="empty-item">
+            <div class="empty-icon blue">⌕</div>
+            <h3>Search</h3>
+            <p>Enter keywords to find relevant content.</p>
+            <button type="button" class="link-button" (click)="showExampleSearch('customer onboarding')">
+              Start Searching
+            </button>
+          </article>
+
+          <article class="empty-item">
+            <div class="empty-icon gold">≡</div>
+            <h3>Filter</h3>
+            <p>Refine results by type, date, and importance.</p>
+            <button type="button" class="link-button gold-link" (click)="toggleFilters()">
+              Try Filters
+            </button>
+          </article>
+
+          <article class="empty-item">
+            <div class="empty-icon gray">●</div>
+            <h3>Explore</h3>
+            <p>View ranked results with clear scoring and summaries.</p>
+            <button type="button" class="link-button gray-link" (click)="showExampleSearch('AI assistant')">
+              See Example
+            </button>
+          </article>
+        </div>
+      </div>
+    </section>
+  }
 </section>

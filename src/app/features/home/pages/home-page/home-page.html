@@ -1,0 +1,58 @@
+<section class="home-page">
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">TriMerge Consulting Group</p>
+      <h1>Strategic Consulting for Modern Business</h1>
+      <p class="subtitle">
+        TriMerge Consulting Group delivers comprehensive solutions that drive innovation,
+        efficiency, and sustainable growth for organizations worldwide.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-gold" routerLink="/search">Get Started</a>
+        <a class="button button-ghost" routerLink="/documents">View Capabilities</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <h2>Our Services</h2>
+      <p>Tailored solutions to meet your organization's unique needs.</p>
+    </div>
+
+    <div class="services-grid">
+      @for (service of services; track service.title) {
+        <article class="service-card">
+          <div class="service-icon" [style.--service-color]="service.color"></div>
+          <h3>{{ service.title }}</h3>
+          <p>{{ service.description }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stats-grid">
+      @for (stat of stats; track stat.label) {
+        <article class="stat-card">
+          <strong>{{ stat.value }}</strong>
+          <span>{{ stat.label }}</span>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="cta-card">
+      <h2>Ready to Transform Your Business?</h2>
+      <p>
+        Let's discuss how TriMerge Consulting Group can help you achieve your strategic
+        goals.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-blue" routerLink="/chat">Schedule a Consultation</a>
+        <a class="button button-outline" routerLink="/admin">Learn More</a>
+      </div>
+    </div>
+  </section>
+</section>

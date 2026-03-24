@@ -1,42 +1,261 @@
-<section class="feature-page">
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Admin Workspace</p>
-      <h1>Management dashboard</h1>
-      <p class="subtitle">
-        This module is ready for system controls, user oversight, and operational reporting.
-      </p>
+<section class="admin-page">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <div class="admin-badge">⛨</div>
+      <div>
+        <h2>Admin Panel</h2>
+        <p>TriMerge Consulting</p>
+      </div>
     </div>
-    <button type="button">Create Report</button>
-  </header>
 
-  <section class="stats">
-    @for (stat of stats; track stat.label) {
-      <article class="stat-card">
-        <span>{{ stat.label }}</span>
-        <strong>{{ stat.value }}</strong>
-      </article>
+    <nav class="admin-nav">
+      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">
+        User Management
+      </button>
+      <button type="button" [class.active]="activeTab === 'data'" (click)="activeTab = 'data'">
+        Data Management
+      </button>
+      <button
+        type="button"
+        [class.active]="activeTab === 'monitoring'"
+        (click)="activeTab = 'monitoring'"
+      >
+        System Monitoring
+      </button>
+    </nav>
+
+    <div class="admin-user">
+      <span>Logged in as</span>
+      <strong>admin@trimerge.com</strong>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-header">
+      <div>
+        <h1>
+          @if (activeTab === 'users') {
+            User Management
+          } @else if (activeTab === 'data') {
+            Data Management
+          } @else {
+            System Monitoring
+          }
+        </h1>
+        <p>
+          @if (activeTab === 'users') {
+            Manage {{ filteredUsers.length }} visible users
+          } @else if (activeTab === 'data') {
+            Manage {{ filteredRecords.length }} visible records
+          } @else {
+            View mock operational metrics and alerts
+          }
+        </p>
+      </div>
+
+      @if (activeTab !== 'monitoring') {
+        <button
+          type="button"
+          class="admin-action"
+          (click)="activeTab === 'users' ? openUserModal() : openRecordModal()"
+        >
+          Add New
+        </button>
+      }
+    </header>
+
+    @if (activeTab !== 'monitoring') {
+      <section class="admin-filters">
+        <label class="admin-search">
+          <span>⌕</span>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            [placeholder]="activeTab === 'users' ? 'Search users...' : 'Search records...'"
+          />
+        </label>
+
+        @if (activeTab === 'users') {
+          <select [(ngModel)]="filterRole">
+            <option value="all">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+          </select>
+        } @else {
+          <select [(ngModel)]="filterStatus">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        }
+      </section>
     }
-  </section>
 
-  <section class="panel">
-    <h2>Management Actions</h2>
-    <div class="action-grid">
-      @for (action of actions; track action.title) {
-        <div class="action-card">
-          <h3>{{ action.title }}</h3>
-          <p>{{ action.description }}</p>
+    <section class="admin-content">
+      @if (activeTab === 'users') {
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Created</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of filteredUsers; track user.id) {
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <div class="avatar">{{ user.name.charAt(0) }}</div>
+                      <strong>{{ user.name }}</strong>
+                    </div>
+                  </td>
+                  <td>{{ user.email }}</td>
+                  <td>
+                    <span class="pill" [class.gold-pill]="user.role === 'admin'">{{ user.role }}</span>
+                  </td>
+                  <td>{{ user.created }}</td>
+                  <td>{{ user.lastLogin }}</td>
+                  <td class="actions-cell">
+                    <button type="button" class="table-action" (click)="openUserModal(user)">Edit</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (activeTab === 'data') {
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (record of filteredRecords; track record.id) {
+                <tr>
+                  <td><strong>{{ record.title }}</strong></td>
+                  <td><span class="pill blue-pill">{{ record.category }}</span></td>
+                  <td><span class="pill" [class.gray-pill]="record.status === 'inactive'">{{ record.status }}</span></td>
+                  <td>{{ record.created }}</td>
+                  <td>{{ record.updated }}</td>
+                  <td class="actions-cell">
+                    <button type="button" class="table-action" (click)="openRecordModal(record)">Edit</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="monitor-grid">
+          @for (stat of stats; track stat.label) {
+            <article class="metric-card">
+              <span>{{ stat.label }}</span>
+              <strong>{{ stat.value }}</strong>
+            </article>
+          }
+
+          <article class="activity-card">
+            <h2>Management Actions</h2>
+            <div class="activity-list">
+              @for (action of actions; track action.title) {
+                <div class="activity-item">
+                  <strong>{{ action.title }}</strong>
+                  <p>{{ action.description }}</p>
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="activity-card">
+            <h2>System Alerts</h2>
+            <div class="activity-list">
+              @for (alert of alerts; track alert) {
+                <div class="alert-item">{{ alert }}</div>
+              }
+            </div>
+          </article>
         </div>
       }
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <section class="panel">
-    <h2>System Alerts</h2>
-    <div class="alerts">
-      @for (alert of alerts; track alert) {
-        <div class="alert-item">{{ alert }}</div>
-      }
+  @if (showUserModal && editingUser) {
+    <div class="modal-backdrop">
+      <form class="modal-card" (ngSubmit)="saveUser()">
+        <header class="modal-header">
+          <h2>{{ editingUser.id ? 'Edit User' : 'Add New User' }}</h2>
+          <button type="button" class="modal-close" (click)="closeModals()">×</button>
+        </header>
+
+        <label class="modal-field">
+          <span>Name</span>
+          <input type="text" [(ngModel)]="editingUser.name" name="userName" required />
+        </label>
+
+        <label class="modal-field">
+          <span>Email</span>
+          <input type="email" [(ngModel)]="editingUser.email" name="userEmail" required />
+        </label>
+
+        <label class="modal-field">
+          <span>Role</span>
+          <select [(ngModel)]="editingUser.role" name="userRole">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" class="modal-secondary" (click)="closeModals()">Cancel</button>
+          <button type="submit" class="modal-primary">Save</button>
+        </div>
+      </form>
     </div>
-  </section>
+  }
+
+  @if (showDataModal && editingRecord) {
+    <div class="modal-backdrop">
+      <form class="modal-card" (ngSubmit)="saveRecord()">
+        <header class="modal-header">
+          <h2>{{ editingRecord.id ? 'Edit Record' : 'Add New Record' }}</h2>
+          <button type="button" class="modal-close" (click)="closeModals()">×</button>
+        </header>
+
+        <label class="modal-field">
+          <span>Title</span>
+          <input type="text" [(ngModel)]="editingRecord.title" name="recordTitle" required />
+        </label>
+
+        <label class="modal-field">
+          <span>Category</span>
+          <input type="text" [(ngModel)]="editingRecord.category" name="recordCategory" required />
+        </label>
+
+        <label class="modal-field">
+          <span>Status</span>
+          <select [(ngModel)]="editingRecord.status" name="recordStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" class="modal-secondary" (click)="closeModals()">Cancel</button>
+          <button type="submit" class="modal-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  }
 </section>

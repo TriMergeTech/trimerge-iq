@@ -38,6 +38,9 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+/.firebase
+/tmp-figma-import
+/tmp-figma-import-2
 
 # System files
 .DS_Store

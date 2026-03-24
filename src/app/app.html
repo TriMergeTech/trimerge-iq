@@ -1,24 +1,21 @@
 <div class="app-shell">
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" routerLink="/search">
-        <span class="brand-mark">T</span>
-        <span class="brand-copy">
-          <strong>Trimerge</strong>
-          <small>Workspace</small>
-        </span>
+      <a class="brand" routerLink="/">
+        <img class="brand-logo" src="/trimerge-logo.png" alt="TriMerge Consulting Group" />
       </a>
 
       <nav class="nav" aria-label="Main navigation">
-        <a routerLink="/search" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Search</a>
-        <a routerLink="/chat" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Chat</a>
-        <a routerLink="/documents" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Documents</a>
-        <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Admin</a>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="nav-icon">⌂</span>Home</a>
+        <a routerLink="/search" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="nav-icon">⌕</span>Search</a>
+        <a routerLink="/chat" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="nav-icon">◦</span>Chat</a>
+        <a routerLink="/documents" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="nav-icon">▣</span>Documents</a>
+        <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span class="nav-icon">◇</span>Admin</a>
       </nav>
     </div>
   </header>
 
-  <main class="content">
+  <main class="content" [class.content-home]="isHomeRoute()">
     <router-outlet></router-outlet>
   </main>
 </div>

@@ -6,6 +6,11 @@ import {
   ChatSession,
 } from '../../services/chat-mock.service';
 
+interface SuggestedPrompt {
+  label: string;
+  icon: string;
+}
+
 @Component({
   selector: 'app-chat-page',
   imports: [FormsModule],
@@ -16,27 +21,56 @@ export class ChatPage {
   private readonly chatService = inject(ChatMockService);
 
   prompt = '';
+  isTyping = false;
   sessions: ChatSession[] = this.chatService.getSessions();
-  messages: ChatMessage[] = this.chatService.getInitialMessages();
+  messages: ChatMessage[] = [];
 
-  startNewChat(): void {
-    this.messages = [
-      {
-        role: 'assistant',
-        content: 'New mock chat started. This is where a fresh AI session would begin.',
-      },
-    ];
-    this.prompt = '';
+  readonly suggestedPrompts: SuggestedPrompt[] = [
+    { label: 'Tell me about your strategic consulting services', icon: '◎' },
+    { label: 'How can you help with digital transformation?', icon: '⚡' },
+    { label: 'What is your approach to operational excellence?', icon: '↗' },
+    { label: 'What industries do you serve?', icon: '✦' },
+  ];
+
+  constructor() {
+    this.startNewChat();
   }
 
-  send(): void {
-    const nextMessages = this.chatService.sendMessage(this.prompt);
+  startNewChat(): void {
+    this.messages = this.chatService.getInitialMessages();
+    this.prompt = '';
+    this.isTyping = false;
+  }
 
-    if (!nextMessages.length) {
+  applyPrompt(prompt: string): void {
+    this.prompt = prompt;
+  }
+
+  handleKeydown(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+
+    if (keyboardEvent.shiftKey) {
       return;
     }
 
-    this.messages = [...this.messages, ...nextMessages];
+    keyboardEvent.preventDefault();
+    this.send();
+  }
+
+  send(): void {
+    const trimmedPrompt = this.prompt.trim();
+    if (!trimmedPrompt || this.isTyping) {
+      return;
+    }
+
+    this.isTyping = true;
+    const nextMessages = this.chatService.sendMessage(trimmedPrompt);
+    this.messages = [...this.messages, { role: 'user', content: trimmedPrompt }];
     this.prompt = '';
+
+    setTimeout(() => {
+      this.messages = [...this.messages, nextMessages[1]];
+      this.isTyping = false;
+    }, 900);
   }
 }

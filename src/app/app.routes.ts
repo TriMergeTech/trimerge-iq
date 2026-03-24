@@ -2,6 +2,11 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
+    path: '',
+    loadChildren: () =>
+      import('./features/home/home-module').then(m => m.HomeModule)
+  },
+  {
     path: 'search',
     loadChildren: () =>
       import('./features/search/search-module').then(m => m.SearchModule)
@@ -27,8 +32,7 @@ export const routes: Routes = [
       import('./features/admin/admin-module').then(m => m.AdminModule)
   },
   {
-    path: '',
-    redirectTo: 'search',
-    pathMatch: 'full'
+    path: '**',
+    redirectTo: ''
   }
 ]
