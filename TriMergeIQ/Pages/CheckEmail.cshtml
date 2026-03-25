@@ -1,0 +1,220 @@
+@page
+@model CheckEmailModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Check Your Email";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Check Your Email - TriMerge IQ</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        :root {
+            --tiq-bg: #eef3fb;
+            --tiq-card: #ffffff;
+            --tiq-text: #1a2e5a;
+            --tiq-muted: #6c87a7;
+            --tiq-primary: #2d7ef7;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            background: var(--tiq-bg);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--tiq-text);
+        }
+
+        .ce-page {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem 1rem;
+        }
+
+        .ce-shell {
+            width: 100%;
+            max-width: 460px;
+        }
+
+        .ce-brand {
+            text-align: center;
+            margin-bottom: 1.1rem;
+        }
+
+        .ce-logo {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 0.6rem;
+            display: block;
+        }
+
+        .ce-title {
+            font-size: clamp(2rem, 6vw, 2.4rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0;
+            color: var(--tiq-text);
+        }
+
+        .ce-title span {
+            color: var(--tiq-primary);
+        }
+
+        .ce-subtitle {
+            font-size: 1.08rem;
+            color: var(--tiq-muted);
+            margin: 0.45rem 0 0;
+        }
+
+        .ce-card {
+            background: var(--tiq-card);
+            border-radius: 18px;
+            box-shadow: 0 10px 26px rgba(26, 46, 90, 0.12);
+            border: 1px solid #e8eef7;
+            padding: 1.45rem 1.3rem 1.35rem;
+            text-align: center;
+        }
+
+        .ce-card-title {
+            font-size: 1.65rem;
+            font-weight: 700;
+            line-height: 1.15;
+            margin: 0 0 0.9rem;
+            color: var(--tiq-text);
+        }
+
+        .ce-illustration {
+            width: 160px;
+            height: auto;
+            margin: 0.1rem auto 0.9rem;
+            display: block;
+        }
+
+        .ce-message {
+            color: #495a77;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            margin: 0 0 0.95rem;
+        }
+
+        .ce-message-secondary {
+            color: #495a77;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            margin: 0 0 1.2rem;
+        }
+
+        .ce-btn {
+            margin-top: 0.2rem;
+            width: 100%;
+            height: 50px;
+            border: 0;
+            border-radius: 11px;
+            background: linear-gradient(90deg, #4f8eea 0%, #2d7ef7 100%);
+            color: #fff;
+            font-size: 1.18rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.01em;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .12s ease, box-shadow .12s ease, opacity .15s ease;
+            box-shadow: 0 5px 14px rgba(45, 126, 247, 0.28);
+        }
+
+        .ce-btn:hover {
+            opacity: 0.95;
+            color: #fff;
+        }
+
+        .ce-btn:active {
+            transform: translateY(1px);
+        }
+
+        @@media (max-width: 480px) {
+            .ce-shell {
+                max-width: 100%;
+            }
+
+            .ce-title {
+                font-size: 1.8rem;
+            }
+
+            .ce-subtitle {
+                font-size: 1rem;
+            }
+
+            .ce-card {
+                border-radius: 14px;
+                padding: 1.1rem 1rem 1.05rem;
+            }
+
+            .ce-card-title {
+                font-size: 1.4rem;
+            }
+
+            .ce-illustration {
+                width: 145px;
+            }
+
+            .ce-message,
+            .ce-message-secondary {
+                font-size: 1rem;
+            }
+
+            .ce-btn {
+                height: 48px;
+                font-size: 1.06rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="ce-page" role="main">
+        <div class="ce-shell">
+            <header class="ce-brand" aria-label="TriMerge IQ heading">
+                <svg class="ce-logo" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect width="52" height="52" rx="12" fill="#2d7ef7" opacity=".12" />
+                    <path d="M14 20 L26 12 L38 20 L38 32 C38 37 32 41 26 44 C20 41 14 37 14 32 Z"
+                          fill="#2d7ef7" stroke="#1a5bbf" stroke-width="1.5" />
+                    <path d="M21 26 L24.5 30 L31 22" stroke="#fff" stroke-width="2.2"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <h1 class="ce-title">TriMerge <span>IQ</span></h1>
+                <p class="ce-subtitle">In-House AI Knowledge Tool</p>
+            </header>
+
+            <section class="ce-card" aria-label="Password reset confirmation">
+                <h2 class="ce-card-title">Check Your Email</h2>
+
+                <svg class="ce-illustration" viewBox="0 0 220 150" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <ellipse cx="110" cy="126" rx="72" ry="10" fill="#dfe8f7" />
+                    <rect x="74" y="28" width="72" height="56" rx="8" fill="#d8e5fb" />
+                    <circle cx="110" cy="56" r="16" fill="#42b5c8" />
+                    <path d="M102.5 56.5L108 62L118 52" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M38 62H182V122H38V62Z" fill="#bdd3f7" />
+                    <path d="M38 62L110 106L182 62" fill="#cde0fb" />
+                    <path d="M38 122L88 82" stroke="#a8c4f0" stroke-width="2" />
+                    <path d="M182 122L132 82" stroke="#a8c4f0" stroke-width="2" />
+                    <path d="M38 122L110 74L182 122" fill="#d7e6ff" />
+                </svg>
+
+                <p class="ce-message">If this email exists in our system, you will receive a password reset link shortly.</p>
+                <p class="ce-message-secondary">Please check your inbox and click the link provided to reset your password.</p>
+
+                <a class="ce-btn" asp-page="/Login">Back to Log In</a>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
