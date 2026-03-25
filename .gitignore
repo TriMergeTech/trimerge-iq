@@ -1,6 +1,35 @@
 __pycache__/
 *.pyc
+
+# Virtual environments
 .env
 .venv/
 venv/
+
+# Uploaded files
 uploads/
+
+# OS / system files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Python cache/build
+*.pyo
+*.pyd
+build/
+dist/
+*.egg-info/
+
+# Chroma DB (VERY IMPORTANT for your project)
+chroma/
+*.sqlite3
+
+# Model cache (prevents huge pushes)
+.cache/
