@@ -71,6 +71,41 @@ function EyeIcon({ open }) {
   );
 }
 
+function GoogleIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.4c-.2 1.3-1.5 3.9-5.4 3.9-3.2 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.8 0 3 .8 3.7 1.4L18.2 5C16.7 3.6 14.6 2.7 12 2.7 6.9 2.7 2.7 6.9 2.7 12s4.2 9.3 9.3 9.3c5.4 0 8.9-3.8 8.9-9.1 0-.6-.1-1.1-.1-1.6H12Z"
+      />
+      <path
+        fill="#34A853"
+        d="M2.7 7.6l3.2 2.3c.9-1.8 2.8-3 5.1-3 1.8 0 3 .8 3.7 1.4L18.2 5C16.7 3.6 14.6 2.7 12 2.7c-3.6 0-6.7 2-8.3 4.9Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M12 21.3c2.5 0 4.7-.8 6.2-2.2l-2.9-2.3c-.8.6-1.9 1.1-3.3 1.1-3.8 0-5.1-2.6-5.4-3.9l-3.2 2.5c1.6 3 4.8 4.8 8.6 4.8Z"
+      />
+      <path
+        fill="#4285F4"
+        d="M20.9 12.2c0-.6-.1-1.1-.1-1.6H12v3.9h5.4c-.2 1.1-.9 2-2 2.8l2.9 2.3c1.7-1.6 2.6-4 2.6-7.4Z"
+      />
+    </svg>
+  );
+}
+
+function GoogleAuthButton({ mode }) {
+  return (
+    <a
+      href={`/api/auth/google?mode=${mode}`}
+      className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+    >
+      <GoogleIcon />
+      Continue with Google
+    </a>
+  );
+}
+
 function InputField({
   name,
   type,
@@ -163,6 +198,14 @@ export default function LoginPage() {
           <h2 className="mb-6 text-center text-2xl font-semibold text-[#334E8A]">Log In</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <GoogleAuthButton mode="login" />
+
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-slate-200" />
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">or continue with email</p>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
             <InputField
               name="email"
               type="email"
