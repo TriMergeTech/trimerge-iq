@@ -5,7 +5,7 @@ import Link from "next/link";
 // Logo and Brand Header
 function BrandHeader() {
   return (
-    <header className="w-full pt-10 pb-8 px-6 bg-white">
+    <header className="w-full pt-10 pb-10 px-6 bg-white">
       <div className="max-w-6xl mx-auto flex flex-col items-center gap-3">
         {/* TriMerge Logo */}
         <div className="flex items-center gap-3">
@@ -35,11 +35,34 @@ function BrandHeader() {
 // Hero Section
 function HeroSection() {
   return (
-    <section className="w-full py-10 px-6 bg-[#EEF2F8]">
+    <section className="w-full pt-16 pb-16 px-6 bg-[#EEF2F8]">
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl sm:text-4xl md:text-[2.7rem] font-bold text-slate-900 tracking-tight">
+        <h2 className="mx-auto max-w-[700px] text-4xl sm:text-5xl md:text-[3rem] font-bold text-slate-900 tracking-tight leading-tight">
           Private & Secure AI Assistant for TriMerge
         </h2>
+        <p className="mt-5 text-lg text-slate-600 md:text-xl">
+          Access your company's knowledge instantly with AI
+        </p>
+        <div className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center">
+          <Link
+            href="/signup"
+            className="group min-w-[220px] px-12 py-[14px] h-[52px] bg-blue-600 text-white font-semibold text-[1.125rem] rounded-2xl hover:bg-blue-700 transition-all shadow-[0_10px_24px_rgba(37,99,235,0.30)] flex items-center justify-center gap-2"
+          >
+            Sign Up
+            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+          <Link
+            href="/login"
+            className="group min-w-[220px] px-12 py-[14px] h-[52px] bg-white text-slate-800 font-semibold text-[1.125rem] rounded-2xl border-2 border-blue-300 hover:bg-blue-50 transition-all shadow-[0_8px_20px_rgba(15,23,42,0.07)] flex items-center justify-center gap-2"
+          >
+            Log In
+            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -140,7 +163,7 @@ function FeaturesSection() {
   ];
 
   return (
-    <section className="w-full py-8 px-6 bg-[#EEF2F8]">
+    <section className="w-full pt-16 pb-8 px-6 bg-[#EEF2F8]">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {features.map((feature, index) => (
@@ -265,7 +288,6 @@ export default function Home() {
       <HeroSection />
       <FeaturesSection />
       <IllustrationSection />
-      <CTASection />
     </main>
   );
 }
