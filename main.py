@@ -1,7 +1,8 @@
+import json
 import os
 import re
 import uuid
-from typing import List
+from typing import List, Optional
 
 import chromadb
 import fitz  # PyMuPDF
@@ -25,6 +26,7 @@ UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/var/data/uploads")
 CHROMA_DIR = os.getenv("CHROMA_DIR", "/var/data/chroma")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "").strip()
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:4b")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "modelfilerouter")
 ENABLE_OCR = os.getenv("ENABLE_OCR", "true").lower() == "true"
 
 EMBEDDING_MODEL_NAME = os.getenv(
@@ -47,6 +49,10 @@ tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME)
 chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
 ocr_engine = RapidOCR()
 
+ALLOWED_TOOLS = {
+    "employees": ["retrieval"],
+    "create_service": ["mutation"],
+}
 
 # =========================
 # REQUEST MODELS
@@ -61,6 +67,10 @@ class AskAIRequest(BaseModel):
     user_id: str
     question: str
     top_k: int = TOP_K
+
+
+class RouteRequest(BaseModel):
+    message: str
 
 
 # =========================
@@ -260,9 +270,8 @@ def chunk_text_by_tokens(
         normalized = chunk.strip()
         if len(normalized) < 20:
             continue
-        key = normalized
-        if key not in seen:
-            seen.add(key)
+        if normalized not in seen:
+            seen.add(normalized)
             cleaned_chunks.append(normalized)
 
     return cleaned_chunks
@@ -304,18 +313,47 @@ def store_in_chroma(collection, filename: str, user_id: str, chunks: List[str], 
     )
 
 
-def ask_ollama(prompt: str) -> str:
+def extract_first_json(text: str) -> Optional[str]:
+    match = re.search(r"\{.*?\}", text, re.DOTALL)
+    return match.group(0) if match else None
+
+
+def is_valid_router_output(parsed: dict) -> bool:
+    if not isinstance(parsed, dict):
+        return False
+
+    route = parsed.get("route")
+
+    if route == "text":
+        response = parsed.get("response")
+        return isinstance(response, str) and response.strip() != ""
+
+    if route == "tools":
+        toolname = parsed.get("toolname")
+        mode = parsed.get("mode")
+
+        if toolname not in ALLOWED_TOOLS:
+            return False
+
+        return mode in ALLOWED_TOOLS[toolname]
+
+    return False
+
+
+def ask_ollama(prompt: str, model_name: Optional[str] = None) -> str:
     if not OLLAMA_URL:
         raise HTTPException(
             status_code=503,
-            detail="OLLAMA_URL is not configured. Set it in Render environment variables.",
+            detail="OLLAMA_URL is not configured. Set it in environment variables.",
         )
+
+    selected_model = model_name or OLLAMA_MODEL
 
     try:
         response = requests.post(
             f"{OLLAMA_URL.rstrip('/')}/api/generate",
             json={
-                "model": OLLAMA_MODEL,
+                "model": selected_model,
                 "prompt": prompt,
                 "stream": False,
             },
@@ -412,6 +450,50 @@ async def search_documents(request: SearchRequest):
         "user_id": sanitize_user_id(request.user_id),
         "query": request.query,
         "results": results,
+    }
+
+
+@app.post("/route-message")
+async def route_message(request: RouteRequest):
+    raw_response = ask_ollama(request.message, model_name=ROUTER_MODEL)
+
+    cleaned = extract_first_json(raw_response)
+    fallback = {
+        "route": "text",
+        "response": "Hello! How can I help you?"
+    }
+
+    if not cleaned:
+        return {
+            "input": request.message,
+            "raw_response": raw_response,
+            "route_result": fallback,
+            "fallback_used": True,
+        }
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return {
+            "input": request.message,
+            "raw_response": raw_response,
+            "route_result": fallback,
+            "fallback_used": True,
+        }
+
+    if not is_valid_router_output(parsed):
+        return {
+            "input": request.message,
+            "raw_response": raw_response,
+            "route_result": fallback,
+            "fallback_used": True,
+        }
+
+    return {
+        "input": request.message,
+        "raw_response": raw_response,
+        "route_result": parsed,
+        "fallback_used": False,
     }
 
 
