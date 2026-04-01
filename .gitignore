@@ -25,6 +25,10 @@
 # misc
 .DS_Store
 *.pem
+/.firebase
+/.agents
+skills-lock.json
+public/index.html
 
 # debug
 npm-debug.log*
