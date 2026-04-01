@@ -23,7 +23,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Chat endpoint
+// ROUTER endpoint
 app.post("/chat", async (req, res) => {
   try {
     const { model, message } = req.body;
@@ -34,6 +34,9 @@ app.post("/chat", async (req, res) => {
       });
     }
 
+    console.log("MODEL USED:", model);
+    console.log("MESSAGE USED:", message);
+
     const response = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: "POST",
       headers: {
@@ -42,18 +45,21 @@ app.post("/chat", async (req, res) => {
       body: JSON.stringify({
         model: model,
         prompt: message,
-        stream: false,
-        format: "json"
+        stream: false
       })
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       return res.status(500).json({
-        error: "Ollama returned an error"
+        error: "Ollama returned an error",
+        details: errorText
       });
     }
 
     const data = await response.json();
+
+    console.log("RAW OLLAMA RESPONSE:", data.response);
 
     let parsed;
     try {
@@ -65,10 +71,7 @@ app.post("/chat", async (req, res) => {
       });
     }
 
-    return res.json({
-      route: parsed.route,
-      response: parsed.response
-    });
+    return res.json(parsed);
 
   } catch (error) {
     return res.status(500).json({
