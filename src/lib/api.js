@@ -14,13 +14,13 @@ export async function login(email, password) {
 }
 
 // SIGN UP: sends a POST request to /auth/signup
-export async function signup(name, email, password) {
+export async function signup(name, email, profile, password) {
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ profile: name, email, password }),
   });
 
   return res.json();
@@ -34,6 +34,19 @@ export async function forgotPassword(email) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ email }),
+  });
+
+  return res.json();
+}
+
+// VERIFY OTP: sends a POST request to /auth/verify
+export async function verifyOtp(email, otp) {
+  const res = await fetch(`${API_BASE}/auth/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, otp }),
   });
 
   return res.json();

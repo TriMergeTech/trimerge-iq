@@ -8,6 +8,7 @@ const initialValues = {
   fullName: "",
   email: "",
   password: "",
+  profile: "",
   confirmPassword: "",
 };
 
@@ -201,7 +202,7 @@ export default function SignupPage() {
     }
 
     try {
-      const result = await signup(formValues.fullName, formValues.email, formValues.password);
+      const result = await signup(formValues.fullName, formValues.email, formValues.profile, formValues.password);
       console.log("Sign up result:", result);
     } catch (error) {
       console.error("Sign up failed:", error);
@@ -251,6 +252,15 @@ export default function SignupPage() {
               onChange={handleChange}
               icon={<MailIcon />}
               error={errors.email}
+            />
+            <InputField
+              name="profile"
+              type="text"
+              label="Profile"
+              value={formValues.profile}
+              onChange={handleChange}
+              icon={<UserIcon />}
+              error={errors.profile}
             />
 
             <InputField
