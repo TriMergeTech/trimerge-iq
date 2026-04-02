@@ -7,10 +7,26 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const swaggerUi = require('swagger-ui-express');
 const { OAuth2Client } = require('google-auth-library');
+const cors = require('cors');
 
 setGlobalOptions({ maxInstances: 10 });
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://trimerge-backend--trimerge-nextjs-app.us-central1.hosted.app',
+];
+
 const app = express();
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('CORS policy does not allow access from this origin'), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 const swaggerSpec = {
