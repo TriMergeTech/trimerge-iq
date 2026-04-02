@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { forgotPassword } from "@/lib/api";
 
 const initialValues = {
   email: "",
@@ -117,7 +118,7 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const nextErrors = validate(formValues);
@@ -127,7 +128,13 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    setSubmitted(true);
+    try {
+      const result = await forgotPassword(formValues.email);
+      console.log("Forgot password result:", result);
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Forgot password request failed:", error);
+    }
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { login } from "@/lib/api";
 
 const initialValues = {
   email: "",
@@ -168,7 +169,7 @@ export default function LoginPage() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const nextErrors = validate(formValues);
@@ -178,7 +179,12 @@ export default function LoginPage() {
       return;
     }
 
-    alert("Login form is valid. Ready to connect to backend.");
+    try {
+      const result = await login(formValues.email, formValues.password);
+      console.log("Login result:", result);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   }
 
   return (

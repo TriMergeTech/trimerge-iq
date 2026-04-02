@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { signup } from "@/lib/api";
 
 const initialValues = {
   fullName: "",
@@ -189,7 +190,7 @@ export default function SignupPage() {
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const nextErrors = validate(formValues);
@@ -199,7 +200,12 @@ export default function SignupPage() {
       return;
     }
 
-    alert("Sign up form is valid. Ready to connect to backend.");
+    try {
+      const result = await signup(formValues.fullName, formValues.email, formValues.password);
+      console.log("Sign up result:", result);
+    } catch (error) {
+      console.error("Sign up failed:", error);
+    }
   }
 
   return (
