@@ -154,6 +154,46 @@ function InputField({
   );
 }
 
+function SelectField({
+  name,
+  label,
+  value,
+  onChange,
+  icon,
+  error,
+  options,
+}) {
+  return (
+    <label className="block">
+      <span className="sr-only">{label}</span>
+      <div
+        className={[
+          "flex items-center gap-3 rounded-xl border bg-white px-4 py-3",
+          error ? "border-rose-300" : "border-slate-200",
+        ].join(" ")}
+      >
+        <span className="text-slate-400">{icon}</span>
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          className="w-full bg-transparent text-base text-slate-700 outline-none"
+        >
+          <option value="" disabled>
+            {label}
+          </option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error ? <p className="mt-1 text-sm text-rose-500">{error}</p> : null}
+    </label>
+  );
+}
+
 export default function SignupPage() {
   const [formValues, setFormValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);
@@ -168,6 +208,7 @@ export default function SignupPage() {
 
     if (!values.fullName.trim()) nextErrors.fullName = "Full name is required.";
     if (!values.email.trim()) nextErrors.email = "Email is required.";
+    if (!values.profile) nextErrors.profile = "Profile is required.";
     if (!values.password) nextErrors.password = "Password is required.";
     if (values.password && !passwordRule.test(values.password)) {
       nextErrors.password = "Use 8 or more characters with at least one uppercase letter, one number, and one special character.";
@@ -202,7 +243,7 @@ export default function SignupPage() {
     }
 
     try {
-      const result = await signup(formValues.fullName, formValues.email, formValues.profile, formValues.password);
+      const result = await signup(formValues.email, formValues.profile, formValues.password);
       console.log("Sign up result:", result);
     } catch (error) {
       console.error("Sign up failed:", error);
@@ -253,14 +294,17 @@ export default function SignupPage() {
               icon={<MailIcon />}
               error={errors.email}
             />
-            <InputField
+            <SelectField
               name="profile"
-              type="text"
               label="Profile"
               value={formValues.profile}
               onChange={handleChange}
               icon={<UserIcon />}
               error={errors.profile}
+              options={[
+                { value: "staff", label: "Staff" },
+                { value: "client", label: "Client" },
+              ]}
             />
 
             <InputField
