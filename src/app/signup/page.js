@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { signup } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 const initialValues = {
   fullName: "",
@@ -195,10 +195,13 @@ function SelectField({
 }
 
 export default function SignupPage() {
+  const router = useRouter();
   const [formValues, setFormValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const passwordRule = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
   const hasAnyError = useMemo(() => Object.keys(errors).length > 0, [errors]);
@@ -227,6 +230,10 @@ export default function SignupPage() {
     const nextValues = { ...formValues, [name]: value };
     setFormValues(nextValues);
 
+    if (statusMessage) {
+      setStatusMessage("");
+    }
+
     if (hasAnyError) {
       setErrors(validate(nextValues));
     }
@@ -242,11 +249,41 @@ export default function SignupPage() {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      const result = await signup(formValues.email, formValues.profile, formValues.password);
-      console.log("Sign up result:", result);
+      const res = await fetch("https://trimerge-iq.onrender.com/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: formValues.fullName.trim(),
+          email: formValues.email.trim(),
+          password: formValues.password,
+          profile: formValues.profile,
+        }),
+      });
+
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+
+      if (res.status === 201) {
+        router.push(`/verify?email=${encodeURIComponent(formValues.email)}`);
+        return;
+      }
+
+      const errorMessage = payload?.message || "Sign up failed. Please try again.";
+      setStatusMessage(errorMessage);
     } catch (error) {
       console.error("Sign up failed:", error);
+      setStatusMessage("Unable to connect. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -348,11 +385,33 @@ export default function SignupPage() {
               }
             />
 
+            {statusMessage ? (
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {statusMessage}
+              </p>
+            ) : null}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-xl bg-gradient-to-r from-[#5E94EA] to-[#4A82DE] px-4 py-3 text-base font-semibold text-white shadow-[0_10px_20px_rgba(64,123,220,0.25)] transition-all hover:from-[#4F88E3] hover:to-[#3E74D3]"
+              disabled={isSubmitting}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#5E94EA] to-[#4A82DE] px-4 py-3 text-base font-semibold text-white shadow-[0_10px_20px_rgba(64,123,220,0.25)] transition-all hover:from-[#4F88E3] hover:to-[#3E74D3] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Sign Up
+              {isSubmitting ? (
+                <>
+                  <svg
+                    className="h-5 w-5 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  </svg>
+                  Signing Up...
+                </>
+              ) : (
+                "Sign Up"
+              )}
             </button>
           </form>
 
