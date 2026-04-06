@@ -12,7 +12,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 db.serialize(() => {
-  // Enforce foreign keys
   db.run(`PRAGMA foreign_keys = ON`);
 
   //////////////////////////////////////////////////////
@@ -120,6 +119,11 @@ db.serialize(() => {
   `);
 
   db.run(`
+    CREATE INDEX IF NOT EXISTS idx_messages_created_at
+    ON messages(created_at)
+  `);
+
+  db.run(`
     CREATE INDEX IF NOT EXISTS idx_staff_hire_date
     ON staff(hire_date)
   `);
@@ -127,6 +131,11 @@ db.serialize(() => {
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_staff_last_name
     ON staff(last_name)
+  `);
+
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_staff_first_name
+    ON staff(first_name)
   `);
 
   db.run(`
