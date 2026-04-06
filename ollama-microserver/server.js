@@ -1,60 +1,32 @@
-const db = require("./db");
 const express = require("express");
 const cors = require("cors");
+const axios = require("axios");
+const db = require("./db");
 
 const app = express();
-const PORT = 3002;
-const OLLAMA_URL = "http://localhost:11434";
+const PORT = process.env.PORT || 3002;
+
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+const ROUTER_MODEL = process.env.ROUTER_MODEL || "model_file_upgrade";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:latest";
 
 app.use(cors());
 app.use(express.json());
 
-//////////////////////////////////////////////////////
-// HELPER: SAVE MESSAGE
-//////////////////////////////////////////////////////
-function saveMessage(conversationId, role, content) {
-  return new Promise((resolve, reject) => {
-    db.run(
-      `INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)`,
-      [conversationId, role, content],
-      function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.lastID);
-        }
-      }
-    );
-  });
-}
+/* =========================================================
+   PROCESS-LEVEL ERROR HANDLERS
+========================================================= */
+process.on("uncaughtException", (err) => {
+  console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
 
-//////////////////////////////////////////////////////
-// HELPER: RUN DB.ALL AS PROMISE
-//////////////////////////////////////////////////////
-function dbAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
+process.on("unhandledRejection", (reason) => {
+  console.error("🔥 UNHANDLED PROMISE REJECTION:", reason);
+});
 
-//////////////////////////////////////////////////////
-// HELPER: RUN DB.GET AS PROMISE
-//////////////////////////////////////////////////////
-function dbGet(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
-
-//////////////////////////////////////////////////////
-// HELPER: RUN DB.RUN AS PROMISE
-//////////////////////////////////////////////////////
+/* =========================================================
+   DB HELPERS
+========================================================= */
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -64,75 +36,427 @@ function dbRun(sql, params = []) {
   });
 }
 
-//////////////////////////////////////////////////////
-// HELPER: VALIDATE LIMIT
-//////////////////////////////////////////////////////
-function parseLimit(limitValue) {
-  if (limitValue === undefined || limitValue === null || limitValue === "") {
-    return null;
-  }
-
-  const parsed = parseInt(limitValue, 10);
-
-  if (isNaN(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
 }
 
-//////////////////////////////////////////////////////
-// HELPER: EXECUTE TOOL
-//////////////////////////////////////////////////////
+function dbAll(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+/* =========================================================
+   GENERAL HELPERS
+========================================================= */
+function parseLimit(value, fallback = 10) {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n) || n <= 0) return fallback;
+  return n;
+}
+
+function normalizeDate(input) {
+  if (!input) return null;
+
+  const value = String(input).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  let match = value.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (match) {
+    const [, yyyy, mm, dd] = match;
+    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  }
+
+  match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, mm, dd, yyyy] = match;
+    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeToolName(toolname = "") {
+  const t = String(toolname).toLowerCase().trim();
+
+  if (
+    [
+      "staff",
+      "employee",
+      "employees",
+      "staff member",
+      "staff members",
+      "team member",
+      "team members",
+      "worker",
+      "workers",
+      "new hire",
+      "new hires",
+      "hired person",
+      "hired people"
+    ].includes(t)
+  ) {
+    return "staff";
+  }
+
+  if (["client", "clients", "customer", "customers"].includes(t)) {
+    return "clients";
+  }
+
+  return t;
+}
+
+/* =========================================================
+   INTENT / FILTER HELPERS
+========================================================= */
+function isStaffIntent(message = "") {
+  const lower = message.toLowerCase();
+
+  const peopleWords = [
+    "employee",
+    "employees",
+    "staff",
+    "staff member",
+    "staff members",
+    "team member",
+    "team members",
+    "worker",
+    "workers",
+    "new hire",
+    "new hires",
+    "hired person",
+    "hired people"
+  ];
+
+  const hireWords = [
+    "hire",
+    "hired",
+    "joined",
+    "started",
+    "employed"
+  ];
+
+  const hasPeopleWord = peopleWords.some((w) => lower.includes(w));
+  const hasHireWord = hireWords.some((w) => lower.includes(w));
+
+  return hasPeopleWord || hasHireWord;
+}
+
+function extractStaffFiltersFromMessage(message = "") {
+  const lower = message.toLowerCase();
+  const filters = {};
+
+  const yyyyMmDd = lower.match(/\b\d{4}-\d{1,2}-\d{1,2}\b/);
+  const yyyySlashMmDd = lower.match(/\b\d{4}\/\d{1,2}\/\d{1,2}\b/);
+  const mmDdYyyy = lower.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/);
+
+  if (yyyyMmDd) {
+    filters.hire_date = normalizeDate(yyyyMmDd[0]);
+    return filters;
+  }
+
+  if (yyyySlashMmDd) {
+    filters.hire_date = normalizeDate(yyyySlashMmDd[0]);
+    return filters;
+  }
+
+  if (mmDdYyyy) {
+    filters.hire_date = normalizeDate(mmDdYyyy[0]);
+    return filters;
+  }
+
+  const yearMatch = lower.match(/\b(20\d{2})\b/);
+  if (yearMatch && !yyyyMmDd && !yyyySlashMmDd && !mmDdYyyy) {
+    filters.year = yearMatch[1];
+    return filters;
+  }
+
+  if (lower.includes("last year")) {
+    filters.relative_year = "last_year";
+    return filters;
+  }
+
+  if (lower.includes("this year")) {
+    filters.year = String(new Date().getFullYear());
+    return filters;
+  }
+
+  if (lower.includes("today")) {
+    filters.hire_date = getTodayDate();
+    return filters;
+  }
+
+  return filters;
+}
+
+function fallbackRouter(message = "") {
+  if (isStaffIntent(message)) {
+    return {
+      route: "tools",
+      toolname: "staff",
+      mode: "retrieval",
+      filters: extractStaffFiltersFromMessage(message)
+    };
+  }
+
+  return {
+    route: "text",
+    response: "I can help with staff, clients, conversations, and service requests."
+  };
+}
+
+/* =========================================================
+   OLLAMA HELPERS
+========================================================= */
+async function callOllamaGenerate(model, prompt) {
+  const response = await axios.post(`${OLLAMA_URL}/api/generate`, {
+    model,
+    prompt,
+    stream: false
+  });
+
+  return response.data?.response || "";
+}
+
+async function routeMessageWithModel(message) {
+  const routerPrompt = `
+You are a strict JSON routing model.
+
+Return valid JSON only.
+Do not add markdown.
+Do not explain anything.
+
+Allowed shapes:
+
+For staff / employee retrieval:
+{
+  "route": "tools",
+  "toolname": "staff",
+  "mode": "retrieval",
+  "filters": {
+    "hire_date": "YYYY-MM-DD"
+  }
+}
+
+OR
+
+{
+  "route": "tools",
+  "toolname": "staff",
+  "mode": "retrieval",
+  "filters": {
+    "year": "2025"
+  }
+}
+
+OR
+
+{
+  "route": "tools",
+  "toolname": "staff",
+  "mode": "retrieval",
+  "filters": {
+    "relative_year": "last_year"
+  }
+}
+
+For client retrieval:
+{
+  "route": "tools",
+  "toolname": "clients",
+  "mode": "retrieval",
+  "filters": {}
+}
+
+For service creation requests:
+{
+  "route": "tools",
+  "toolname": "create_service",
+  "mode": "mutation"
+}
+
+For everything else:
+{
+  "route": "text",
+  "response": "plain text response"
+}
+
+User message:
+${message}
+`;
+
+  try {
+    const raw = await callOllamaGenerate(ROUTER_MODEL, routerPrompt);
+    const parsed = safeJsonParse(raw);
+
+    if (parsed && parsed.route) {
+      return parsed;
+    }
+
+    return fallbackRouter(message);
+  } catch (error) {
+    console.error("ROUTER MODEL ERROR:", error.message);
+    return fallbackRouter(message);
+  }
+}
+
+async function formatToolResultWithModel(userMessage, toolResult) {
+  const formatterPrompt = `
+You are a business response formatter.
+
+You will receive:
+1. a user question
+2. a database result in JSON
+
+Write exactly one plain-text response using only the provided database result.
+
+Rules:
+- Output plain text only
+- No markdown
+- No JSON
+- No explanation of reasoning
+- No follow-up question
+- If no matching rows exist, clearly say none were found
+
+User question:
+${userMessage}
+
+Database result:
+${JSON.stringify(toolResult, null, 2)}
+`;
+
+  try {
+    const raw = await callOllamaGenerate(OLLAMA_MODEL, formatterPrompt);
+    return raw.trim();
+  } catch (error) {
+    console.error("FORMATTER MODEL ERROR:", error.message);
+
+    if (Array.isArray(toolResult) && toolResult.length === 0) {
+      return "No matching records were found.";
+    }
+
+    if (Array.isArray(toolResult)) {
+      return JSON.stringify(toolResult, null, 2);
+    }
+
+    return "I found a result, but I could not format it.";
+  }
+}
+
+/* =========================================================
+   TOOL EXECUTION
+========================================================= */
 async function executeTool(parsed) {
-  if (parsed.route !== "tools") {
+  if (!parsed || parsed.route !== "tools") {
     return parsed;
   }
 
-  console.log("⚙️ Tool triggered:", parsed.toolname, "| mode:", parsed.mode);
+  const normalizedTool = normalizeToolName(parsed.toolname);
+  console.log("⚙️ Tool triggered:", normalizedTool, "| mode:", parsed.mode);
 
-  if (parsed.toolname === "staff" && parsed.mode === "retrieval") {
+  if (normalizedTool === "staff" && parsed.mode === "retrieval") {
     const filters = parsed.filters || {};
-    const startDate = filters.start_date || null;
-    const endDate = filters.end_date || null;
-    const limit = parseLimit(parsed.limit);
+    const limit = parseLimit(parsed.limit, 25);
+
+    const exactDate = normalizeDate(filters.hire_date || filters.exact_date);
+    const year = filters.year ? String(filters.year) : null;
+    const relativeYear = filters.relative_year || null;
+
+    let startDate = normalizeDate(filters.start_date);
+    let endDate = normalizeDate(filters.end_date);
+
+    const currentYear = new Date().getFullYear();
+
+    if (!year && relativeYear === "last_year") {
+      const y = currentYear - 1;
+      startDate = `${y}-01-01`;
+      endDate = `${y}-12-31`;
+    }
+
+    if (year) {
+      startDate = `${year}-01-01`;
+      endDate = `${year}-12-31`;
+    }
 
     let sql = `
-      SELECT id, first_name, last_name, email, phone, role_title, department, hire_date, status
+      SELECT
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        role_title,
+        department,
+        hire_date,
+        status,
+        created_at
       FROM staff
       WHERE 1=1
     `;
     const params = [];
 
-    if (startDate) {
-      sql += ` AND hire_date >= ?`;
-      params.push(startDate);
+    if (exactDate) {
+      sql += ` AND hire_date = ?`;
+      params.push(exactDate);
+    } else {
+      if (startDate) {
+        sql += ` AND hire_date >= ?`;
+        params.push(startDate);
+      }
+
+      if (endDate) {
+        sql += ` AND hire_date <= ?`;
+        params.push(endDate);
+      }
     }
 
-    if (endDate) {
-      sql += ` AND hire_date <= ?`;
-      params.push(endDate);
-    }
+    sql += ` ORDER BY hire_date DESC, id DESC LIMIT ?`;
+    params.push(limit);
 
-    sql += ` ORDER BY hire_date DESC`;
-
-    if (limit) {
-      sql += ` LIMIT ?`;
-      params.push(limit);
-    }
-
-    const rows = await dbAll(sql, params);
-    return rows;
+    return await dbAll(sql, params);
   }
 
-  if (parsed.toolname === "clients" && parsed.mode === "retrieval") {
+  if (normalizedTool === "clients" && parsed.mode === "retrieval") {
     const filters = parsed.filters || {};
-    const startDate = filters.start_date || null;
-    const endDate = filters.end_date || null;
-    const limit = parseLimit(parsed.limit);
+    const limit = parseLimit(parsed.limit, 25);
+
+    const startDate = normalizeDate(filters.start_date);
+    const endDate = normalizeDate(filters.end_date);
 
     let sql = `
-      SELECT id, client_name, contact_name, email, phone, company_type, status, onboard_date
+      SELECT
+        id,
+        client_name,
+        contact_name,
+        email,
+        phone,
+        company_type,
+        status,
+        onboard_date,
+        created_at
       FROM clients
       WHERE 1=1
     `;
@@ -148,207 +472,196 @@ async function executeTool(parsed) {
       params.push(endDate);
     }
 
-    sql += ` ORDER BY onboard_date DESC`;
+    sql += ` ORDER BY id DESC LIMIT ?`;
+    params.push(limit);
 
-    if (limit) {
-      sql += ` LIMIT ?`;
-      params.push(limit);
-    }
-
-    const rows = await dbAll(sql, params);
-    return rows;
+    return await dbAll(sql, params);
   }
 
-  if (parsed.toolname === "create_service" && parsed.mode === "mutation") {
+  if (normalizedTool === "create_service" && parsed.mode === "mutation") {
     return {
-      route: parsed.route,
-      toolname: parsed.toolname,
-      mode: parsed.mode,
-      status: "ready_for_execution"
+      status: "ready_for_execution",
+      message: "Service creation routing worked."
     };
   }
 
   return {
-    route: parsed.route,
+    status: "unsupported_tool",
     toolname: parsed.toolname,
-    mode: parsed.mode,
-    status: "unsupported_tool"
+    mode: parsed.mode
   };
 }
 
-//////////////////////////////////////////////////////
-// ROOT ROUTE
-//////////////////////////////////////////////////////
+/* =========================================================
+   BASIC ROUTES
+========================================================= */
 app.get("/", (req, res) => {
   res.json({
-    message: "TriMerge multi-user microserver is running"
+    message: "TriMerge microserver is running"
   });
 });
 
-//////////////////////////////////////////////////////
-// HEALTH CHECK
-//////////////////////////////////////////////////////
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    ollama: OLLAMA_URL
+    ollama_url: OLLAMA_URL,
+    router_model: ROUTER_MODEL,
+    ollama_model: OLLAMA_MODEL
   });
 });
 
-//////////////////////////////////////////////////////
-// CREATE OR GET USER
-//////////////////////////////////////////////////////
-app.post("/users", (req, res) => {
-  const { username } = req.body;
+/* =========================================================
+   USERS
+========================================================= */
+app.post("/users", async (req, res, next) => {
+  try {
+    const { username } = req.body;
 
-  if (!username) {
-    return res.status(400).json({
-      error: "username is required"
-    });
-  }
-
-  db.run(
-    `INSERT INTO users (username) VALUES (?)`,
-    [username],
-    function (err) {
-      if (err) {
-        if (err.message.includes("UNIQUE")) {
-          console.log("⚠️ User already exists, returning existing user");
-
-          db.get(
-            `SELECT * FROM users WHERE username = ?`,
-            [username],
-            (err2, row) => {
-              if (err2) {
-                console.error("GET EXISTING USER ERROR:", err2.message);
-                return res.status(500).json({
-                  error: "Failed to fetch existing user"
-                });
-              }
-
-              return res.json(row);
-            }
-          );
-
-          return;
-        }
-
-        console.error("CREATE USER ERROR:", err.message);
-        return res.status(500).json({
-          error: "Failed to create user",
-          details: err.message
-        });
-      }
-
-      res.json({
-        id: this.lastID,
-        username
+    if (!username || !String(username).trim()) {
+      return res.status(400).json({
+        error: "username is required"
       });
     }
-  );
-});
 
-//////////////////////////////////////////////////////
-// GET ALL USERS
-//////////////////////////////////////////////////////
-app.get("/users", (req, res) => {
-  db.all(
-    `SELECT * FROM users ORDER BY created_at DESC`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("GET USERS ERROR:", err.message);
-        return res.status(500).json({
-          error: "Failed to fetch users"
-        });
-      }
+    const result = await dbRun(
+      `INSERT INTO users (username) VALUES (?)`,
+      [String(username).trim()]
+    );
 
-      res.json(rows);
-    }
-  );
-});
+    const user = await dbGet(
+      `SELECT id, username, created_at FROM users WHERE id = ?`,
+      [result.lastID]
+    );
 
-//////////////////////////////////////////////////////
-// CREATE CONVERSATION
-//////////////////////////////////////////////////////
-app.post("/conversations", (req, res) => {
-  const { user_id, title } = req.body;
-
-  if (!user_id) {
-    return res.status(400).json({
-      error: "user_id is required"
-    });
+    res.status(201).json(user);
+  } catch (error) {
+    console.error("CREATE USER ERROR:", error.message);
+    next(error);
   }
+});
 
-  db.run(
-    `INSERT INTO conversations (user_id, title) VALUES (?, ?)`,
-    [user_id, title || "New Chat"],
-    function (err) {
-      if (err) {
-        console.error("CREATE CONVERSATION ERROR:", err.message);
-        return res.status(500).json({
-          error: "Failed to create conversation",
-          details: err.message
-        });
-      }
+app.get("/users", async (req, res, next) => {
+  try {
+    const rows = await dbAll(
+      `SELECT id, username, created_at FROM users ORDER BY id DESC`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("GET USERS ERROR:", error.message);
+    next(error);
+  }
+});
 
-      res.json({
-        id: this.lastID,
-        user_id,
-        title: title || "New Chat"
+/* =========================================================
+   CONVERSATIONS
+========================================================= */
+app.post("/conversations", async (req, res, next) => {
+  try {
+    const { user_id, title } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({
+        error: "user_id is required"
       });
     }
-  );
+
+    const result = await dbRun(
+      `INSERT INTO conversations (user_id, title) VALUES (?, ?)`,
+      [user_id, title || "New Chat"]
+    );
+
+    const conversation = await dbGet(
+      `SELECT id, user_id, title, created_at FROM conversations WHERE id = ?`,
+      [result.lastID]
+    );
+
+    res.status(201).json(conversation);
+  } catch (error) {
+    console.error("CREATE CONVERSATION ERROR:", error.message);
+    next(error);
+  }
 });
 
-//////////////////////////////////////////////////////
-// GET CONVERSATIONS FOR A USER
-//////////////////////////////////////////////////////
-app.get("/users/:userId/conversations", (req, res) => {
-  const { userId } = req.params;
+app.get("/conversations/:user_id", async (req, res, next) => {
+  try {
+    const { user_id } = req.params;
 
-  db.all(
-    `SELECT * FROM conversations WHERE user_id = ? ORDER BY created_at DESC`,
-    [userId],
-    (err, rows) => {
-      if (err) {
-        console.error("GET CONVERSATIONS ERROR:", err.message);
-        return res.status(500).json({
-          error: "Failed to fetch conversations"
-        });
-      }
+    const rows = await dbAll(
+      `
+      SELECT id, user_id, title, created_at
+      FROM conversations
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+      `,
+      [user_id]
+    );
 
-      res.json(rows);
+    res.json(rows);
+  } catch (error) {
+    console.error("GET CONVERSATIONS ERROR:", error.message);
+    next(error);
+  }
+});
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+app.post("/messages", async (req, res, next) => {
+  try {
+    const { conversation_id, role, content } = req.body;
+
+    if (!conversation_id || !role || !content) {
+      return res.status(400).json({
+        error: "conversation_id, role, and content are required"
+      });
     }
-  );
+
+    const result = await dbRun(
+      `INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)`,
+      [conversation_id, role, content]
+    );
+
+    const messageRow = await dbGet(
+      `
+      SELECT id, conversation_id, role, content, created_at
+      FROM messages
+      WHERE id = ?
+      `,
+      [result.lastID]
+    );
+
+    res.status(201).json(messageRow);
+  } catch (error) {
+    console.error("CREATE MESSAGE ERROR:", error.message);
+    next(error);
+  }
 });
 
-//////////////////////////////////////////////////////
-// GET MESSAGES FOR A CONVERSATION
-//////////////////////////////////////////////////////
-app.get("/conversations/:conversationId/messages", (req, res) => {
-  const { conversationId } = req.params;
+app.get("/messages/:conversation_id", async (req, res, next) => {
+  try {
+    const { conversation_id } = req.params;
 
-  db.all(
-    `SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC`,
-    [conversationId],
-    (err, rows) => {
-      if (err) {
-        console.error("GET MESSAGES ERROR:", err.message);
-        return res.status(500).json({
-          error: "Failed to fetch messages"
-        });
-      }
+    const rows = await dbAll(
+      `
+      SELECT id, conversation_id, role, content, created_at
+      FROM messages
+      WHERE conversation_id = ?
+      ORDER BY created_at ASC, id ASC
+      `,
+      [conversation_id]
+    );
 
-      res.json(rows);
-    }
-  );
+    res.json(rows);
+  } catch (error) {
+    console.error("GET MESSAGES ERROR:", error.message);
+    next(error);
+  }
 });
 
-//////////////////////////////////////////////////////
-// ADD STAFF
-//////////////////////////////////////////////////////
-app.post("/staff", async (req, res) => {
+/* =========================================================
+   STAFF / NEW HIRES
+========================================================= */
+app.post("/staff", async (req, res, next) => {
   try {
     const {
       first_name,
@@ -361,16 +674,26 @@ app.post("/staff", async (req, res) => {
       status
     } = req.body;
 
-    if (!first_name || !last_name || !hire_date) {
+    if (!first_name || !last_name) {
       return res.status(400).json({
-        error: "first_name, last_name, and hire_date are required"
+        error: "first_name and last_name are required"
       });
     }
 
+    const finalHireDate = normalizeDate(hire_date) || getTodayDate();
+
     const result = await dbRun(
       `
-      INSERT INTO staff
-      (first_name, last_name, email, phone, role_title, department, hire_date, status)
+      INSERT INTO staff (
+        first_name,
+        last_name,
+        email,
+        phone,
+        role_title,
+        department,
+        hire_date,
+        status
+      )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -380,82 +703,97 @@ app.post("/staff", async (req, res) => {
         phone || null,
         role_title || null,
         department || null,
-        hire_date,
+        finalHireDate,
         status || "active"
       ]
     );
 
     const row = await dbGet(
       `
-      SELECT id, first_name, last_name, email, phone, role_title, department, hire_date, status
+      SELECT
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        role_title,
+        department,
+        hire_date,
+        status,
+        created_at
       FROM staff
       WHERE id = ?
       `,
       [result.lastID]
     );
 
-    res.json(row);
+    res.status(201).json(row);
   } catch (error) {
     console.error("ADD STAFF ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to add staff"
-    });
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// GET STAFF
-// ?start_date=2026-03-01&end_date=2026-03-31&limit=5
-//////////////////////////////////////////////////////
-app.get("/staff", async (req, res) => {
+app.get("/staff", async (req, res, next) => {
   try {
-    const { start_date, end_date, limit } = req.query;
-
-    let sql = `
-      SELECT id, first_name, last_name, email, phone, role_title, department, hire_date, status
+    const rows = await dbAll(
+      `
+      SELECT
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        role_title,
+        department,
+        hire_date,
+        status,
+        created_at
       FROM staff
-      WHERE 1=1
-    `;
-    const params = [];
+      ORDER BY hire_date DESC, id DESC
+      `
+    );
 
-    if (start_date) {
-      sql += ` AND hire_date >= ?`;
-      params.push(start_date);
-    }
-
-    if (end_date) {
-      sql += ` AND hire_date <= ?`;
-      params.push(end_date);
-    }
-
-    sql += ` ORDER BY hire_date DESC`;
-
-    const parsedLimit = parseLimit(limit);
-    if (limit && !parsedLimit) {
-      return res.status(400).json({
-        error: "limit must be a positive number"
-      });
-    }
-
-    if (parsedLimit) {
-      sql += ` LIMIT ?`;
-      params.push(parsedLimit);
-    }
-
-    const rows = await dbAll(sql, params);
     res.json(rows);
   } catch (error) {
     console.error("GET STAFF ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to fetch staff"
-    });
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// ADD CLIENT
-//////////////////////////////////////////////////////
-app.post("/clients", async (req, res) => {
+/* =========================================================
+   DIRECT STAFF SEARCH
+========================================================= */
+app.post("/staff/search", async (req, res, next) => {
+  try {
+    const { hire_date, year, relative_year, start_date, end_date, limit } = req.body;
+
+    const parsed = {
+      route: "tools",
+      toolname: "staff",
+      mode: "retrieval",
+      limit: limit || 25,
+      filters: {
+        hire_date,
+        year,
+        relative_year,
+        start_date,
+        end_date
+      }
+    };
+
+    const result = await executeTool(parsed);
+    res.json(result);
+  } catch (error) {
+    console.error("STAFF SEARCH ERROR:", error.message);
+    next(error);
+  }
+});
+
+/* =========================================================
+   CLIENTS
+========================================================= */
+app.post("/clients", async (req, res, next) => {
   try {
     const {
       client_name,
@@ -473,10 +811,19 @@ app.post("/clients", async (req, res) => {
       });
     }
 
+    const finalOnboardDate = normalizeDate(onboard_date) || null;
+
     const result = await dbRun(
       `
-      INSERT INTO clients
-      (client_name, contact_name, email, phone, company_type, status, onboard_date)
+      INSERT INTO clients (
+        client_name,
+        contact_name,
+        email,
+        phone,
+        company_type,
+        status,
+        onboard_date
+      )
       VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -486,258 +833,181 @@ app.post("/clients", async (req, res) => {
         phone || null,
         company_type || null,
         status || "active",
-        onboard_date || null
+        finalOnboardDate
       ]
     );
 
     const row = await dbGet(
       `
-      SELECT id, client_name, contact_name, email, phone, company_type, status, onboard_date
+      SELECT
+        id,
+        client_name,
+        contact_name,
+        email,
+        phone,
+        company_type,
+        status,
+        onboard_date,
+        created_at
       FROM clients
       WHERE id = ?
       `,
       [result.lastID]
     );
 
-    res.json(row);
+    res.status(201).json(row);
   } catch (error) {
     console.error("ADD CLIENT ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to add client"
-    });
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// GET CLIENTS
-// ?start_date=2026-03-01&end_date=2026-03-31&limit=5
-//////////////////////////////////////////////////////
-app.get("/clients", async (req, res) => {
+app.get("/clients", async (req, res, next) => {
   try {
-    const { start_date, end_date, limit } = req.query;
-
-    let sql = `
-      SELECT id, client_name, contact_name, email, phone, company_type, status, onboard_date
+    const rows = await dbAll(
+      `
+      SELECT
+        id,
+        client_name,
+        contact_name,
+        email,
+        phone,
+        company_type,
+        status,
+        onboard_date,
+        created_at
       FROM clients
-      WHERE 1=1
-    `;
-    const params = [];
+      ORDER BY id DESC
+      `
+    );
 
-    if (start_date) {
-      sql += ` AND onboard_date >= ?`;
-      params.push(start_date);
-    }
-
-    if (end_date) {
-      sql += ` AND onboard_date <= ?`;
-      params.push(end_date);
-    }
-
-    sql += ` ORDER BY onboard_date DESC`;
-
-    const parsedLimit = parseLimit(limit);
-    if (limit && !parsedLimit) {
-      return res.status(400).json({
-        error: "limit must be a positive number"
-      });
-    }
-
-    if (parsedLimit) {
-      sql += ` LIMIT ?`;
-      params.push(parsedLimit);
-    }
-
-    const rows = await dbAll(sql, params);
     res.json(rows);
   } catch (error) {
     console.error("GET CLIENTS ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to fetch clients"
-    });
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// CREATE SERVICE REQUEST
-//////////////////////////////////////////////////////
-app.post("/service-requests", async (req, res) => {
+/* =========================================================
+   ROUTER TEST
+========================================================= */
+app.post("/route-message", async (req, res, next) => {
   try {
-    const {
-      client_id,
-      service_type,
-      description,
-      request_status,
-      priority,
-      assigned_staff_id
-    } = req.body;
+    const { message } = req.body;
 
-    if (!service_type) {
+    if (!message) {
       return res.status(400).json({
-        error: "service_type is required"
+        error: "message is required"
       });
     }
 
-    const result = await dbRun(
-      `
-      INSERT INTO service_requests
-      (client_id, service_type, description, request_status, priority, assigned_staff_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-      `,
-      [
-        client_id || null,
-        service_type,
-        description || null,
-        request_status || "pending",
-        priority || "normal",
-        assigned_staff_id || null
-      ]
-    );
-
-    const row = await dbGet(
-      `
-      SELECT id, client_id, service_type, description, request_status, priority, assigned_staff_id, created_at
-      FROM service_requests
-      WHERE id = ?
-      `,
-      [result.lastID]
-    );
-
-    res.json(row);
+    const parsed = await routeMessageWithModel(message);
+    res.json(parsed);
   } catch (error) {
-    console.error("CREATE SERVICE REQUEST ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to create service request"
-    });
+    console.error("ROUTE MESSAGE ERROR:", error.message);
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// GET SERVICE REQUESTS
-// ?limit=5
-//////////////////////////////////////////////////////
-app.get("/service-requests", async (req, res) => {
+/* =========================================================
+   EXECUTE TOOL TEST
+========================================================= */
+app.post("/execute-tool", async (req, res, next) => {
   try {
-    const { limit } = req.query;
+    const parsed = req.body;
 
-    let sql = `
-      SELECT id, client_id, service_type, description, request_status, priority, assigned_staff_id, created_at
-      FROM service_requests
-      ORDER BY created_at DESC
-    `;
-    const params = [];
-
-    const parsedLimit = parseLimit(limit);
-    if (limit && !parsedLimit) {
+    if (!parsed || !parsed.route) {
       return res.status(400).json({
-        error: "limit must be a positive number"
+        error: "Valid parsed tool JSON is required"
       });
     }
 
-    if (parsedLimit) {
-      sql += ` LIMIT ?`;
-      params.push(parsedLimit);
-    }
-
-    const rows = await dbAll(sql, params);
-    res.json(rows);
+    const result = await executeTool(parsed);
+    res.json(result);
   } catch (error) {
-    console.error("GET SERVICE REQUESTS ERROR:", error.message);
-    res.status(500).json({
-      error: "Failed to fetch service requests"
-    });
+    console.error("EXECUTE TOOL ERROR:", error.message);
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// CHAT ROUTE
-//////////////////////////////////////////////////////
-app.post("/chat", async (req, res) => {
+/* =========================================================
+   CHAT
+========================================================= */
+app.post("/chat", async (req, res, next) => {
   try {
     const { model, message, conversation_id } = req.body;
 
-    if (!model || !message || !conversation_id) {
+    if (!message) {
       return res.status(400).json({
-        error: "model, message, and conversation_id are required"
+        error: "message is required"
       });
     }
 
-    console.log("MODEL USED:", model);
-    console.log("MESSAGE USED:", message);
-    console.log("CONVERSATION ID:", conversation_id);
-
-    try {
-      const userMessageId = await saveMessage(conversation_id, "user", message);
-      console.log("✅ Saved user message ID:", userMessageId);
-    } catch (err) {
-      console.error("SAVE USER MESSAGE ERROR:", err.message);
+    if (!conversation_id) {
+      return res.status(400).json({
+        error: "conversation_id is required"
+      });
     }
 
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: model,
-        prompt: message,
-        stream: false
-      })
+    await dbRun(
+      `INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)`,
+      [conversation_id, "user", message]
+    );
+
+    const parsed = await routeMessageWithModel(message);
+
+    let finalReply = "";
+    let toolResult = null;
+
+    if (parsed.route === "tools") {
+      toolResult = await executeTool(parsed);
+      finalReply = await formatToolResultWithModel(message, toolResult);
+    } else {
+      finalReply =
+        parsed.response ||
+        "I understood your message, but I do not have a response.";
+    }
+
+    await dbRun(
+      `INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)`,
+      [conversation_id, "assistant", finalReply]
+    );
+
+    res.json({
+      model_used: model || OLLAMA_MODEL,
+      router_model: ROUTER_MODEL,
+      parsed_route: parsed,
+      tool_result: toolResult,
+      response: finalReply
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(500).json({
-        error: "Ollama returned an error",
-        details: errorText
-      });
-    }
-
-    const data = await response.json();
-
-    console.log("RAW OLLAMA RESPONSE:", data.response);
-
-    let parsed;
-    try {
-      parsed = JSON.parse(data.response);
-    } catch (e) {
-      return res.status(500).json({
-        error: "Invalid JSON from model",
-        raw: data.response
-      });
-    }
-
-    const finalResponse = await executeTool(parsed);
-
-    try {
-      const assistantMessageId = await saveMessage(
-        conversation_id,
-        "assistant",
-        JSON.stringify(finalResponse)
-      );
-      console.log("✅ Saved assistant message ID:", assistantMessageId);
-    } catch (err) {
-      console.error("SAVE ASSISTANT MESSAGE ERROR:", err.message);
-    }
-
-    return res.json(finalResponse);
   } catch (error) {
-    return res.status(500).json({
-      error: "Failed to connect to Ollama",
-      details: error.message
-    });
+    console.error("CHAT ERROR:", error.message);
+    next(error);
   }
 });
 
-//////////////////////////////////////////////////////
-// START SERVER
-//////////////////////////////////////////////////////
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+/* =========================================================
+   GLOBAL ERROR HANDLER
+========================================================= */
+app.use((err, req, res, next) => {
+  console.error("🔥 GLOBAL ERROR HANDLER:", err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(err.status || 500).json({
+    error: "Internal Server Error",
+    details: err.message || "Something went wrong"
+  });
 });
 
-//////////////////////////////////////////////////////
-// CATCH SERVER ERRORS
-//////////////////////////////////////////////////////
-server.on("error", (error) => {
-  console.error("Server error:", error);
+/* =========================================================
+   START SERVER
+========================================================= */
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ OLLAMA_URL: ${OLLAMA_URL}`);
+  console.log(`✅ ROUTER_MODEL: ${ROUTER_MODEL}`);
+  console.log(`✅ OLLAMA_MODEL: ${OLLAMA_MODEL}`);
 });
