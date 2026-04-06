@@ -14,6 +14,7 @@ setGlobalOptions({ maxInstances: 10 });
 const allowedOrigins = [
   'http://localhost:3000',
   'https://trimerge-backend--trimerge-nextjs-app.us-central1.hosted.app',
+  'https://trimerge-iq.onrender.com',
 ];
 
 const app = express();
