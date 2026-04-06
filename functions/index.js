@@ -39,11 +39,12 @@ const swaggerSpec = {
     schemas: {
       SignupRequest: {
         type: 'object',
-        required: ['email', 'password', 'profile'],
+        required: ['fullName', 'email', 'profile', 'password'],
         properties: {
+          fullName: { type: 'string', example: 'Jane Doe' },
           email: { type: 'string', example: 'user@example.com' },
-          password: { type: 'string', example: 'SecurePassword123' },
           profile: { type: 'string', enum: ['staff', 'client'] },
+          password: { type: 'string', example: 'SecurePassword123' },
         },
       },
       VerifyRequest: {
@@ -283,11 +284,12 @@ app.get('/', (req, res) => {
 
 app.post('/auth/signup', async (req, res) => {
   await connectDb();
-  const { email, password, profile } = req.body;
+  const { fullName, email, profile, password } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const normalizedFullName = typeof fullName === 'string' ? fullName.trim() : '';
 
-  if (!normalizedEmail || !password || !profile) {
-    return res.status(400).json({ message: 'Email, password, and profile are required' });
+  if (!normalizedFullName || !normalizedEmail || !profile || !password) {
+    return res.status(400).json({ message: 'Full name, email, profile, and password are required' });
   }
 
   if (!['staff', 'client'].includes(profile)) {
@@ -301,7 +303,7 @@ app.post('/auth/signup', async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(password, 12);
-    const user = { email: normalizedEmail, password_hash, profile, is_verified: false, created_at: new Date() };
+    const user = { fullName: normalizedFullName, email: normalizedEmail, password_hash, profile, is_verified: false, created_at: new Date() };
     await users.insertOne(user);
 
     const otp = createOtp();
@@ -385,7 +387,7 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   await connectDb();
   const user = await users.findOne({ _id: new ObjectId(req.user.userId) });
   if (!user) return res.status(404).json({ message: 'User not found' });
-  return res.json({ email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
+  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
 });
 
 app.post('/auth/forgot-password', async (req, res) => {

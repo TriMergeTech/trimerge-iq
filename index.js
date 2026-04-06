@@ -3,7 +3,8 @@ const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
 const swaggerUi = require('swagger-ui-express');
 const { OAuth2Client } = require('google-auth-library');
 const cors = require('cors');
@@ -36,11 +37,12 @@ const swaggerSpec = {
     schemas: {
       SignupRequest: {
         type: 'object',
-        required: ['email', 'password', 'profile'],
+        required: ['fullName', 'email', 'profile', 'password'],
         properties: {
+          fullName: { type: 'string', example: 'Jane Doe' },
           email: { type: 'string', example: 'user@example.com' },
-          password: { type: 'string', example: 'SecurePassword123' },
           profile: { type: 'string', enum: ['staff', 'client'] },
+          password: { type: 'string', example: 'SecurePassword123' },
         },
       },
       VerifyRequest: {
@@ -195,10 +197,9 @@ const {
   MONGODB_URI,
   JWT_SECRET,
   GOOGLE_CLIENT_ID,
-  EMAIL_USER,
-  EMAIL_PASS,
-  EMAIL_HOST = 'smtp.gmail.com',
-  EMAIL_PORT = 465,
+  MAILGUN_API_KEY,
+  MAILGUN_DOMAIN,
+  MAILGUN_SENDER,
 } = process.env;
 
 if (!MONGODB_URI) {
@@ -252,20 +253,17 @@ function authMiddleware(req, res, next) {
   }
 }
 
-const transporter = nodemailer.createTransport({
-  host: EMAIL_HOST,
-  port: Number(EMAIL_PORT),
-  secure: Number(EMAIL_PORT) === 465,
-  auth: EMAIL_USER && EMAIL_PASS ? { user: EMAIL_USER, pass: EMAIL_PASS } : undefined,
-});
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({ username: 'api', key: MAILGUN_API_KEY });
 
 async function sendEmail({ to, subject, text, html }) {
-  // DEBUG MODE: This prints the OTP to your terminal instead of sending an actual email
-  console.log('--------------------------');
-  console.log('📧 DEBUG EMAIL SENT TO:', to);
-  console.log('🔢 YOUR OTP CODE IS:', text);
-  console.log('--------------------------');
-  return; // Skip the actual sending for now
+  await mg.messages.create(MAILGUN_DOMAIN, {
+    from: `TriMerge IQ <${MAILGUN_SENDER}>`,
+    to,
+    subject,
+    text,
+    html,
+  });
 }
 
 async function connectDb() {
@@ -287,11 +285,12 @@ app.get('/', (req, res) => {
 });
 
 app.post('/auth/signup', async (req, res) => {
-  const { email, password, profile } = req.body;
+  const { fullName, email, profile, password } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const normalizedFullName = typeof fullName === 'string' ? fullName.trim() : '';
 
-  if (!normalizedEmail || !password || !profile) {
-    return res.status(400).json({ message: 'Email, password, and profile are required' });
+  if (!normalizedFullName || !normalizedEmail || !profile || !password) {
+    return res.status(400).json({ message: 'Full name, email, profile, and password are required' });
   }
 
   if (!['staff', 'client'].includes(profile)) {
@@ -306,6 +305,7 @@ app.post('/auth/signup', async (req, res) => {
 
     const password_hash = await bcrypt.hash(password, 12);
     const user = {
+      fullName: normalizedFullName,
       email: normalizedEmail,
       password_hash,
       profile,
@@ -417,7 +417,7 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
     return res.status(404).json({ message: 'User not found' });
   }
 
-  return res.json({ email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
+  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
 });
 
 app.post('/auth/forgot-password', async (req, res) => {
