@@ -16,6 +16,9 @@
 # next.js
 /.next/
 /out/
+.firebase/
+.next-dev.log
+.next-dev.err.log
 
 # production
 /build
