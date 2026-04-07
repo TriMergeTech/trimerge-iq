@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { forgotPassword } from "@/lib/api";
 
 const initialValues = {
@@ -94,9 +95,10 @@ function InputField({
 }
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const hasAnyError = useMemo(() => Object.keys(errors).length > 0, [errors]);
 
@@ -128,12 +130,14 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    setLoading(true);
     try {
-      const result = await forgotPassword(formValues.email);
-      console.log("Forgot password result:", result);
-      setSubmitted(true);
+      await forgotPassword(formValues.email);
+      router.push("/reset-password");
     } catch (error) {
       console.error("Forgot password request failed:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -151,56 +155,48 @@ export default function ForgotPasswordPage() {
         </section>
 
         <section className="rounded-3xl bg-white/90 p-6 shadow-[0_12px_35px_rgba(26,61,130,0.12)] ring-1 ring-white/70 sm:p-8">
-          {!submitted ? (
-            <>
-              <h2 className="mb-2 text-center text-2xl font-semibold text-[#334E8A]">Forgot Password</h2>
-              <p className="mb-6 text-center text-sm text-slate-600">Enter your email and we'll send you a password reset link.</p>
+          <h2 className="mb-2 text-center text-2xl font-semibold text-[#334E8A]">Forgot Password</h2>
+          <p className="mb-6 text-center text-sm text-slate-600">Enter your email and we'll send you a password reset link.</p>
 
-              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                <InputField
-                  name="email"
-                  type="email"
-                  label="Email"
-                  value={formValues.email}
-                  onChange={handleChange}
-                  icon={<MailIcon />}
-                  error={errors.email}
-                />
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+            <InputField
+              name="email"
+              type="email"
+              label="Email"
+              value={formValues.email}
+              onChange={handleChange}
+              icon={<MailIcon />}
+              error={errors.email}
+            />
 
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#5E94EA] to-[#4A82DE] px-4 py-3 text-base font-semibold text-white shadow-[0_10px_20px_rgba(64,123,220,0.25)] transition-all hover:from-[#4F88E3] hover:to-[#3E74D3]"
-                >
-                  Send Reset Link
-                </button>
-              </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#5E94EA] to-[#4A82DE] px-4 py-3 text-base font-semibold text-white shadow-[0_10px_20px_rgba(64,123,220,0.25)] transition-all hover:from-[#4F88E3] hover:to-[#3E74D3] disabled:opacity-70"
+            >
+              {loading ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Sending…
+                </>
+              ) : (
+                "Reset Password"
+              )}
+            </button>
+          </form>
 
-              <div className="mt-6 text-center">
-                <span className="text-sm text-slate-500">Back to </span>
-                <Link
-                  href="/login"
-                  className="text-base font-semibold text-[#4A82DE] transition-colors hover:text-[#396FC5]"
-                >
-                  Log In
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-8 flex justify-center">
-                <EmailConfirmationIcon />
-              </div>
-              <h2 className="mb-6 text-center text-2xl font-semibold text-[#334E8A]">Check Your Email</h2>
-              <p className="mb-4 text-center text-sm text-slate-600">If this email exists in our system, you will receive a password reset link shortly.</p>
-              <p className="mb-8 text-center text-sm text-slate-600">Please check your inbox and click the link provided to reset your password.</p>
-              <Link
-                href="/login"
-                className="block w-full rounded-xl bg-gradient-to-r from-[#5E94EA] to-[#4A82DE] px-4 py-3 text-center text-base font-semibold text-white shadow-[0_10px_20px_rgba(64,123,220,0.25)] transition-all hover:from-[#4F88E3] hover:to-[#3E74D3]"
-              >
-                Back to Log In
-              </Link>
-            </>
-          )}
+          <div className="mt-6 text-center">
+            <span className="text-sm text-slate-500">Back to </span>
+            <Link
+              href="/login"
+              className="text-base font-semibold text-[#4A82DE] transition-colors hover:text-[#396FC5]"
+            >
+              Log In
+            </Link>
+          </div>
         </section>
       </div>
     </main>

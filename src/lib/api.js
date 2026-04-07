@@ -51,3 +51,16 @@ export async function verifyOtp(email, otp) {
 
   return res.json();
 }
+
+// RESET PASSWORD: sends a POST request to /auth/reset-password
+export async function resetPassword(token, password) {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, password }),
+  });
+
+  return res.json();
+}
