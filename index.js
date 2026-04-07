@@ -182,9 +182,33 @@ const swaggerSpec = {
         summary: 'Get authenticated user profile',
         security: [{ bearerAuth: [] }],
         responses: {
-          200: { description: 'Returns user profile' },
+          200: { description: 'Returns user profile including role' },
           401: { description: 'Unauthorized' },
           404: { description: 'User not found' },
+        },
+      },
+    },
+    '/auth/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List all users — admin only',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all users (passwords excluded)' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: admin role required' },
+        },
+      },
+    },
+    '/auth/dashboard': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Staff/Admin dashboard',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Welcome message for staff and admin users' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin role required' },
         },
       },
     },
@@ -254,6 +278,15 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    }
+    next();
+  };
+}
+
 const mailgun = new Mailgun(formData);
 const mg = mailgun.client({ username: 'api', key: MAILGUN_API_KEY });
 
@@ -310,6 +343,7 @@ app.post('/auth/signup', async (req, res) => {
       email: normalizedEmail,
       password_hash,
       profile,
+      role: profile,
       is_verified: false,
       created_at: new Date(),
     };
@@ -360,7 +394,7 @@ app.post('/auth/verify', async (req, res) => {
   await users.updateOne({ _id: user._id }, { $set: { is_verified: true } });
   await otpVerifications.deleteMany({ email: normalizedEmail });
 
-  const refresh_token = createRefreshToken({ userId: user._id.toString(), email: user.email, profile: user.profile });
+  const refresh_token = createRefreshToken({ userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role });
   return res.json({ message: 'Account verified', refresh_token });
 });
 
@@ -386,7 +420,7 @@ app.post('/auth/login', async (req, res) => {
     return res.status(403).json({ message: 'Please verify your account before logging in' });
   }
 
-  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile };
+  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
   const access_token = createAccessToken(payload);
   const refresh_token = createRefreshToken(payload);
 
@@ -405,7 +439,7 @@ app.post('/auth/refresh', async (req, res) => {
       throw new Error('Token is not a refresh token');
     }
 
-    const access_token = createAccessToken({ userId: payload.userId, email: payload.email, profile: payload.profile });
+    const access_token = createAccessToken({ userId: payload.userId, email: payload.email, profile: payload.profile, role: payload.role });
     return res.json({ access_token });
   } catch (error) {
     return res.status(401).json({ message: 'Invalid or expired refresh token' });
@@ -418,7 +452,16 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
     return res.status(404).json({ message: 'User not found' });
   }
 
-  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
+  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, role: user.role, is_verified: user.is_verified, created_at: user.created_at });
+});
+
+app.get('/auth/admin/users', authMiddleware, requireRole('admin'), async (req, res) => {
+  const allUsers = await users.find({}, { projection: { password_hash: 0 } }).toArray();
+  return res.json({ users: allUsers });
+});
+
+app.get('/auth/dashboard', authMiddleware, requireRole('admin', 'staff'), async (req, res) => {
+  return res.json({ message: `Welcome to the dashboard, ${req.user.email}`, role: req.user.role });
 });
 
 app.post('/auth/forgot-password', async (req, res) => {
@@ -496,6 +539,7 @@ app.post('/auth/google', async (req, res) => {
         email,
         password_hash: null,
         profile,
+        role: profile,
         is_verified: true,
         google_id: googlePayload.sub,
         created_at: new Date(),
@@ -503,7 +547,7 @@ app.post('/auth/google', async (req, res) => {
       user = await users.findOne({ _id: result.insertedId });
     }
 
-    const tokenPayload = { userId: user._id.toString(), email: user.email, profile: user.profile };
+    const tokenPayload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
     const access_token = createAccessToken(tokenPayload);
     const refresh_token = createRefreshToken(tokenPayload);
 
@@ -514,7 +558,7 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error(err);
   return res.status(500).json({ message: 'Unexpected server error' });
 });

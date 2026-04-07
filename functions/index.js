@@ -184,9 +184,33 @@ const swaggerSpec = {
         summary: 'Get authenticated user profile',
         security: [{ bearerAuth: [] }],
         responses: {
-          200: { description: 'Returns user profile' },
+          200: { description: 'Returns user profile including role' },
           401: { description: 'Unauthorized' },
           404: { description: 'User not found' },
+        },
+      },
+    },
+    '/auth/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List all users — admin only',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all users (passwords excluded)' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: admin role required' },
+        },
+      },
+    },
+    '/auth/dashboard': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Staff/Admin dashboard',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Welcome message for staff and admin users' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin role required' },
         },
       },
     },
@@ -247,6 +271,15 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    }
+    next();
+  };
+}
+
 const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
   port: Number(EMAIL_PORT),
@@ -304,7 +337,7 @@ app.post('/auth/signup', async (req, res) => {
     }
 
     const password_hash = await bcrypt.hash(password, 12);
-    const user = { fullName: normalizedFullName, email: normalizedEmail, password_hash, profile, is_verified: false, created_at: new Date() };
+    const user = { fullName: normalizedFullName, email: normalizedEmail, password_hash, profile, role: profile, is_verified: false, created_at: new Date() };
     await users.insertOne(user);
 
     const otp = createOtp();
@@ -347,7 +380,7 @@ app.post('/auth/verify', async (req, res) => {
   await users.updateOne({ _id: user._id }, { $set: { is_verified: true } });
   await otpVerifications.deleteMany({ email: normalizedEmail });
 
-  const refresh_token = createRefreshToken({ userId: user._id.toString(), email: user.email, profile: user.profile });
+  const refresh_token = createRefreshToken({ userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role });
   return res.json({ message: 'Account verified', refresh_token });
 });
 
@@ -367,7 +400,7 @@ app.post('/auth/login', async (req, res) => {
   if (!isValid) return res.status(401).json({ message: 'Invalid email or password' });
   if (!user.is_verified) return res.status(403).json({ message: 'Please verify your account before logging in' });
 
-  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile };
+  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
   return res.json({ access_token: createAccessToken(payload), refresh_token: createRefreshToken(payload) });
 });
 
@@ -378,7 +411,7 @@ app.post('/auth/refresh', async (req, res) => {
   try {
     const payload = jwt.verify(refresh_token, JWT_SECRET);
     if (payload.tokenType !== 'refresh') throw new Error('Not a refresh token');
-    return res.json({ access_token: createAccessToken({ userId: payload.userId, email: payload.email, profile: payload.profile }) });
+    return res.json({ access_token: createAccessToken({ userId: payload.userId, email: payload.email, profile: payload.profile, role: payload.role }) });
   } catch (error) {
     return res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
@@ -388,7 +421,17 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   await connectDb();
   const user = await users.findOne({ _id: new ObjectId(req.user.userId) });
   if (!user) return res.status(404).json({ message: 'User not found' });
-  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, is_verified: user.is_verified, created_at: user.created_at });
+  return res.json({ fullName: user.fullName, email: user.email, profile: user.profile, role: user.role, is_verified: user.is_verified, created_at: user.created_at });
+});
+
+app.get('/auth/admin/users', authMiddleware, requireRole('admin'), async (req, res) => {
+  await connectDb();
+  const allUsers = await users.find({}, { projection: { password_hash: 0 } }).toArray();
+  return res.json({ users: allUsers });
+});
+
+app.get('/auth/dashboard', authMiddleware, requireRole('admin', 'staff'), async (req, res) => {
+  return res.json({ message: `Welcome to the dashboard, ${req.user.email}`, role: req.user.role });
 });
 
 app.post('/auth/forgot-password', async (req, res) => {
@@ -457,13 +500,13 @@ app.post('/auth/google', async (req, res) => {
         return res.status(400).json({ message: 'Profile ("staff" or "client") is required for new users' });
       }
       const result = await users.insertOne({
-        email, password_hash: null, profile, is_verified: true,
+        email, password_hash: null, profile, role: profile, is_verified: true,
         google_id: googlePayload.sub, created_at: new Date(),
       });
       user = await users.findOne({ _id: result.insertedId });
     }
 
-    const tokenPayload = { userId: user._id.toString(), email: user.email, profile: user.profile };
+    const tokenPayload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
     return res.json({ access_token: createAccessToken(tokenPayload), refresh_token: createRefreshToken(tokenPayload) });
   } catch (error) {
     console.error(error);
@@ -471,7 +514,7 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error(err);
   return res.status(500).json({ message: 'Unexpected server error' });
 });
