@@ -400,7 +400,7 @@ app.post('/auth/login', async (req, res) => {
   if (!isValid) return res.status(401).json({ message: 'Invalid email or password' });
   if (!user.is_verified) return res.status(403).json({ message: 'Please verify your account before logging in' });
 
-  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
+  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role || user.profile || 'client' };
   return res.json({ access_token: createAccessToken(payload), refresh_token: createRefreshToken(payload) });
 });
 

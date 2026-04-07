@@ -420,7 +420,7 @@ app.post('/auth/login', async (req, res) => {
     return res.status(403).json({ message: 'Please verify your account before logging in' });
   }
 
-  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role };
+  const payload = { userId: user._id.toString(), email: user.email, profile: user.profile, role: user.role || user.profile || 'client' };
   const access_token = createAccessToken(payload);
   const refresh_token = createRefreshToken(payload);
 
