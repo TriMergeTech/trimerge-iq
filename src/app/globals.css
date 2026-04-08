@@ -202,7 +202,7 @@ textarea {
 
 .chat-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+  scrollbar-color: rgb(212 175 55 / 0.42) transparent;
 }
 
 .chat-scrollbar::-webkit-scrollbar {
@@ -216,12 +216,20 @@ textarea {
 .chat-scrollbar::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.28);
+  background: linear-gradient(
+    180deg,
+    rgb(212 175 55 / 0.68),
+    rgb(30 91 168 / 0.58)
+  );
   background-clip: padding-box;
 }
 
 .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.38);
+  background: linear-gradient(
+    180deg,
+    rgb(224 188 73 / 0.82),
+    rgb(30 91 168 / 0.7)
+  );
   background-clip: padding-box;
 }
 
