@@ -127,9 +127,9 @@ export default function SearchPage() {
   };
 
   return (
-    <section className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-4 py-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-12 text-center">
+    <section className="page-shell min-h-[calc(100vh-80px)] bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-4 py-12">
+      <div className="mx-auto max-w-[1500px]">
+        <div className="page-section mb-12 text-center">
           <h1 className="text-4xl font-bold text-white">Search & Explore</h1>
           <p className="mt-4 text-lg text-blue-200">
             Query input and result exploration with filtering and ranked
@@ -137,11 +137,11 @@ export default function SearchPage() {
           </p>
         </div>
 
-        <div className="mb-8 flex justify-center gap-4">
+        <div className="page-section mb-8 flex justify-center gap-4 [animation-delay:90ms]">
           <button
             type="button"
             onClick={() => setActiveView("search")}
-            className={`flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg transition-all ${
+            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
               activeView === "search"
                 ? "bg-[#1e5ba8] text-white"
                 : "bg-white/10 text-white hover:bg-white/20"
@@ -153,7 +153,7 @@ export default function SearchPage() {
           <button
             type="button"
             onClick={() => setActiveView("filter")}
-            className={`flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg transition-all ${
+            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
               activeView === "filter"
                 ? "bg-[#d4af37] text-gray-900"
                 : "bg-white/10 text-white hover:bg-white/20"
@@ -168,7 +168,7 @@ export default function SearchPage() {
               setActiveView("explore");
               handleRunQuery();
             }}
-            className={`flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg transition-all ${
+            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
               activeView === "explore"
                 ? "bg-[#808080] text-white"
                 : "bg-white/10 text-white hover:bg-white/20"
@@ -179,9 +179,9 @@ export default function SearchPage() {
           </button>
         </div>
 
-        <div className="rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-lg">
+        <div className="page-section rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-lg [animation-delay:160ms]">
           {activeView === "search" && (
-            <div className="max-w-4xl">
+            <div className="max-w-[1100px]">
               <h2 className="mb-6 text-2xl font-bold text-white">Search Query</h2>
               <div className="space-y-4">
                 <div className="relative">
@@ -193,12 +193,12 @@ export default function SearchPage() {
                       event.key === "Enter" ? handleSearch() : undefined
                     }
                     placeholder="Enter your search query..."
-                    className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-6 py-4 pr-32 text-lg text-white outline-none placeholder:text-blue-200 focus:ring-2 focus:ring-[#1e5ba8]"
+                    className="interactive-input w-full rounded-xl border-2 border-white/20 bg-white/5 px-6 py-4 pr-32 text-lg text-white outline-none placeholder:text-blue-200 focus:ring-2 focus:ring-[#1e5ba8]"
                   />
                   <button
                     type="button"
                     onClick={handleSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#1e5ba8] px-6 py-2 font-semibold text-white transition-colors hover:bg-[#174a8f]"
+                    className="interactive-button absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#1e5ba8] px-6 py-2 font-semibold text-white hover:bg-[#174a8f]"
                   >
                     Search
                   </button>
@@ -222,7 +222,7 @@ export default function SearchPage() {
                       key={category}
                       type="button"
                       onClick={() => filterByCategory(category)}
-                      className={`w-full rounded-lg px-4 py-3 text-left font-medium transition-all ${
+                      className={`interactive-button w-full rounded-lg px-4 py-3 text-left font-medium ${
                         selectedCategory === category.toLowerCase() ||
                         (category === "All Categories" && selectedCategory === "all")
                           ? "bg-[#1e5ba8] text-white"
@@ -240,17 +240,17 @@ export default function SearchPage() {
                 <div className="space-y-3">
                   <input
                     type="date"
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                    className="interactive-input w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                   />
                   <input
                     type="date"
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                    className="interactive-input w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleRunQuery}
-                  className="mt-4 w-full rounded-lg bg-[#d4af37] px-6 py-3 font-bold text-gray-900 shadow-lg transition-colors hover:bg-[#c19a2e]"
+                  className="interactive-button mt-4 w-full rounded-lg bg-[#d4af37] px-6 py-3 font-bold text-gray-900 shadow-lg hover:bg-[#c19a2e]"
                 >
                   Apply Filters
                 </button>
@@ -264,7 +264,7 @@ export default function SearchPage() {
               <button
                 type="button"
                 onClick={handleRunQuery}
-                className="flex items-center gap-2 rounded-lg bg-[#808080] px-6 py-2 font-semibold text-white transition-colors hover:bg-[#6b6b6b]"
+                className="interactive-button flex items-center gap-2 rounded-lg bg-[#808080] px-6 py-2 font-semibold text-white hover:bg-[#6b6b6b]"
               >
                 <RotateCcw className="h-4 w-4" />
                 Run Query
@@ -281,7 +281,7 @@ export default function SearchPage() {
                 <select
                   value={sortBy}
                   onChange={(event) => sortResults(event.target.value)}
-                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                  className="interactive-input rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                 >
                   <option value="relevance">Sort by Relevance</option>
                   <option value="date">Sort by Date</option>
@@ -291,7 +291,7 @@ export default function SearchPage() {
               {results.map((result, index) => (
                 <div
                   key={result.id}
-                  className="rounded-xl border border-white/20 bg-white/5 p-6 transition-all hover:bg-white/10"
+                  className="card-lift rounded-xl border border-white/20 bg-white/5 p-6 hover:bg-white/10"
                 >
                   <div className="mb-3 flex items-start justify-between">
                     <div>

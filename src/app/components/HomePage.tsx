@@ -35,11 +35,11 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white page-shell">
       <Navbar />
 
-      <section className="bg-gradient-to-br from-[#1e5ba8] to-[#0f3d7a] py-24 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="page-section bg-gradient-to-br from-[#1e5ba8] to-[#0f3d7a] py-24 text-white">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="mb-6 text-5xl font-semibold tracking-tight">
               Strategic Consulting for Modern Business
@@ -53,14 +53,14 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => router.push("/search")}
-                className="rounded-md bg-[#d4af37] px-8 py-3 font-semibold text-gray-900 transition-colors hover:bg-[#c19b28]"
+                className="interactive-button rounded-md bg-[#d4af37] px-8 py-3 font-semibold text-gray-900 shadow-lg hover:bg-[#c19b28]"
               >
                 Get Started
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/admin")}
-                className="rounded-md border border-white/30 px-8 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+                className="interactive-button rounded-md border border-white/30 px-8 py-3 font-semibold text-white hover:bg-white/10"
               >
                 Admin Access
               </button>
@@ -69,8 +69,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="page-section py-20 [animation-delay:90ms]">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-4xl text-gray-900">Our Services</h2>
             <p className="text-xl text-gray-600">
@@ -82,7 +82,7 @@ export default function HomePage() {
             {services.map((service) => (
               <div
                 key={service.title}
-                className="rounded-lg border border-gray-200 bg-white p-8 transition-shadow hover:shadow-xl"
+                className="card-lift rounded-lg border border-gray-200 bg-white p-8"
               >
                 <div
                   className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg"
@@ -103,11 +103,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-gray-50 py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="page-section bg-gray-50 py-16 [animation-delay:150ms]">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-8 text-center md:grid-cols-4">
             {stats.map((stat) => (
-              <div key={stat.label}>
+              <div key={stat.label} className="interactive-base rounded-2xl px-4 py-3">
                 <div className="mb-2 text-4xl text-[#1e5ba8]">
                   {stat.value}
                 </div>
@@ -118,8 +118,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+      <section className="page-section py-20 [animation-delay:220ms]">
+        <div className="mx-auto max-w-[1320px] px-4 text-center sm:px-6 lg:px-8">
           <h2 className="mb-6 text-4xl text-gray-900">
             Ready to Transform Your Business?
           </h2>
@@ -131,14 +131,14 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => router.push("/chat")}
-              className="rounded-md bg-[#1e5ba8] px-8 py-3 font-semibold text-white transition-colors hover:bg-[#0f3d7a]"
+              className="interactive-button rounded-md bg-[#1e5ba8] px-8 py-3 font-semibold text-white shadow-lg hover:bg-[#0f3d7a]"
             >
               Schedule a Consultation
             </button>
             <button
               type="button"
               onClick={() => router.push("/search")}
-              className="rounded-md border-2 border-[#1e5ba8] px-8 py-3 font-semibold text-[#1e5ba8] transition-colors hover:bg-[#1e5ba8] hover:text-white"
+              className="interactive-button rounded-md border-2 border-[#1e5ba8] px-8 py-3 font-semibold text-[#1e5ba8] hover:bg-[#1e5ba8] hover:text-white"
             >
               Learn More
             </button>
@@ -146,20 +146,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="bg-gray-900 py-12 text-gray-400">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <footer className="page-section bg-gray-900 py-12 text-gray-400 [animation-delay:280ms]">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between md:flex-row">
             <div className="mb-4 md:mb-0">
               <p>&copy; 2026 TriMerge Consulting Group. All rights reserved.</p>
             </div>
             <div className="flex gap-8">
-              <a href="#" className="transition-colors hover:text-white">
+              <a href="#" className="interactive-base hover:text-white">
                 Privacy Policy
               </a>
-              <a href="#" className="transition-colors hover:text-white">
+              <a href="#" className="interactive-base hover:text-white">
                 Terms of Service
               </a>
-              <a href="#" className="transition-colors hover:text-white">
+              <a href="#" className="interactive-base hover:text-white">
                 Contact
               </a>
             </div>

@@ -94,8 +94,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] bg-gray-100">
-      <aside className="relative w-64 bg-gradient-to-b from-[#1e5ba8] to-[#174a8f] text-white shadow-2xl">
+    <div className="page-shell min-h-[calc(100vh-80px)] bg-gray-100 xl:flex">
+      <aside className="relative bg-gradient-to-b from-[#1e5ba8] to-[#174a8f] text-white shadow-2xl page-section xl:sticky xl:top-[81px] xl:h-[calc(100vh-81px)] xl:w-64">
         <div className="border-b border-white/20 p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#d4af37]">
@@ -113,7 +113,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           <SidebarButton active={activeTab === "monitoring"} icon={Activity} label="System Monitoring" onClick={() => setActiveTab("monitoring")} />
         </nav>
 
-        <div className="absolute bottom-0 w-64 border-t border-white/20 p-4">
+        <div className="border-t border-white/20 p-4 xl:absolute xl:bottom-0 xl:w-64">
           <div className="mb-3">
             <p className="text-xs text-blue-200">Logged in as:</p>
             <p className="text-sm font-semibold text-white">{loggedInEmail}</p>
@@ -121,7 +121,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 font-medium text-white transition-all hover:bg-white/20"
+            className="interactive-button flex w-full items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 font-medium text-white hover:bg-white/20"
           >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
@@ -129,8 +129,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b border-gray-200 bg-white shadow-sm">
+      <div className="flex flex-1 flex-col">
+        <div className="border-b border-gray-200 bg-white shadow-sm page-section">
           <div className="px-8 py-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -158,7 +158,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     });
                     setShowUserModal(true);
                   }}
-                  className="flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-[#174a8f]"
+                  className="interactive-button flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#174a8f]"
                 >
                   <Plus className="h-4 w-4" />
                   Add New
@@ -175,13 +175,13 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     placeholder="Search users..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                    className="interactive-input w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                   />
                 </div>
                 <select
                   value={filterRole}
                   onChange={(event) => setFilterRole(event.target.value as "all" | "admin" | "user")}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                  className="interactive-input rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                 >
                   <option value="all">All Roles</option>
                   <option value="admin">Admin</option>
@@ -192,11 +192,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
+        <div className="flex-1 bg-gray-50 p-8 page-section [animation-delay:120ms]">
           {activeTab === "users" && (
             <TableShell headers={["User", "Email", "Role", "Created", "Last Login", "Actions"]}>
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="transition-colors hover:bg-gray-50">
+                <tr key={user.id} className="interactive-base hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#174a8f] font-semibold text-white">
@@ -216,7 +216,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                           ),
                         )
                       }
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      className={`interactive-input rounded-lg px-3 py-1.5 text-xs font-semibold ${
                         user.role === "admin" ? "bg-[#d4af37] text-gray-900" : "bg-gray-200 text-gray-800"
                       }`}
                     >
@@ -260,7 +260,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                 <StatCard icon={Check} accent="from-green-500 to-green-600" value="Online" label="System Status" trend="99.9%" />
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md">
+              <div className="card-lift rounded-xl border border-gray-200 bg-white p-6 shadow-md">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900">
                   <Activity className="h-5 w-5 text-[#1e5ba8]" />
                   Recent Activity
@@ -269,7 +269,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   {RECENT_ACTIVITY.map((activity) => (
                     <div
                       key={`${activity.user}-${activity.time}`}
-                      className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
+                      className="interactive-base flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
                     >
                       <div
                         className={`h-2 w-2 rounded-full ${
@@ -324,7 +324,7 @@ function SidebarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 font-medium transition-all ${
+      className={`interactive-button flex w-full items-center gap-3 rounded-lg px-4 py-3 font-medium ${
         active ? "bg-[#d4af37] text-gray-900 shadow-lg" : "text-white hover:bg-white/10"
       }`}
     >
@@ -342,7 +342,7 @@ function TableShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md">
+    <div className="card-lift overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -374,7 +374,7 @@ function ActionIconButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg p-2 transition-colors ${
+      className={`interactive-button rounded-lg p-2 ${
         color === "blue" ? "text-[#1e5ba8] hover:bg-blue-50" : "text-red-600 hover:bg-red-50"
       }`}
     >
@@ -399,7 +399,7 @@ function StatCard({
   dark?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md">
+    <div className="card-lift rounded-xl border border-gray-200 bg-white p-6 shadow-md">
       <div className="mb-4 flex items-center justify-between">
         <div
           className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${accent} ${
@@ -428,13 +428,13 @@ function UserModal({
   const [formData, setFormData] = useState<User>(user);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-rise">
       <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-[#1e5ba8] to-[#174a8f] p-6">
           <h3 className="text-xl font-bold text-white">
             {user.id ? "Edit User" : "Add New User"}
           </h3>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/20">
+          <button type="button" onClick={onClose} className="interactive-button rounded-lg p-2 hover:bg-white/20">
             <X className="h-5 w-5 text-white" />
           </button>
         </div>
@@ -450,7 +450,7 @@ function UserModal({
               type="text"
               value={formData.name}
               onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
               required
             />
           </FormField>
@@ -459,7 +459,7 @@ function UserModal({
               type="email"
               value={formData.email}
               onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
               required
             />
           </FormField>
@@ -467,7 +467,7 @@ function UserModal({
             <select
               value={formData.role}
               onChange={(event) => setFormData({ ...formData, role: event.target.value as "admin" | "user" })}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -501,13 +501,13 @@ function ModalActions({ onClose }: { onClose: () => void }) {
       <button
         type="button"
         onClick={onClose}
-        className="flex-1 rounded-lg border-2 border-gray-300 px-4 py-2.5 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+        className="interactive-button flex-1 rounded-lg border-2 border-gray-300 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-50"
       >
         Cancel
       </button>
       <button
         type="submit"
-        className="flex-1 rounded-lg bg-[#1e5ba8] px-4 py-2.5 font-semibold text-white shadow-md transition-colors hover:bg-[#174a8f]"
+        className="interactive-button flex-1 rounded-lg bg-[#1e5ba8] px-4 py-2.5 font-semibold text-white shadow-md hover:bg-[#174a8f]"
       >
         Save
       </button>

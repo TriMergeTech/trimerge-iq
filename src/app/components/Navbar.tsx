@@ -20,9 +20,9 @@ export default function Navbar() {
   }, [pathname]);
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-        <Link href="/" className="text-left">
+    <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur page-section">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <Link href="/" className="interactive-base text-left">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/trimerge-logo.png"
@@ -34,7 +34,8 @@ export default function Navbar() {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/"
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+            data-active={pathname === "/"}
+            className={`nav-link interactive-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
               pathname === "/"
                 ? "bg-trimerge-blue text-white shadow-md"
                 : "text-slate-700 hover:bg-slate-100"
@@ -50,7 +51,8 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                data-active={isActive}
+                className={`nav-link interactive-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                   isActive
                     ? "bg-trimerge-blue text-white shadow-md"
                     : "text-slate-700 hover:bg-slate-100"
@@ -64,7 +66,7 @@ export default function Navbar() {
         </div>
 
         {pathname === "/admin" && userEmail ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-right">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-right interactive-base">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Logged in as
             </p>

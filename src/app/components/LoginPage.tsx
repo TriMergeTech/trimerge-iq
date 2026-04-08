@@ -70,14 +70,14 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <section className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-900 via-[#0f3d7a] to-[#1e5ba8] px-4 py-12">
+    <section className="page-shell min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-900 via-[#0f3d7a] to-[#1e5ba8] px-4 py-12">
       <div className="relative mx-auto w-full max-w-md">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute left-1/4 top-1/4 h-72 w-72 rounded-full bg-[#d4af37] opacity-20 blur-[128px]" />
           <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-[#1e5ba8] opacity-20 blur-[128px]" />
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl page-section">
           <div className="mb-8 text-center">
             <div className="mb-6 flex justify-center">
               <div className="relative">
@@ -117,7 +117,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                  className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                   placeholder="admin@trimerge.com"
                 />
               </Field>
@@ -131,7 +131,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                       setViewMode("forgotPassword");
                       setError("");
                     }}
-                    className="text-sm text-[#d4af37] transition-colors hover:text-white"
+                    className="interactive-base text-sm text-[#d4af37] hover:text-white"
                   >
                     Forgot Password?
                   </button>
@@ -142,13 +142,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-300 transition-colors hover:text-white"
+                    className="interactive-base absolute right-4 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -160,7 +160,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </button>
@@ -175,7 +175,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   setViewMode("login");
                   setError("");
                 }}
-                className="mb-4 inline-flex items-center gap-2 text-sm text-blue-200 transition-colors hover:text-white"
+                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Login
@@ -187,7 +187,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     type="email"
                     value={resetEmail}
                     onChange={(event) => setResetEmail(event.target.value)}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="admin@trimerge.com"
                   />
                 </Field>
@@ -197,7 +197,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
                 >
                   {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
                 </button>
@@ -235,7 +235,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   setViewMode("login");
                   setResetEmail("");
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl transition-all hover:scale-[1.02]"
+                className="interactive-button flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl"
               >
                 <ArrowLeft className="h-5 w-5" />
                 Back to Login
@@ -253,7 +253,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             Need help? Contact{" "}
             <a
               href="mailto:support@trimerge.com"
-              className="text-[#d4af37] transition-colors hover:text-white"
+              className="interactive-base text-[#d4af37] hover:text-white"
             >
               support@trimerge.com
             </a>
@@ -292,7 +292,7 @@ function InlineMessage({
   message: string;
 }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-red-500/50 bg-red-500/20 p-4">
+    <div className="animate-fade-rise flex items-start gap-2 rounded-xl border border-red-500/50 bg-red-500/20 p-4">
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
       <p className="text-sm text-red-200">{message}</p>
     </div>
