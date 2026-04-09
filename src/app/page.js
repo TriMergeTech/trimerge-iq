@@ -1,3 +1,4 @@
+import Head from "next/head";
 import Link from "next/link";
 
 // Reusable Components
@@ -283,11 +284,16 @@ function CTASection() {
 // Main Page Component
 export default function Home() {
   return (
-    <main className="w-full bg-white">
-      <BrandHeader />
-      <HeroSection />
-      <FeaturesSection />
-      <IllustrationSection />
-    </main>
+    <>
+      <Head>
+        <title>Home | TriMerge IQ</title>
+      </Head>
+      <main className="w-full bg-white">
+        <BrandHeader />
+        <HeroSection />
+        <FeaturesSection />
+        <IllustrationSection />
+      </main>
+    </>
   );
 }

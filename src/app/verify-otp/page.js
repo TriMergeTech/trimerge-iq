@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Head from "next/head";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { verifyOtp } from "@/lib/api";
@@ -161,17 +162,21 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#ECEFF6] px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mx-auto w-full max-w-md">
-        <section className="mb-8 text-center sm:mb-10">
-          <div className="mb-3 flex justify-center">
-            <ShieldCheckIcon />
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-[#334E8A]">
-            TriMerge <span className="text-[#5D8FE7]">IQ</span>
-          </h1>
-          <p className="mt-3 text-sm text-[#6E8EAC]">In-House AI Knowledge Tool</p>
-        </section>
+    <>
+      <Head>
+        <title>Verify OTP | TriMerge IQ</title>
+      </Head>
+      <main className="min-h-screen bg-[#ECEFF6] px-4 py-10 sm:px-6 sm:py-14">
+        <div className="mx-auto w-full max-w-md">
+          <section className="mb-8 text-center sm:mb-10">
+            <div className="mb-3 flex justify-center">
+              <ShieldCheckIcon />
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#334E8A]">
+              TriMerge <span className="text-[#5D8FE7]">IQ</span>
+            </h1>
+            <p className="mt-3 text-sm text-[#6E8EAC]">In-House AI Knowledge Tool</p>
+          </section>
 
         <section className="rounded-3xl bg-white/90 p-6 shadow-[0_12px_35px_rgba(26,61,130,0.12)] ring-1 ring-white/70 sm:p-8">
           <h2 className="mb-2 text-center text-2xl font-semibold text-[#334E8A]">Verify OTP</h2>
@@ -230,7 +235,8 @@ export default function VerifyOtpPage() {
             </Link>
           </div>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }
