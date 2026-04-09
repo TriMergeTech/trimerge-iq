@@ -1,36 +1,161 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TriMerge AI Operating System (Working Name)
 
-## Getting Started
+## Overview
 
-First, run the development server:
+This project defines an AI-powered organizational operating system where a chat interface acts as a **company intelligence and execution layer**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+The system enables:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Conversational access to company data
+- Role-aware AI responses
+- Task delegation through chat
+- Tool-based execution of actions
+- Structured organizational hierarchy mapping
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+At its core, the AI is not just a chatbot — it is an **operational layer over a company structure**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Core Concept
 
-To learn more about Next.js, take a look at the following resources:
+The system is built around three main primitives:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Profiles (People Layer)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Every entity in the system is a **profile**, including:
 
-## Deploy on Vercel
+- CEO
+- Admin
+- Staff
+- (Optional) Clients as data structures
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Each profile contains:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Name
+- Role
+- Description
+- Responsibilities
+- Assigned tools
+
+---
+
+### 2. Tools (Action Layer)
+
+Tools are atomic actions the system can execute.
+
+Examples:
+
+- `assign_task`
+- `create_project`
+- `request_information`
+- `generate_report`
+
+Tools define:
+
+- What can be done
+- Required inputs
+- Execution behavior
+
+---
+
+### 3. AI Chat (Intelligence Layer)
+
+The chat system:
+
+- Understands user intent
+- Reads profile context
+- Selects appropriate tools
+- Routes execution to the system
+
+It operates in two modes:
+
+- Conversational mode (Q&A, insights)
+- Action mode (task creation, execution, delegation)
+
+---
+
+## System Behavior
+
+### Role-Based Interaction
+
+All users interact through role-aware AI personas:
+
+- CEO can manage and delegate
+- Staff receive tasks and respond with context
+- Admin manages system structure
+
+---
+
+### Task Delegation Flow
+
+1. User sends prompt
+2. AI interprets intent
+3. AI selects a tool
+4. System resolves appropriate staff
+5. Task is assigned or executed
+
+---
+
+### Persona Interaction
+
+The system supports indirect communication between roles:
+
+- CEO can query staff through AI
+- Staff can receive structured instructions
+- AI mediates all interactions
+
+---
+
+## Key Design Principle
+
+> The AI selects tools — not people directly.
+
+People (profiles) are used as:
+
+- Context providers
+- Capability holders
+- Execution targets
+
+Tools are the actual execution interface.
+
+---
+
+## Example Use Case
+
+**Prompt:**
+
+> “Create a proposal for Client A”
+
+**System Flow:**
+
+- AI selects: `assign_task`
+- System identifies proposal staff
+- Task is created and assigned
+- Staff receives instruction via chat
+
+---
+
+## Architecture Summary
+
+- Profiles → Define who the system knows
+- Tools → Define what the system can do
+- AI Chat → Decides what should happen
+
+---
+
+## Status
+
+This is an early-stage system design specification.
+
+Future expansions:
+
+- Tool schema definition
+- Permission system
+- Execution engine design
+- Memory + data graph layer
+
+---
+
+## Vision
+
+To build a **self-operating organizational AI layer** where communication, decision-making, and execution all occur through natural language.
