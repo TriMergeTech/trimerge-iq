@@ -16,8 +16,25 @@ export default function Navbar() {
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    setUserEmail(localStorage.getItem("trimerge_admin_email") ?? "");
-  }, [pathname]);
+    let token = localStorage.getItem("token");
+    let profile = localStorage.getItem("profile");
+
+    if (token && profile) {
+      try {
+        let parsed = JSON.parse(profile);
+
+        if (parsed.profile == "98260a6c-e1d5-46f1-8ab3-4f30a062b52a") {
+          navItems[2].href = "/staff"; // Redirect to staff page if not admin
+          navItems[2].label = "Staff";
+          setUserEmail(parsed.email);
+        }
+      } catch (e) {
+        console.error("Failed to parse profile from localStorage", e);
+      }
+    } else {
+      setUserEmail("");
+    }
+  }, []);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">

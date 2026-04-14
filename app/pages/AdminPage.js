@@ -13,123 +13,128 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@trimerge.com",
-    role: "admin",
-    createdAt: new Date("2024-01-15"),
-    lastLogin: new Date("2025-03-24"),
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.j@trimerge.com",
-    role: "user",
-    createdAt: new Date("2024-02-20"),
-    lastLogin: new Date("2025-03-23"),
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    email: "m.chen@trimerge.com",
-    role: "user",
-    createdAt: new Date("2024-03-10"),
-    lastLogin: new Date("2025-03-22"),
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.d@trimerge.com",
-    role: "user",
-    createdAt: new Date("2024-03-15"),
-    lastLogin: new Date("2025-03-20"),
-  },
-];
-
-const RECENT_ACTIVITY = [
-  {
-    user: "John Smith",
-    action: "Created new user account",
-    time: "2 minutes ago",
-    type: "success",
-  },
-  {
-    user: "Sarah Johnson",
-    action: "Updated role permissions",
-    time: "15 minutes ago",
-    type: "info",
-  },
-  {
-    user: "Michael Chen",
-    action: "Deleted user account",
-    time: "1 hour ago",
-    type: "warning",
-  },
-  {
-    user: "System",
-    action: "Automated backup completed",
-    time: "3 hours ago",
-    type: "success",
-  },
-];
+import { useRouter, useSearchParams } from "next/navigation";
+import { post_request } from "../utils/services";
+import Stafflist from "./stafflist";
+import Adminlist from "./adminlist";
+import Positionlist from "./position_list";
 
 export default function AdminPage({ onLogout, profile }) {
-  console.log(profile, typeof profile, "UHHH");
-  const [activeTab, setActiveTab] = useState("staffs");
-  const [users, setUsers] = useState(MOCK_USERS);
-  const [staffs, set_staffs] = useState(null);
-  const [admins, set_admins] = useState(null);
+  let searchParam = useSearchParams();
+
+  const [activeTab, setActiveTab] = useState(
+    searchParam?.get("tab") || "staff",
+  );
   const [admin, set_admin] = useState(profile || null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState("all");
   const [editingUser, setEditingUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+  });
+
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [activeTab, searchQuery]);
+
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+
+      try {
+        const res = await post_request(`$PROFILE/get_profiles`, {
+          profile:
+            activeTab === "staff"
+              ? "98260a6c-e1d5-46f1-8ab3-4f30a062b52a"
+              : activeTab === "admin"
+                ? "52a1d68b-87d6-4adf-8d38-777656a427d6"
+                : "",
+          ...pagination,
+        });
+
+        console.log(res, "HELO");
+        if (res.ok) {
+          setData(res.data);
+          setTotalPages(res.pagination?.pages);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [activeTab, pagination.page, pagination.limit, debouncedSearch]);
+
+  const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   let router = useRouter();
 
-  useEffect(() => {
-    set_admin(profile);
-  }, []);
+  const fetchPanelData = async () => {
+    setLoading(true);
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((user) => {
-        const matchesSearch =
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = filterRole === "all" || user.role === filterRole;
-        return matchesSearch && matchesRole;
-      }),
-    [filterRole, searchQuery, users],
-  );
+    try {
+      const res = await fetch(
+        `/api/${activeTab}?page=${pagination.page}&limit=${pagination.limit}&search=${searchQuery}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
 
-  const adminCount = useMemo(
-    () => users.filter((user) => user.role === "admin").length,
-    [users],
-  );
+      if (!res.ok) throw new Error("Failed to fetch data");
+
+      const result = await res.json();
+
+      setData(result.data); // backend should return { data, totalPages }
+      setTotalPages(result.totalPages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const nextPage = () => {
+    if (pagination.page < totalPages) {
+      setPagination((prev) => ({
+        ...prev,
+        page: prev.page + 1,
+      }));
+    }
+  };
+
+  const prevPage = () => {
+    if (pagination.page > 1) {
+      setPagination((prev) => ({
+        ...prev,
+        page: prev.page - 1,
+      }));
+    }
+  };
+
+  const set_active_tab = (tab) => {
+    if (tab === activeTab) return;
+    setData(null);
+    setActiveTab(tab);
+  };
 
   const handleSaveUser = (user) => {
-    if (user.id) {
-      setUsers((current) =>
-        current.map((item) => (item.id === user.id ? user : item)),
-      );
-    } else {
-      setUsers((current) => [
-        ...current,
-        {
-          ...user,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-          lastLogin: new Date(),
-        },
-      ]);
-    }
-
     setShowUserModal(false);
     setEditingUser(null);
   };
@@ -151,17 +156,24 @@ export default function AdminPage({ onLogout, profile }) {
 
         <nav className="space-y-2 p-4">
           <SidebarButton
-            active={activeTab === "staffs"}
+            active={activeTab === "staff"}
             icon={Users}
             label="Staff Management"
-            onClick={() => setActiveTab("staffs")}
+            onClick={() => set_active_tab("staff")}
           />
           <SidebarButton
             active={activeTab === "admin"}
             icon={Users}
             label="Admin Management"
-            onClick={() => setActiveTab("admin")}
+            onClick={() => set_active_tab("admin")}
           />
+          <SidebarButton
+            active={activeTab === "position"}
+            icon={Users}
+            label="Position Management"
+            onClick={() => set_active_tab("position")}
+          />
+
           {/* <SidebarButton
             active={activeTab === "monitoring"}
             icon={Activity}
@@ -192,14 +204,12 @@ export default function AdminPage({ onLogout, profile }) {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  {activeTab === "staffs"
+                  {activeTab === "staff"
                     ? "Staff Management"
                     : "Admin Management"}
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  {activeTab === "staffs"
-                    ? `Manage ${staffs?.length || "-"} registered staffs`
-                    : `Manage ${admins?.length || "-"} registered admins`}
+                  {`Manage ${data?.length || "-"} registry`}
                 </p>
               </div>
 
@@ -207,7 +217,7 @@ export default function AdminPage({ onLogout, profile }) {
                 <button
                   type="button"
                   onClick={() => {
-                    router.push(`/signup?redirect=${activeTab.slice(0, -1)}`);
+                    router.push(`/signup?redirect=${activeTab.slice(0)}`);
                   }}
                   className="flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-[#174a8f]"
                 >
@@ -241,157 +251,26 @@ export default function AdminPage({ onLogout, profile }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
-          {activeTab === "users" && (
-            <TableShell
-              headers={[
-                "User",
-                "Email",
-                "Role",
-                "Created",
-                "Last Login",
-                "Actions",
-              ]}
-            >
-              {filteredUsers.map((user) => (
-                <tr
-                  key={user.id}
-                  className="transition-colors hover:bg-gray-50"
-                >
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#174a8f] font-semibold text-white">
-                        {user.name
-                          .split(" ")
-                          .map((part) => part[0])
-                          .join("")}
-                      </div>
-                      <div className="font-medium text-gray-900">
-                        {user.name}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                    {user.email}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <select
-                      value={user.role}
-                      onChange={(event) =>
-                        setUsers((current) =>
-                          current.map((item) =>
-                            item.id === user.id
-                              ? { ...item, role: event.target.value }
-                              : item,
-                          ),
-                        )
-                      }
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                        user.role === "admin"
-                          ? "bg-[#d4af37] text-gray-900"
-                          : "bg-gray-200 text-gray-800"
-                      }`}
-                    >
-                      <option value="user">User</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                    {user.createdAt.toLocaleDateString()}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                    {user.lastLogin.toLocaleDateString()}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                    <div className="flex items-center justify-end gap-2">
-                      <ActionIconButton
-                        color="blue"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setShowUserModal(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </ActionIconButton>
-                      <ActionIconButton
-                        color="red"
-                        onClick={() =>
-                          setUsers((current) =>
-                            current.filter((item) => item.id !== user.id),
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </ActionIconButton>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </TableShell>
-          )}
+        {activeTab === "staff" ? (
+          <Stafflist data={data} />
+        ) : activeTab === "admin" ? (
+          <Adminlist data={data} />
+        ) : activeTab === "position" ? (
+          <Positionlist data={data} />
+        ) : null}
 
-          {activeTab === "monitoring" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard
-                  icon={Users}
-                  accent="from-[#1e5ba8] to-[#174a8f]"
-                  value={users.length.toString()}
-                  label="Total Users"
-                  trend="+12%"
-                />
-                <StatCard
-                  icon={Shield}
-                  accent="from-[#d4af37] to-[#c19a2e]"
-                  value={adminCount.toString()}
-                  label="Admin Accounts"
-                  trend="+2%"
-                  dark
-                />
-                <StatCard
-                  icon={Check}
-                  accent="from-green-500 to-green-600"
-                  value="Online"
-                  label="System Status"
-                  trend="99.9%"
-                />
-              </div>
+        <div className="flex items-center gap-3 mt-4">
+          <button onClick={prevPage} disabled={pagination.page === 1}>
+            Prev
+          </button>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md">
-                <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900">
-                  <Activity className="h-5 w-5 text-[#1e5ba8]" />
-                  Recent Activity
-                </h3>
-                <div className="space-y-4">
-                  {RECENT_ACTIVITY.map((activity) => (
-                    <div
-                      key={`${activity.user}-${activity.time}`}
-                      className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div
-                        className={`h-2 w-2 rounded-full ${
-                          activity.type === "success"
-                            ? "bg-green-500"
-                            : activity.type === "warning"
-                              ? "bg-yellow-500"
-                              : "bg-blue-500"
-                        }`}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">
-                          <span className="font-semibold">{activity.user}</span>{" "}
-                          {activity.action}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <span>
+            Page {pagination.page} of {totalPages}
+          </span>
+
+          <button onClick={nextPage} disabled={pagination.page === totalPages}>
+            Next
+          </button>
         </div>
       </div>
 
@@ -426,46 +305,6 @@ function SidebarButton({ active, icon: Icon, label, onClick }) {
   );
 }
 
-function TableShell({ headers, children }) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <tr>
-              {headers.map((header) => (
-                <th
-                  key={header}
-                  className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">{children}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function ActionIconButton({ color, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg p-2 transition-colors ${
-        color === "blue"
-          ? "text-[#1e5ba8] hover:bg-blue-50"
-          : "text-red-600 hover:bg-red-50"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function StatCard({ icon: Icon, accent, value, label, trend, dark = false }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md">
@@ -493,7 +332,7 @@ function UserModal({ user, onSave, onClose }) {
       <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-[#1e5ba8] to-[#174a8f] p-6">
           <h3 className="text-xl font-bold text-white">
-            {user.id ? "Edit User" : "Add New User"}
+            {user._id ? "Edit User" : "Add New User"}
           </h3>
           <button
             type="button"

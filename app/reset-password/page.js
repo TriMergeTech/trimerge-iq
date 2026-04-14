@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { resetPassword } from "@/lib/api";
 import { post_request } from "../utils/services";
 
 const initialValues = {

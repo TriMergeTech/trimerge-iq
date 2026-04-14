@@ -199,7 +199,7 @@ export default function LoginPage() {
 
   const searchParams = useSearchParams();
 
-  const [redirect] = useState(searchParams?.get("redirect") || "home");
+  const [redirect] = useState(searchParams?.get("redirect") || "admin");
 
   const [role, setRole] = useState(redirect || "staff");
 
