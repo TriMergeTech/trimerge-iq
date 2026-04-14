@@ -190,6 +190,99 @@ const swaggerSpec = {
         },
       },
     },
+    '/positions': {
+      post: {
+        tags: ['Positions'],
+        summary: 'Create a new position',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'description'],
+                properties: {
+                  name: { type: 'string', example: 'Senior Accountant' },
+                  description: { type: 'string', example: 'Handles financial reporting' },
+                  responsibility: { type: 'array', items: { type: 'string' }, example: ['Prepare reports', 'Review audits'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Position created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Positions'],
+        summary: 'Retrieve all positions',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all positions' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/positions/{id}': {
+      get: {
+        tags: ['Positions'],
+        summary: 'Retrieve a single position by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the position' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Position not found' },
+        },
+      },
+      put: {
+        tags: ['Positions'],
+        summary: 'Update a position by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  responsibility: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Position updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Position not found' },
+        },
+      },
+      delete: {
+        tags: ['Positions'],
+        summary: 'Delete a position by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Position deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Position not found' },
+        },
+      },
+    },
     '/auth/admin/users': {
       get: {
         tags: ['Admin'],
@@ -233,6 +326,7 @@ let mongoClient;
 let users;
 let otpVerifications;
 let passwordResets;
+let positions;
 let dbConnected = false;
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
@@ -303,6 +397,7 @@ async function connectDb() {
   users = db.collection('users');
   otpVerifications = db.collection('otp_verifications');
   passwordResets = db.collection('password_resets');
+  positions = db.collection('positions');
   await users.createIndex({ email: 1 }, { unique: true });
   await otpVerifications.createIndex({ email: 1 });
   await otpVerifications.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
@@ -311,6 +406,13 @@ async function connectDb() {
   dbConnected = true;
   console.log('Connected to MongoDB');
 }
+
+const createPositionsRouter = require('../routes/positions');
+app.use('/positions', (req, res, next) => {
+  connectDb().then(() => {
+    createPositionsRouter(positions, authMiddleware, requireRole)(req, res, next);
+  }).catch(next);
+});
 
 app.get('/', (req, res) => {
   res.json({ status: 'Authentication API is running' });
