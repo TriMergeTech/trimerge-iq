@@ -18,7 +18,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "user";
+  role: "staff" | "user";
   createdAt: Date;
   lastLogin: Date;
 }
@@ -28,15 +28,15 @@ interface AdminPageProps {
 }
 
 const MOCK_USERS: User[] = [
-  { id: "1", name: "John Smith", email: "john.smith@trimerge.com", role: "admin", createdAt: new Date("2024-01-15"), lastLogin: new Date("2025-03-24") },
+  { id: "1", name: "John Smith", email: "john.smith@trimerge.com", role: "staff", createdAt: new Date("2024-01-15"), lastLogin: new Date("2025-03-24") },
   { id: "2", name: "Sarah Johnson", email: "sarah.j@trimerge.com", role: "user", createdAt: new Date("2024-02-20"), lastLogin: new Date("2025-03-23") },
   { id: "3", name: "Michael Chen", email: "m.chen@trimerge.com", role: "user", createdAt: new Date("2024-03-10"), lastLogin: new Date("2025-03-22") },
   { id: "4", name: "Emily Davis", email: "emily.d@trimerge.com", role: "user", createdAt: new Date("2024-03-15"), lastLogin: new Date("2025-03-20") },
 ];
 
 const RECENT_ACTIVITY = [
-  { user: "John Smith", action: "Created new user account", time: "2 minutes ago", type: "success" },
-  { user: "Sarah Johnson", action: "Updated role permissions", time: "15 minutes ago", type: "info" },
+  { user: "John Smith", action: "Created new staff profile", time: "2 minutes ago", type: "success" },
+  { user: "Sarah Johnson", action: "Updated staff access", time: "15 minutes ago", type: "info" },
   { user: "Michael Chen", action: "Deleted user account", time: "1 hour ago", type: "warning" },
   { user: "System", action: "Automated backup completed", time: "3 hours ago", type: "success" },
 ] as const;
@@ -45,7 +45,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<"users" | "monitoring">("users");
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState<"all" | "admin" | "user">("all");
+  const [filterRole, setFilterRole] = useState<"all" | "staff" | "user">("all");
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
@@ -69,10 +69,35 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     [filterRole, searchQuery, users],
   );
 
-  const adminCount = useMemo(
-    () => users.filter((user) => user.role === "admin").length,
+  const staffCount = useMemo(
+    () => users.filter((user) => user.role === "staff").length,
     [users],
   );
+
+  const openNewUserModal = () => {
+    setEditingUser({
+      id: "",
+      name: "",
+      email: "",
+      role: "user",
+      createdAt: new Date(),
+      lastLogin: new Date(),
+    });
+    setShowUserModal(true);
+  };
+
+  const openNewStaffModal = () => {
+    setActiveTab("users");
+    setEditingUser({
+      id: "",
+      name: "",
+      email: "",
+      role: "staff",
+      createdAt: new Date(),
+      lastLogin: new Date(),
+    });
+    setShowUserModal(true);
+  };
 
   const handleSaveUser = (user: User) => {
     if (user.id) {
@@ -110,6 +135,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
         <nav className="space-y-2 p-4">
           <SidebarButton active={activeTab === "users"} icon={Users} label="User Management" onClick={() => setActiveTab("users")} />
+          <SidebarButton active={false} icon={Plus} label="New Staff Member" onClick={openNewStaffModal} />
           <SidebarButton active={activeTab === "monitoring"} icon={Activity} label="System Monitoring" onClick={() => setActiveTab("monitoring")} />
         </nav>
 
@@ -147,21 +173,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               {activeTab === "users" && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingUser({
-                      id: "",
-                      name: "",
-                      email: "",
-                      role: "user",
-                      createdAt: new Date(),
-                      lastLogin: new Date(),
-                    });
-                    setShowUserModal(true);
-                  }}
+                  onClick={openNewUserModal}
                   className="interactive-button flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#174a8f]"
                 >
                   <Plus className="h-4 w-4" />
-                  Add New
+                  Add User
                 </button>
               )}
             </div>
@@ -180,11 +196,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                 </div>
                 <select
                   value={filterRole}
-                  onChange={(event) => setFilterRole(event.target.value as "all" | "admin" | "user")}
+                  onChange={(event) => setFilterRole(event.target.value as "all" | "staff" | "user")}
                   className="interactive-input rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                 >
                   <option value="all">All Roles</option>
-                  <option value="admin">Admin</option>
+                  <option value="staff">Staff</option>
                   <option value="user">User</option>
                 </select>
               </div>
@@ -212,16 +228,16 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                       onChange={(event) =>
                         setUsers((current) =>
                           current.map((item) =>
-                            item.id === user.id ? { ...item, role: event.target.value as "admin" | "user" } : item,
+                            item.id === user.id ? { ...item, role: event.target.value as "staff" | "user" } : item,
                           ),
                         )
                       }
                       className={`interactive-input rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                        user.role === "admin" ? "bg-[#d4af37] text-gray-900" : "bg-gray-200 text-gray-800"
+                        user.role === "staff" ? "bg-[#d4af37] text-gray-900" : "bg-gray-200 text-gray-800"
                       }`}
                     >
                       <option value="user">User</option>
-                      <option value="admin">Admin</option>
+                      <option value="staff">Staff</option>
                     </select>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">{user.createdAt.toLocaleDateString()}</td>
@@ -256,7 +272,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <StatCard icon={Users} accent="from-[#1e5ba8] to-[#174a8f]" value={users.length.toString()} label="Total Users" trend="+12%" />
-                <StatCard icon={Shield} accent="from-[#d4af37] to-[#c19a2e]" value={adminCount.toString()} label="Admin Accounts" trend="+2%" dark />
+                <StatCard icon={Shield} accent="from-[#d4af37] to-[#c19a2e]" value={staffCount.toString()} label="Staff Accounts" trend="+2%" dark />
                 <StatCard icon={Check} accent="from-green-500 to-green-600" value="Online" label="System Status" trend="99.9%" />
               </div>
 
@@ -426,13 +442,18 @@ function UserModal({
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState<User>(user);
+  const isCreating = !user.id;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-rise">
       <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-[#1e5ba8] to-[#174a8f] p-6">
           <h3 className="text-xl font-bold text-white">
-            {user.id ? "Edit User" : "Add New User"}
+            {isCreating
+              ? formData.role === "staff"
+                ? "Add New Staff Member"
+                : "Add New User"
+              : "Edit Team Member"}
           </h3>
           <button type="button" onClick={onClose} className="interactive-button rounded-lg p-2 hover:bg-white/20">
             <X className="h-5 w-5 text-white" />
@@ -463,14 +484,13 @@ function UserModal({
               required
             />
           </FormField>
-          <FormField label="Role">
+          <FormField label="Position">
             <select
-              value={formData.role}
-              onChange={(event) => setFormData({ ...formData, role: event.target.value as "admin" | "user" })}
+              value=""
+              onChange={() => undefined}
               className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+              <option value="" />
             </select>
           </FormField>
           <ModalActions onClose={onClose} />

@@ -1,28 +1,32 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock3, FileText, Image as ImageIcon, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Send, Sparkles, X } from "lucide-react";
+import { ChevronDown, Clock3, FileText, FolderPlus, Image as ImageIcon, Lightbulb, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Send, Sparkles, X } from "lucide-react";
 
 interface UploadedFile { name: string; size: number; type: string; }
 interface Message { id: number; content: string; sender: "user" | "ai"; timestamp: Date; files?: UploadedFile[]; }
-interface Conversation { id: number; title: string; updatedAt: Date; messages: Message[]; pinned?: boolean; archived?: boolean; }
+interface Project { id: number; name: string; createdAt: Date; description?: string; service?: string; team?: string[]; projectManager?: string; client?: string; pinned?: boolean; archived?: boolean; }
+interface Conversation { id: number; title: string; updatedAt: Date; messages: Message[]; projectId: number | null; pinned?: boolean; archived?: boolean; }
 
-const suggestedPrompts = [
-  "Explain our strategic consulting services",
-  "How can we improve operational efficiency?",
-  "What are the latest digital transformation trends?",
-  "Help me with financial analysis",
-];
+const serviceOptions = [
+  "Strategy Consulting",
+  "Digital Transformation",
+  "Operational Excellence",
+] as const;
 
-const initialConversations: Conversation[] = [
-  { id: 1, title: "Digital Transformation Roadmap", updatedAt: new Date("2026-04-08T09:15:00"), messages: [{ id: 1, content: "Can you outline a three-phase digital transformation roadmap for a mid-sized company?", sender: "user", timestamp: new Date("2026-04-08T09:15:00") }, { id: 2, content: "Absolutely. Start with assessment and prioritization, then move into process redesign and system rollout, and finally scale with automation, analytics, and governance.", sender: "ai", timestamp: new Date("2026-04-08T09:16:00") }] },
-  { id: 2, title: "Q2 Operations Review", updatedAt: new Date("2026-04-07T16:20:00"), messages: [{ id: 1, content: "What should I include in an operations review for regional managers?", sender: "user", timestamp: new Date("2026-04-07T16:20:00") }, { id: 2, content: "Focus on throughput, utilization, service levels, bottlenecks, staffing trends, and a short action plan with owners and deadlines.", sender: "ai", timestamp: new Date("2026-04-07T16:21:00") }] },
-  { id: 3, title: "Financial Model Support", updatedAt: new Date("2026-04-05T11:05:00"), messages: [{ id: 1, content: "Help me structure a simple cash flow forecast model.", sender: "user", timestamp: new Date("2026-04-05T11:05:00") }, { id: 2, content: "Use three sections: cash in, cash out, and net position. Then layer assumptions by month and scenario so you can compare base, upside, and downside outcomes.", sender: "ai", timestamp: new Date("2026-04-05T11:06:00") }] },
-];
+const staffOptions = [
+  "John Smith",
+  "Sarah Johnson",
+  "Michael Chen",
+  "Emily Davis",
+] as const;
 
 export default function ChatPage() {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [projectHomeTab, setProjectHomeTab] = useState<"chats" | "sources">("chats");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [conversationSearch, setConversationSearch] = useState("");
   const [inputMessage, setInputMessage] = useState("");
@@ -30,29 +34,56 @@ export default function ChatPage() {
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState<number | null>(null);
+  const [openProjectActionMenuId, setOpenProjectActionMenuId] = useState<number | null>(null);
+  const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [newProjectService, setNewProjectService] = useState<(typeof serviceOptions)[number]>(serviceOptions[0]);
+  const [newProjectTeam, setNewProjectTeam] = useState<string[]>([]);
+  const [newProjectManager, setNewProjectManager] = useState<(typeof staffOptions)[number]>(staffOptions[0]);
+  const [newProjectClient, setNewProjectClient] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const projectNameInputRef = useRef<HTMLInputElement>(null);
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
   const conversationMenuRef = useRef<HTMLDivElement>(null);
+  const projectMenuRef = useRef<HTMLDivElement>(null);
+  const projectActionMenuRef = useRef<HTMLDivElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = useMemo(() => conversations.find((c) => c.id === activeConversationId) ?? null, [activeConversationId, conversations]);
+  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
   const filteredConversations = useMemo(() => {
-    const base = conversations.filter((c) => !c.archived);
+    const base = conversations.filter((c) => !c.archived && c.projectId === selectedProjectId);
     if (!conversationSearch.trim()) return base;
     return base.filter((c) => c.title.toLowerCase().includes(conversationSearch.toLowerCase()));
-  }, [conversationSearch, conversations]);
+  }, [conversationSearch, conversations, selectedProjectId]);
   const visibleConversations = useMemo(() => [...filteredConversations].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   }), [filteredConversations]);
+  const recentProjects = useMemo(
+    () =>
+      [...projects]
+        .filter((project) => !project.archived)
+        .sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        }),
+    [projects],
+  );
+  const projectRecentConversations = useMemo(() => visibleConversations.slice(0, 6), [visibleConversations]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(event.target as Node)) setIsAttachmentMenuOpen(false);
       if (conversationMenuRef.current && !conversationMenuRef.current.contains(event.target as Node)) setOpenConversationMenuId(null);
+      if (projectMenuRef.current && !projectMenuRef.current.contains(event.target as Node)) setIsProjectMenuOpen(false);
+      if (projectActionMenuRef.current && !projectActionMenuRef.current.contains(event.target as Node)) setOpenProjectActionMenuId(null);
       if (workspaceMenuRef.current && !workspaceMenuRef.current.contains(event.target as Node)) setIsWorkspaceMenuOpen(false);
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -63,14 +94,20 @@ export default function ChatPage() {
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
 
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = isCreateProjectModalOpen ? "hidden" : previousHtmlOverflow;
+    document.body.style.overflow = isCreateProjectModalOpen ? "hidden" : previousBodyOverflow;
 
     return () => {
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
     };
-  }, []);
+  }, [isCreateProjectModalOpen]);
+
+  useEffect(() => {
+    if (!isCreateProjectModalOpen) return;
+    const timeoutId = window.setTimeout(() => projectNameInputRef.current?.focus(), 30);
+    return () => window.clearTimeout(timeoutId);
+  }, [isCreateProjectModalOpen]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -81,6 +118,68 @@ export default function ChatPage() {
 
   const startNewChat = () => {
     setActiveConversationId(null); setInputMessage(""); setAttachedFiles([]); setIsTyping(false); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null);
+  };
+
+  const openCreateProjectModal = () => {
+    setIsProjectMenuOpen(false);
+    setNewProjectName("");
+    setNewProjectDescription("");
+    setNewProjectService(serviceOptions[0]);
+    setNewProjectTeam([]);
+    setNewProjectManager(staffOptions[0]);
+    setNewProjectClient("");
+    setIsCreateProjectModalOpen(true);
+  };
+
+  const closeCreateProjectModal = () => {
+    setIsCreateProjectModalOpen(false);
+    setNewProjectName("");
+    setNewProjectDescription("");
+    setNewProjectService(serviceOptions[0]);
+    setNewProjectTeam([]);
+    setNewProjectManager(staffOptions[0]);
+    setNewProjectClient("");
+  };
+
+  const handleCreateProject = () => {
+    const nextName = newProjectName.trim();
+    if (!nextName) return;
+    const newProject: Project = {
+      id: Date.now(),
+      name: nextName,
+      createdAt: new Date(),
+      description: newProjectDescription.trim(),
+      service: newProjectService,
+      team: newProjectTeam,
+      projectManager: newProjectManager,
+      client: newProjectClient.trim(),
+    };
+    setProjects((current) => [newProject, ...current]);
+    setSelectedProjectId(newProject.id);
+    setActiveConversationId(null);
+    setInputMessage("");
+    setAttachedFiles([]);
+    setConversationSearch("");
+    setIsAttachmentMenuOpen(false);
+    setOpenConversationMenuId(null);
+    setOpenProjectActionMenuId(null);
+    setIsProjectMenuOpen(false);
+    closeCreateProjectModal();
+  };
+
+  const handleSelectProject = (projectId: number | null) => {
+    setSelectedProjectId(projectId);
+    setActiveConversationId(null);
+    setProjectHomeTab("chats");
+    setOpenConversationMenuId(null);
+    setOpenProjectActionMenuId(null);
+    setIsProjectMenuOpen(false);
+  };
+
+  const toggleTeamMember = (member: string) => {
+    setNewProjectTeam((current) =>
+      current.includes(member) ? current.filter((item) => item !== member) : [...current, member],
+    );
   };
 
   const updateConversation = (conversationId: number, updater: (conversation: Conversation) => Conversation | null) => {
@@ -113,6 +212,51 @@ export default function ChatPage() {
     setOpenConversationMenuId(null);
   };
 
+  const updateProject = (projectId: number, updater: (project: Project) => Project | null) => {
+    setProjects((current) => current.map((project) => project.id === projectId ? updater(project) : project).filter(Boolean) as Project[]);
+  };
+
+  const handleRenameProject = (project: Project) => {
+    const nextName = window.prompt("Rename project", project.name)?.trim();
+    if (!nextName) return;
+    updateProject(project.id, (current) => ({ ...current, name: nextName }));
+    setOpenProjectActionMenuId(null);
+  };
+
+  const handlePinProject = (projectId: number) => {
+    updateProject(projectId, (current) => ({ ...current, pinned: !current.pinned }));
+    setOpenProjectActionMenuId(null);
+  };
+
+  const handleArchiveProject = (projectId: number) => {
+    updateProject(projectId, (current) => ({ ...current, archived: true }));
+    if (selectedProjectId === projectId) {
+      setSelectedProjectId(null);
+      setActiveConversationId(null);
+    }
+    setOpenProjectActionMenuId(null);
+  };
+
+  const handleDeleteProject = (projectId: number) => {
+    setProjects((current) => current.filter((project) => project.id !== projectId));
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.projectId === projectId ? { ...conversation, projectId: null } : conversation,
+      ),
+    );
+    if (selectedProjectId === projectId) {
+      setSelectedProjectId(null);
+      setActiveConversationId(null);
+    }
+    setOpenProjectActionMenuId(null);
+  };
+
+  const handleShareProject = async (project: Project) => {
+    const shareLabel = `TriMerge project: ${project.name}`;
+    try { await navigator.clipboard.writeText(shareLabel); } catch { window.prompt("Copy this project label", shareLabel); }
+    setOpenProjectActionMenuId(null);
+  };
+
   const handleClearActiveChat = () => {
     if (!activeConversation) return;
     updateConversation(activeConversation.id, (current) => ({ ...current, messages: [], updatedAt: new Date() }));
@@ -130,7 +274,7 @@ export default function ChatPage() {
     setConversations((current) => {
       const existingConversation = current.find((conversation) => conversation.id === conversationId);
       if (!existingConversation) {
-        return [{ id: conversationId, title: newTitle, updatedAt: new Date(), messages: [userMessage] }, ...current];
+        return [{ id: conversationId, title: newTitle, updatedAt: new Date(), projectId: selectedProjectId, messages: [userMessage] }, ...current];
       }
       return current.map((conversation) => conversation.id === conversationId ? { ...conversation, title: conversation.title === "New chat" && content ? newTitle : conversation.title, updatedAt: new Date(), messages: [...conversation.messages, userMessage] } : conversation).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     });
@@ -147,6 +291,158 @@ export default function ChatPage() {
 
   return (
     <section className="relative h-[calc(100vh-81px)] overflow-hidden bg-gradient-to-br from-slate-950 via-[#0d1f3a] to-slate-950 text-white">
+      {isCreateProjectModalOpen && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm">
+          <div className="flex max-h-[calc(100vh-170px)] w-full max-w-[980px] flex-col overflow-hidden rounded-[16px] border border-white/8 bg-[#232323] shadow-[0_30px_80px_rgba(0,0,0,0.55)] animate-fade-rise">
+            <div className="flex items-start justify-between gap-4 border-b border-white/8 px-6 py-5 sm:px-8">
+              <h2 className="text-[20px] font-medium tracking-tight text-white">Create project</h2>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Close create project dialog"
+                  onClick={closeCreateProjectModal}
+                  className="interactive-button flex h-10 w-10 items-center justify-center rounded-full text-white/88 hover:bg-white/8"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="chat-scrollbar overflow-y-auto px-6 pb-4 pt-6 sm:px-8">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label htmlFor="project-name" className="mb-3 block text-[15px] font-medium text-white/95">
+                  Name
+                </label>
+                <div className="flex items-center gap-3 rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5">
+                  <FolderPlus className="h-5 w-5 text-white/55" />
+                  <input
+                    id="project-name"
+                    ref={projectNameInputRef}
+                    type="text"
+                    value={newProjectName}
+                    onChange={(event) => setNewProjectName(event.target.value)}
+                    placeholder="Copenhagen Trip"
+                    className="w-full bg-transparent text-[16px] text-white outline-none placeholder:text-white/35"
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label htmlFor="project-description" className="mb-3 block text-[15px] font-medium text-white/95">
+                  Description
+                </label>
+                <textarea
+                  id="project-description"
+                  value={newProjectDescription}
+                  onChange={(event) => setNewProjectDescription(event.target.value)}
+                  placeholder="Briefly describe the project scope and goals."
+                  rows={3}
+                  className="w-full resize-none rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/35"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="project-service" className="mb-3 block text-[15px] font-medium text-white/95">
+                  Service
+                </label>
+                <select
+                  id="project-service"
+                  value={newProjectService}
+                  onChange={(event) => setNewProjectService(event.target.value as (typeof serviceOptions)[number])}
+                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none"
+                >
+                  {serviceOptions.map((service) => (
+                    <option key={service} value={service} className="bg-[#252525]">
+                      {service}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="project-client" className="mb-3 block text-[15px] font-medium text-white/95">
+                  Client
+                </label>
+                <input
+                  id="project-client"
+                  type="text"
+                  value={newProjectClient}
+                  onChange={(event) => setNewProjectClient(event.target.value)}
+                  placeholder="Client name"
+                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/35"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="project-manager" className="mb-3 block text-[15px] font-medium text-white/95">
+                  Project manager
+                </label>
+                <select
+                  id="project-manager"
+                  value={newProjectManager}
+                  onChange={(event) => setNewProjectManager(event.target.value as (typeof staffOptions)[number])}
+                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none"
+                >
+                  {staffOptions.map((staff) => (
+                    <option key={staff} value={staff} className="bg-[#252525]">
+                      {staff}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-3 block text-[15px] font-medium text-white/95">
+                  Team
+                </label>
+                <div className="flex flex-wrap gap-2 rounded-[12px] border border-white/10 bg-[#252525] px-3 py-3">
+                  {staffOptions.map((staff) => {
+                    const isSelected = newProjectTeam.includes(staff);
+                    return (
+                      <button
+                        key={staff}
+                        type="button"
+                        onClick={() => toggleTeamMember(staff)}
+                        className={`interactive-button rounded-full px-3 py-2 text-sm ${isSelected ? "bg-[#d4af37] text-[#111214]" : "bg-white/8 text-white/88 hover:bg-white/12"}`}
+                      >
+                        {staff}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            </div>
+
+            <div className="border-t border-white/8 bg-[#232323] px-6 pb-5 pt-4 sm:px-8">
+            <div className="rounded-[14px] bg-[#4b4b4b] px-4 py-5 text-white/92">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6">
+                  <Lightbulb className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-[16px] leading-7 text-white/92">
+                  Projects keep chats, files, and custom instructions in one place. Use them for ongoing work, or just to keep things tidy.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim()}
+                className="interactive-button rounded-full bg-[#626262] px-7 py-3.5 text-[17px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[#737373] disabled:cursor-not-allowed disabled:bg-[#5a5a5a] disabled:text-white/45"
+              >
+                Create project
+              </button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-9rem] top-12 h-80 w-80 rounded-full bg-[#d4af37]/[0.08] blur-3xl" />
         <div className="absolute right-[-5rem] top-0 h-[28rem] w-[28rem] rounded-full bg-[#1e5ba8]/[0.14] blur-3xl" />
@@ -189,6 +485,69 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 px-4 py-5">
+            {isSidebarOpen && (
+              <div className="relative mb-5" ref={projectMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsProjectMenuOpen((current) => !current)}
+                  className="interactive-button flex w-full items-center justify-between rounded-xl border border-white/8 bg-transparent px-3 py-2.5 text-left text-white/88 hover:bg-white/[0.04]"
+                >
+                  <span className="text-sm font-medium">Project</span>
+                  <ChevronDown className={`h-4 w-4 text-white/55 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isProjectMenuOpen && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-20 rounded-2xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+                    <button type="button" onClick={openCreateProjectModal} className="interactive-button flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-white hover:bg-[#162235]">
+                      <span className="flex items-center gap-3">
+                        <span className="text-base">✨</span>
+                        <span className="text-sm font-medium">Create new project</span>
+                      </span>
+                      <Plus className="h-4 w-4 text-[#d4af37]" />
+                    </button>
+                    <div className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/60">Recent projects</div>
+                    {recentProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className={`group relative rounded-xl ${selectedProjectId === project.id ? "bg-[#162235]" : "hover:bg-[#162235]"}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelectProject(project.id)}
+                          className={`interactive-button flex w-full items-center justify-between rounded-xl px-3 py-3 pr-12 text-left ${selectedProjectId === project.id ? "text-white" : "text-white/88"}`}
+                        >
+                          <span className="text-sm font-medium">{project.pinned ? "📌 " : ""}{project.name}</span>
+                        </button>
+
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2" ref={openProjectActionMenuId === project.id ? projectActionMenuRef : undefined}>
+                          <button
+                            type="button"
+                            aria-label={`Project actions for ${project.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenProjectActionMenuId((current) => current === project.id ? null : project.id);
+                            }}
+                            className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full border border-[#d4af37]/24 bg-[#101827]/75 text-[#f6edd0] transition ${openProjectActionMenuId === project.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+
+                          {openProjectActionMenuId === project.id && (
+                            <div className="absolute right-0 top-10 z-20 w-48 rounded-2xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+                              <ConversationMenuItem emoji="🔗" label="Share" onClick={() => handleShareProject(project)} />
+                              <ConversationMenuItem emoji="✏️" label="Rename" onClick={() => handleRenameProject(project)} />
+                              <ConversationMenuItem emoji={project.pinned ? "📍" : "📌"} label={project.pinned ? "Unpin project" : "Pin project"} onClick={() => handlePinProject(project.id)} />
+                              <ConversationMenuItem emoji="🗂️" label="Archive" onClick={() => handleArchiveProject(project.id)} />
+                              <ConversationMenuItem emoji="🗑️" label="Delete" danger onClick={() => handleDeleteProject(project.id)} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {isSidebarOpen && <div className="mb-5 px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/70">Recents</div>}
             {isSidebarOpen && <div className="space-y-2">
               {visibleConversations.map((conversation) => {
@@ -239,7 +598,7 @@ export default function ChatPage() {
                 <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">Workspace</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">{selectedProject?.name ?? "Workspace"}</p>
                       <h1 className="mt-2 text-[34px] font-semibold tracking-tight text-white/95">{activeConversation.title}</h1>
                     </div>
                     <div className="flex items-center gap-3">
@@ -320,9 +679,9 @@ export default function ChatPage() {
             ) : (
               <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
                 <div className="flex w-full max-w-[1200px] flex-col items-center justify-center text-center">
-                  <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">Workspace</p>
+                  <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">{selectedProject?.name ?? "Workspace"}</p>
                   <p className="text-3xl font-light tracking-tight text-white/92 md:text-4xl">
-                    Ready when you are.
+                    {selectedProject ? `Ready to chat inside ${selectedProject.name}.` : "Ready when you are."}
                   </p>
 
                   <div className="mt-10 w-full max-w-[980px]">
@@ -370,6 +729,56 @@ export default function ChatPage() {
                       </div>
                     </form>
                   </div>
+
+                  {selectedProject && (
+                    <div className="mt-12 w-full max-w-[980px] text-left">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setProjectHomeTab("chats")}
+                          className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "chats" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
+                        >
+                          Chats
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProjectHomeTab("sources")}
+                          className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "sources" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
+                        >
+                          Sources
+                        </button>
+                      </div>
+
+                      {projectHomeTab === "chats" ? (
+                        <div className="mt-8 space-y-3">
+                          {projectRecentConversations.length > 0 ? (
+                            projectRecentConversations.map((conversation) => (
+                              <button
+                                key={conversation.id}
+                                type="button"
+                                onClick={() => setActiveConversationId(conversation.id)}
+                                className="interactive-button flex w-full items-center justify-between rounded-[24px] border border-white/8 bg-white/[0.03] px-5 py-4 text-left text-white/88 hover:border-[#d4af37]/28 hover:bg-white/[0.05]"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-lg font-medium text-white/92">{conversation.pinned ? "📌 " : ""}{conversation.title}</p>
+                                  <p className="mt-1 text-sm text-white/40">{conversation.messages.length} messages</p>
+                                </div>
+                                <span className="shrink-0 pl-6 text-sm text-white/42">{conversation.updatedAt.toLocaleDateString()}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
+                              This project does not have recent chats yet.
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-8 rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
+                          Sources for this project will appear here.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
