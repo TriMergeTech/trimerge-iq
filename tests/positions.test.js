@@ -278,6 +278,72 @@ describe('PUT /positions/:id', () => {
   });
 });
 
+describe('POST /positions — skills field', () => {
+  test('skills array is stored when provided', async () => {
+    const res = await request(app)
+      .post('/positions')
+      .set('Authorization', `Bearer ${makeToken('staff')}`)
+      .send({
+        name: 'Data Analyst',
+        description: 'Analyses business data',
+        responsibility: ['Build dashboards'],
+        skills: ['SQL', 'Power BI', 'Python'],
+      });
+
+    expect(res.status).toBe(201);
+    expect(Array.isArray(res.body.skills)).toBe(true);
+    expect(res.body.skills).toHaveLength(3);
+    expect(res.body.skills).toContain('SQL');
+
+    insertedIds.push(res.body._id);
+  });
+
+  test('skills defaults to empty array when not provided', async () => {
+    const res = await request(app)
+      .post('/positions')
+      .set('Authorization', `Bearer ${makeToken('staff')}`)
+      .send({ name: 'Office Admin', description: 'General administration' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.skills).toEqual([]);
+
+    insertedIds.push(res.body._id);
+  });
+});
+
+describe('PUT /positions/:id — skills field', () => {
+  let createdId;
+
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/positions')
+      .set('Authorization', `Bearer ${makeToken('staff')}`)
+      .send({ name: 'IT Support', description: 'Handles internal IT requests' });
+    createdId = res.body._id;
+    insertedIds.push(createdId);
+  });
+
+  test('staff can add skills to a position that had none', async () => {
+    const res = await request(app)
+      .put(`/positions/${createdId}`)
+      .set('Authorization', `Bearer ${makeToken('staff')}`)
+      .send({ skills: ['Linux', 'Networking', 'Helpdesk'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Position updated');
+  });
+
+  test('updated skills are persisted in the database', async () => {
+    const res = await request(app)
+      .get(`/positions/${createdId}`)
+      .set('Authorization', `Bearer ${makeToken('staff')}`);
+
+    expect(Array.isArray(res.body.skills)).toBe(true);
+    expect(res.body.skills).toHaveLength(3);
+    expect(res.body.skills).toContain('Networking');
+  });
+});
+
 describe('DELETE /positions/:id', () => {
   let targetId;
 

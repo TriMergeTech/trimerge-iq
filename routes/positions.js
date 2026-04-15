@@ -11,7 +11,7 @@ module.exports = function createPositionsRouter(positions, authMiddleware, requi
 
   // POST /positions — create a new position (staff + admin)
   router.post('/', authMiddleware, requireRole('admin', 'staff'), async (req, res) => {
-    const { name, description, responsibility } = req.body;
+    const { name, description, responsibility, skills } = req.body;
 
     if (!name || !description) {
       return res.status(400).json({ message: 'Name and description are required' });
@@ -21,6 +21,7 @@ module.exports = function createPositionsRouter(positions, authMiddleware, requi
       name: name.trim(),
       description: description.trim(),
       responsibility: Array.isArray(responsibility) ? responsibility : [],
+      skills: Array.isArray(skills) ? skills : [],
       created_at: new Date(),
     };
 
@@ -60,11 +61,12 @@ module.exports = function createPositionsRouter(positions, authMiddleware, requi
       return res.status(400).json({ message: 'Invalid position ID' });
     }
 
-    const { name, description, responsibility } = req.body;
+    const { name, description, responsibility, skills } = req.body;
     const updates = {};
     if (name) updates.name = name.trim();
     if (description) updates.description = description.trim();
     if (Array.isArray(responsibility)) updates.responsibility = responsibility;
+    if (Array.isArray(skills)) updates.skills = skills;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ message: 'No valid fields provided to update' });

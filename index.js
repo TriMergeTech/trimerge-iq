@@ -204,6 +204,7 @@ const swaggerSpec = {
                   name: { type: 'string', example: 'Senior Accountant' },
                   description: { type: 'string', example: 'Handles financial reporting' },
                   responsibility: { type: 'array', items: { type: 'string' }, example: ['Prepare reports', 'Review audits'] },
+                  skills: { type: 'array', items: { type: 'string' }, example: ['Excel', 'GAAP'] },
                 },
               },
             },
@@ -254,6 +255,7 @@ const swaggerSpec = {
                   name: { type: 'string' },
                   description: { type: 'string' },
                   responsibility: { type: 'array', items: { type: 'string' } },
+                  skills: { type: 'array', items: { type: 'string' } },
                 },
               },
             },
@@ -305,6 +307,281 @@ const swaggerSpec = {
         },
       },
     },
+    '/services': {
+      post: {
+        tags: ['Services'],
+        summary: 'Create a new service',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'descriptions'],
+                properties: {
+                  title: { type: 'string', example: 'Tax Consulting' },
+                  descriptions: { type: 'string', example: 'End-to-end tax advisory service' },
+                  skills: { type: 'array', items: { type: 'string' }, example: ['Tax Law', 'IFRS'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Service created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Services'],
+        summary: 'Retrieve all services',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all services' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/services/{id}': {
+      get: {
+        tags: ['Services'],
+        summary: 'Retrieve a single service by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the service' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Service not found' },
+        },
+      },
+      put: {
+        tags: ['Services'],
+        summary: 'Update a service by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  descriptions: { type: 'string' },
+                  skills: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Service updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Service not found' },
+        },
+      },
+      delete: {
+        tags: ['Services'],
+        summary: 'Delete a service by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Service deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Service not found' },
+        },
+      },
+    },
+    '/skills': {
+      post: {
+        tags: ['Skills'],
+        summary: 'Create a new skill',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'description'],
+                properties: {
+                  name: { type: 'string', example: 'Financial Modelling' },
+                  description: { type: 'string', example: 'Building forecast models in Excel' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Skill created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Skills'],
+        summary: 'Retrieve all skills',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all skills' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/skills/{id}': {
+      get: {
+        tags: ['Skills'],
+        summary: 'Retrieve a single skill by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the skill' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Skill not found' },
+        },
+      },
+      put: {
+        tags: ['Skills'],
+        summary: 'Update a skill by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Skill updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Skill not found' },
+        },
+      },
+      delete: {
+        tags: ['Skills'],
+        summary: 'Delete a skill by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Skill deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Skill not found' },
+        },
+      },
+    },
+    '/clients': {
+      post: {
+        tags: ['Clients'],
+        summary: 'Create a new client',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'about'],
+                properties: {
+                  name: { type: 'string', example: 'Acme Corp' },
+                  about: { type: 'string', example: 'Global manufacturing company' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Client created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Clients'],
+        summary: 'Retrieve all clients',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all clients' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/clients/{id}': {
+      get: {
+        tags: ['Clients'],
+        summary: 'Retrieve a single client by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the client' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Client not found' },
+        },
+      },
+      put: {
+        tags: ['Clients'],
+        summary: 'Update a client by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  about: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Client updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Client not found' },
+        },
+      },
+      delete: {
+        tags: ['Clients'],
+        summary: 'Delete a client by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Client deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Client not found' },
+        },
+      },
+    },
   },
 };
 
@@ -335,6 +612,9 @@ let users;
 let otpVerifications;
 let passwordResets;
 let positions;
+let services;
+let skills;
+let clients;
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
@@ -401,6 +681,9 @@ async function connectDb() {
   otpVerifications = db.collection('otp_verifications');
   passwordResets = db.collection('password_resets');
   positions = db.collection('positions');
+  services = db.collection('services');
+  skills = db.collection('skills');
+  clients = db.collection('clients');
   await users.createIndex({ email: 1 }, { unique: true });
   await otpVerifications.createIndex({ email: 1 });
   await otpVerifications.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
@@ -410,6 +693,9 @@ async function connectDb() {
 }
 
 const createPositionsRouter = require('./routes/positions');
+const createServicesRouter = require('./routes/services');
+const createSkillsRouter = require('./routes/skills');
+const createClientsRouter = require('./routes/clients');
 
 app.get('/', (req, res) => {
   res.json({ status: 'Authentication API is running' });
@@ -663,6 +949,9 @@ app.use((err, _req, res, _next) => {
 connectDb()
   .then(() => {
     app.use('/positions', createPositionsRouter(positions, authMiddleware, requireRole));
+    app.use('/services', createServicesRouter(services, authMiddleware, requireRole));
+    app.use('/skills', createSkillsRouter(skills, authMiddleware, requireRole));
+    app.use('/clients', createClientsRouter(clients, authMiddleware, requireRole));
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
