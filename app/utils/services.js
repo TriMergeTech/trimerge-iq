@@ -1,20 +1,43 @@
 let Services = {
   profile: {
     url: "https://profile-api.savvyaisolution.com",
-    api_key: "9d6653a0f982d0c04bd802ca8362257cb2d8d6d82a1d35cd194f39768d455d76",
+    api_key: process.env.NEXT_PUBLIC_PROFILE_API_KEY,
     "x-api-version": "v2",
   },
 };
 
+let DEV = true;
+const BACKEND = DEV
+  ? "http://localhost:8005"
+  : "https://trimerge-iq-backend.vercel.app";
+
 const post_request = async (url, body) => {
-  let service = url.split("/");
-  let name = service[0].slice(1).toLowerCase();
+  let ftch;
+  if (!url.startsWith("$")) {
+    url = `${BACKEND}/${url}`;
 
-  let service_conf = Services[name];
+    let token = localStorage.getItem("token");
+    let headers = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
 
-  url = `${service_conf.url}/${service.slice(1).join("/")}`;
-  try {
-    let ftch = await fetch(url, {
+    ftch = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } else {
+    let service = url.split("/");
+    let name = service[0].slice(1).toLowerCase();
+
+    let service_conf = Services[name];
+
+    url = `${service_conf.url}/${service.slice(1).join("/")}`;
+
+    ftch = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,7 +46,9 @@ const post_request = async (url, body) => {
       },
       body: JSON.stringify(body),
     });
+  }
 
+  try {
     let res = await ftch.json();
 
     return res;

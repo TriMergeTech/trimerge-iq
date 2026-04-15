@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { act, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Check,
@@ -18,6 +18,10 @@ import { post_request } from "../utils/services";
 import Stafflist from "./stafflist";
 import Adminlist from "./adminlist";
 import Positionlist from "./position_list";
+import Skillslist from "./skillslist";
+import Serviceslist from "./serviceslist";
+import PositionModal from "./position_modal";
+import SkillModal from "./skills_modal";
 
 export default function AdminPage({ onLogout, profile }) {
   let searchParam = useSearchParams();
@@ -54,8 +58,41 @@ export default function AdminPage({ onLogout, profile }) {
     const fetchData = async () => {
       setLoading(true);
 
+      // sync active tab to URL (replace so tab switches don't fill history)
       try {
-        const res = await post_request(`$PROFILE/get_profiles`, {
+        const params = new URLSearchParams(searchParam?.toString() || "");
+        params.set("tab", activeTab);
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        router.replace(newUrl);
+      } catch (err) {
+        console.warn("Failed to update tab query param", err);
+      }
+
+      try {
+        let url =
+          activeTab === "position"
+            ? "get_positions"
+            : activeTab === "skills"
+              ? "get_skills"
+              : activeTab === "services"
+                ? "get_services"
+                : null;
+
+        let res =
+          url &&
+          (await post_request(url, {
+            ...pagination,
+            search: debouncedSearch,
+          }));
+
+        console.log(res, "HI");
+        if (res?.ok) {
+          setData(res.data);
+          setTotalPages(res.pagination?.pages);
+        }
+        if (res) return;
+
+        res = await post_request(`$PROFILE/get_profiles`, {
           profile:
             activeTab === "staff"
               ? "98260a6c-e1d5-46f1-8ab3-4f30a062b52a"
@@ -65,7 +102,6 @@ export default function AdminPage({ onLogout, profile }) {
           ...pagination,
         });
 
-        console.log(res, "HELO");
         if (res.ok) {
           setData(res.data);
           setTotalPages(res.pagination?.pages);
@@ -84,31 +120,6 @@ export default function AdminPage({ onLogout, profile }) {
   const [totalPages, setTotalPages] = useState(1);
 
   let router = useRouter();
-
-  const fetchPanelData = async () => {
-    setLoading(true);
-
-    try {
-      const res = await fetch(
-        `/api/${activeTab}?page=${pagination.page}&limit=${pagination.limit}&search=${searchQuery}`,
-        {
-          method: "GET",
-          credentials: "include",
-        },
-      );
-
-      if (!res.ok) throw new Error("Failed to fetch data");
-
-      const result = await res.json();
-
-      setData(result.data); // backend should return { data, totalPages }
-      setTotalPages(result.totalPages);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const nextPage = () => {
     if (pagination.page < totalPages) {
@@ -155,31 +166,46 @@ export default function AdminPage({ onLogout, profile }) {
         </div>
 
         <nav className="space-y-2 p-4">
-          <SidebarButton
-            active={activeTab === "staff"}
-            icon={Users}
-            label="Staff Management"
-            onClick={() => set_active_tab("staff")}
-          />
-          <SidebarButton
-            active={activeTab === "admin"}
-            icon={Users}
-            label="Admin Management"
-            onClick={() => set_active_tab("admin")}
-          />
-          <SidebarButton
-            active={activeTab === "position"}
-            icon={Users}
-            label="Position Management"
-            onClick={() => set_active_tab("position")}
-          />
-
-          {/* <SidebarButton
-            active={activeTab === "monitoring"}
-            icon={Activity}
-            label="System Monitoring"
-            onClick={() => setActiveTab("monitoring")}
-          /> */}
+          {[
+            {
+              key: "staff",
+              icon: Users,
+              label: "Staff Management",
+              tab: "staff",
+            },
+            {
+              key: "admin",
+              icon: Users,
+              label: "Admin Management",
+              tab: "admin",
+            },
+            {
+              key: "position",
+              icon: Users,
+              label: "Position Management",
+              tab: "position",
+            },
+            {
+              key: "skills",
+              icon: Users,
+              label: "Skills Management",
+              tab: "skills",
+            },
+            {
+              key: "services",
+              icon: Users,
+              label: "Services Management",
+              tab: "services",
+            },
+          ].map(({ key, icon, label, tab }) => (
+            <SidebarButton
+              key={key}
+              active={activeTab === tab}
+              icon={icon}
+              label={label}
+              onClick={() => set_active_tab(tab)}
+            />
+          ))}
         </nav>
 
         <div className="absolute bottom-0 w-64 border-t border-white/20 p-4">
@@ -217,7 +243,9 @@ export default function AdminPage({ onLogout, profile }) {
                 <button
                   type="button"
                   onClick={() => {
-                    router.push(`/signup?redirect=${activeTab.slice(0)}`);
+                    activeTab === "position"
+                      ? setShowUserModal(true)
+                      : router.push(`/signup?redirect=${activeTab.slice(0)}`);
                   }}
                   className="flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-[#174a8f]"
                 >
@@ -257,6 +285,10 @@ export default function AdminPage({ onLogout, profile }) {
           <Adminlist data={data} />
         ) : activeTab === "position" ? (
           <Positionlist data={data} />
+        ) : activeTab === "skills" ? (
+          <Skillslist data={data} />
+        ) : activeTab === "services" ? (
+          <Serviceslist data={data} />
         ) : null}
 
         <div className="flex items-center gap-3 mt-4">
@@ -274,15 +306,32 @@ export default function AdminPage({ onLogout, profile }) {
         </div>
       </div>
 
-      {showUserModal && editingUser && (
-        <UserModal
-          user={editingUser}
-          onSave={handleSaveUser}
+      {showUserModal && (
+        <Modal
           onClose={() => {
             setShowUserModal(false);
             setEditingUser(null);
           }}
-        />
+        >
+          {activeTab === "position" ? (
+            <PositionModal
+              onClose={() => setShowUserModal(false)}
+              onSave={handleSaveUser}
+            />
+          ) : activeTab === "skills" ? (
+            <SkillModal
+              skill={
+                editingUser || {
+                  title: "",
+                  description: "",
+                  responsibilities: "",
+                }
+              }
+              onClose={() => setShowUserModal(false)}
+              onSave={handleSaveUser}
+            />
+          ) : null}
+        </Modal>
       )}
     </div>
   );
@@ -320,6 +369,26 @@ function StatCard({ icon: Icon, accent, value, label, trend, dark = false }) {
       </div>
       <h3 className="mb-1 text-2xl font-bold text-gray-900">{value}</h3>
       <p className="text-sm text-gray-600">{label}</p>
+    </div>
+  );
+}
+
+function Modal({ children, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-end rounded-t-xl p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5 text-gray-700" />
+          </button>
+        </div>
+        <div className="p-0">{children}</div>
+      </div>
     </div>
   );
 }
@@ -387,17 +456,6 @@ function UserModal({ user, onSave, onClose }) {
         </form>
       </div>
     </div>
-  );
-}
-
-function FormField({ label, children }) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-gray-700">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }
 
