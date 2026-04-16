@@ -97,6 +97,21 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (storedEmail) setLoggedInEmail(storedEmail);
   }, []);
 
+  const loggedInName = useMemo(() => {
+    const localPart = loggedInEmail.split("@")[0] ?? "";
+    const normalizedParts = localPart
+      .replace(/[0-9]+/g, " ")
+      .split(/[._-]+|\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (normalizedParts.length === 0) return "Admin User";
+
+    return normalizedParts
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
+  }, [loggedInEmail]);
+
   const activeSectionMeta = SECTION_META[activeSection];
 
   const filteredStaff = useMemo(() => {
@@ -215,7 +230,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-white">Savvy Manuel</h2>
+              <h2 className="text-[15px] font-semibold tracking-tight text-white">{loggedInName}</h2>
               <p className="text-xs text-white/64">Admin Panel</p>
             </div>
           </div>
