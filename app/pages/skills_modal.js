@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FormField from "../components/form_field";
 import { post_request } from "../utils/services";
 
@@ -6,48 +6,15 @@ function SkillModal({ skill = {}, onSave, onClose }) {
   const [form, setForm] = useState({
     title: skill.title || "",
     description: skill.description || "",
-    responsibilities: skill.responsibilities || "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [availableSkills, setAvailableSkills] = useState([]);
-  const [selectedSkills, setSelectedSkills] = useState(() => {
-    const init = skill.skills || form.skills;
-    if (!init) return [];
-    if (Array.isArray(init))
-      return init.map((s) => (typeof s === "string" ? s : s._id || s.id));
-    return [];
-  });
-  const [skillsLoading, setSkillsLoading] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    const fetchSkills = async () => {
-      setSkillsLoading(true);
-      try {
-        const res = await post_request("get_skills", {});
-        if (res.ok && mounted) {
-          setAvailableSkills(res.data || []);
-        }
-      } catch (err) {
-        console.error("Failed to load skills", err);
-      } finally {
-        if (mounted) setSkillsLoading(false);
-      }
-    };
-    fetchSkills();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   // keep form.skills in sync with selectedSkills so handleSubmit sends them
-  useEffect(() => {
-    setForm((prev) => ({ ...prev, skills: selectedSkills }));
-  }, [selectedSkills]);
-
-  const handleChange = (key) => (e) =>
+  const handleChange = (key) => (e) => {
+    console.log(key, e.target.value);
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,8 +22,8 @@ function SkillModal({ skill = {}, onSave, onClose }) {
     setError(null);
 
     try {
-      const endpoint = skill._id ? "update_position" : "create_position";
-      const payload = skill._id ? { _id: skill._id, ...form } : form;
+      const endpoint = skill._id ? "update_skill" : "add_skill";
+      const payload = skill._id ? { _id: skill._id, updates: form } : form;
 
       const res = await post_request(endpoint, payload);
 
@@ -88,7 +55,7 @@ function SkillModal({ skill = {}, onSave, onClose }) {
             type="text"
             value={form.title}
             onChange={handleChange("title")}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             required
           />
         </FormField>
@@ -97,117 +64,9 @@ function SkillModal({ skill = {}, onSave, onClose }) {
           <textarea
             value={form.description}
             onChange={handleChange("description")}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             rows={4}
           />
-        </FormField>
-
-        <FormField label="Responsibilities">
-          <div className="space-y-2">
-            {(() => {
-              const getResponsibilities = () =>
-                Array.isArray(form.responsibilities)
-                  ? form.responsibilities
-                  : form.responsibilities
-                    ? [form.responsibilities]
-                    : [""];
-
-              const responsibilities = getResponsibilities();
-
-              return (
-                <>
-                  {responsibilities.map((resp, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={resp}
-                        onChange={(e) => {
-                          const arr = getResponsibilities().slice();
-                          arr[idx] = e.target.value;
-                          setForm((prev) => ({
-                            ...prev,
-                            responsibilities: arr,
-                          }));
-                        }}
-                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
-                        placeholder={`Responsibility ${idx + 1}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const arr = getResponsibilities().slice();
-                          arr.splice(idx, 1);
-                          setForm((prev) => ({
-                            ...prev,
-                            responsibilities: arr,
-                          }));
-                        }}
-                        className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
-                        aria-label={`Remove responsibility ${idx + 1}`}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const arr = Array.isArray(form.responsibilities)
-                          ? form.responsibilities.slice()
-                          : form.responsibilities
-                            ? [form.responsibilities]
-                            : [];
-                        arr.push("");
-                        setForm((prev) => ({ ...prev, responsibilities: arr }));
-                      }}
-                      className="mt-1 inline-flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-3 py-2 text-sm font-semibold text-white hover:bg-[#174a8f]"
-                    >
-                      + Add responsibility
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </FormField>
-
-        <FormField label="Skills">
-          <div className="space-y-2 max-h-40 overflow-auto">
-            {skillsLoading ? (
-              <p className="text-sm text-gray-500">Loading skills...</p>
-            ) : availableSkills.length === 0 ? (
-              <p className="text-sm text-gray-500">No skills available</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {availableSkills.map((skill) => {
-                  const id = skill._id || skill.id || skill.name;
-                  const checked = selectedSkills.includes(id);
-                  return (
-                    <label
-                      key={id}
-                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setSelectedSkills((prev) =>
-                            prev.includes(id)
-                              ? prev.filter((s) => s !== id)
-                              : [...prev, id],
-                          );
-                        }}
-                        className="h-4 w-4"
-                      />
-                      <span>{skill.name || skill.title || id}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </FormField>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

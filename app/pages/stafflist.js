@@ -3,8 +3,58 @@
 import { Loader, Trash2 } from "lucide-react";
 import TableShell from "../components/table_shell";
 import ActionIconButton from "../components/action_icon_button";
+import { useEffect, useState } from "react";
+import { post_request } from "../utils/services";
+import Listempty from "../components/list_empty";
 
 const Stafflist = ({ data }) => {
+  let [staffs, set_staffs] = useState(data);
+  let [positions, setPositions] = useState(null);
+
+  useEffect(() => {
+    set_staffs(data);
+  }, [data]);
+
+  useEffect(() => {
+    const fetch_positions = async () => {
+      if (positions) return; // already have positions, no need to fetch again
+
+      try {
+        const res = await post_request("get_positions");
+        console.log("Positions response:", res);
+        res.ok && setPositions(res.data);
+      } catch (err) {
+        console.error("Failed to fetch positions", err);
+      }
+    };
+
+    fetch_positions();
+  }, []);
+
+  const update_position = async (user_id, position_id) => {
+    if (!position_id) return;
+
+    try {
+      const res = await post_request("$PROFILE/update_profile", {
+        profile: user_id,
+        updates: { position: position_id },
+      });
+
+      if (!res.ok) {
+      } else {
+        set_staffs((prev) => {
+          return prev.map((p) => {
+            if (p._id === user_id) p.position = position_id;
+            return [];
+          });
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "An error occurred while updating position");
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
       <TableShell
@@ -17,7 +67,7 @@ const Stafflist = ({ data }) => {
           "Actions",
         ]}
       >
-        {!data ? (
+        {!staffs ? (
           <tr>
             <td colSpan="6">
               <div className="flex items-center justify-center py-16">
@@ -28,8 +78,13 @@ const Stafflist = ({ data }) => {
               </div>
             </td>
           </tr>
+        ) : staffs?.length === 0 ? (
+          <Listempty
+            title="No staffs found"
+            description="There are no staffs to display. Add a new position to get started."
+          />
         ) : (
-          data.map((user) => (
+          staffs.map((user) => (
             <tr key={user._id} className="transition-colors hover:bg-gray-50">
               <td className="whitespace-nowrap px-6 py-4">
                 <div className="flex items-center gap-3">
@@ -49,23 +104,21 @@ const Stafflist = ({ data }) => {
               </td>
               <td className="whitespace-nowrap px-6 py-4">
                 <select
-                  value={user.profile}
-                  onChange={(event) =>
-                    setUsers((current) =>
-                      current.map((item) =>
-                        item._id === user._id
-                          ? { ...item, role: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                    user.role === "admin"
-                      ? "bg-[#d4af37] text-gray-900"
-                      : "bg-gray-200 text-gray-800"
-                  }`}
+                  value={user.position}
+                  onChange={(event) => {
+                    update_position(user._id, event.target.value);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${"bg-gray-200 text-gray-800"}`}
                 >
-                  <option value="user">activeTab</option>
+                  <option disabled value="">
+                    -- Select Position --{" "}
+                  </option>
+
+                  {positions?.map((pos) => (
+                    <option key={pos._id} value={pos._id}>
+                      {pos.title}
+                    </option>
+                  ))}
                 </select>
               </td>
               <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">

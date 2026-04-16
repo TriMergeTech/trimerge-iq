@@ -4,7 +4,7 @@ import { Loader, Trash2 } from "lucide-react";
 import TableShell from "../components/table_shell";
 import ActionIconButton from "../components/action_icon_button";
 
-const Stafflist = ({ data }) => {
+const Serviceslist = ({ data }) => {
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
       <TableShell headers={["Name", "Description", "Created", "Actions"]}>
@@ -87,4 +87,4 @@ const Stafflist = ({ data }) => {
   );
 };
 
-export default Stafflist;
+export default Serviceslist;

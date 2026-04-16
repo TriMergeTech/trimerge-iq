@@ -51,11 +51,14 @@ function PositionModal({ position = {}, onSave, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    console.log("Submitting position with data:", form);
+
     setLoading(true);
     setError(null);
 
     try {
-      const endpoint = position._id ? "update_position" : "create_position";
+      const endpoint = position._id ? "update_position" : "add_position";
       const payload = position._id ? { _id: position._id, ...form } : form;
 
       const res = await post_request(endpoint, payload);
@@ -88,7 +91,7 @@ function PositionModal({ position = {}, onSave, onClose }) {
             type="text"
             value={form.title}
             onChange={handleChange("title")}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             required
           />
         </FormField>
@@ -97,7 +100,7 @@ function PositionModal({ position = {}, onSave, onClose }) {
           <textarea
             value={form.description}
             onChange={handleChange("description")}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
             rows={4}
           />
         </FormField>
@@ -129,7 +132,7 @@ function PositionModal({ position = {}, onSave, onClose }) {
                             responsibilities: arr,
                           }));
                         }}
-                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
                         placeholder={`Responsibility ${idx + 1}`}
                       />
                       <button
@@ -182,7 +185,7 @@ function PositionModal({ position = {}, onSave, onClose }) {
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {availableSkills.map((skill) => {
-                  const id = skill._id || skill.id || skill.name;
+                  const id = skill._id;
                   const checked = selectedSkills.includes(id);
                   return (
                     <label
@@ -199,9 +202,12 @@ function PositionModal({ position = {}, onSave, onClose }) {
                               : [...prev, id],
                           );
                         }}
-                        className="h-4 w-4"
+                        // className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                        className="h-4 w-4 text-gray-700"
                       />
-                      <span>{skill.name || skill.title || id}</span>
+                      <span className="text-gray-700">
+                        {skill.name || skill.title || id}
+                      </span>
                     </label>
                   );
                 })}

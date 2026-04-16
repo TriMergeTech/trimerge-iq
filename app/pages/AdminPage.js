@@ -145,9 +145,9 @@ export default function AdminPage({ onLogout, profile }) {
     setActiveTab(tab);
   };
 
-  const handleSaveUser = (user) => {
+  const handleSave = (datum) => {
     setShowUserModal(false);
-    setEditingUser(null);
+    setData((prev) => [...prev, datum]);
   };
 
   return (
@@ -230,9 +230,7 @@ export default function AdminPage({ onLogout, profile }) {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  {activeTab === "staff"
-                    ? "Staff Management"
-                    : "Admin Management"}
+                  {`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Management`}
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
                   {`Manage ${data?.length || "-"} registry`}
@@ -243,9 +241,9 @@ export default function AdminPage({ onLogout, profile }) {
                 <button
                   type="button"
                   onClick={() => {
-                    activeTab === "position"
-                      ? setShowUserModal(true)
-                      : router.push(`/signup?redirect=${activeTab.slice(0)}`);
+                    ["staff", "admin"].includes(activeTab)
+                      ? router.push(`/signup?redirect=${activeTab.slice(0)}`)
+                      : setShowUserModal(true);
                   }}
                   className="flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-[#174a8f]"
                 >
@@ -316,7 +314,7 @@ export default function AdminPage({ onLogout, profile }) {
           {activeTab === "position" ? (
             <PositionModal
               onClose={() => setShowUserModal(false)}
-              onSave={handleSaveUser}
+              onSave={handleSave}
             />
           ) : activeTab === "skills" ? (
             <SkillModal
@@ -328,7 +326,7 @@ export default function AdminPage({ onLogout, profile }) {
                 }
               }
               onClose={() => setShowUserModal(false)}
-              onSave={handleSaveUser}
+              onSave={handleSave}
             />
           ) : null}
         </Modal>
