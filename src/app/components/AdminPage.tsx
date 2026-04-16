@@ -2,322 +2,510 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
-  Check,
-  Edit,
+  Briefcase,
   LogOut,
   Plus,
   Search,
   Shield,
   Trash2,
+  User,
+  UserCog,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 
-interface User {
+type AdminSection = "staff" | "admin" | "position" | "skills" | "services";
+type CreateModal = AdminSection | null;
+
+interface StaffMember {
   id: string;
   name: string;
   email: string;
-  role: "staff" | "user";
+  positionId?: string;
   createdAt: Date;
-  lastLogin: Date;
+}
+
+interface SkillItem {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+}
+
+interface ServiceItem {
+  id: string;
+  name: string;
+  description: string;
+  skillIds: string[];
+  positionIds: string[];
+  createdAt: Date;
+}
+
+interface PositionItem {
+  id: string;
+  title: string;
+  description: string;
+  responsibilities: string[];
+  skillIds: string[];
+  createdAt: Date;
 }
 
 interface AdminPageProps {
   onLogout: () => void;
 }
 
-const MOCK_USERS: User[] = [
-  { id: "1", name: "John Smith", email: "john.smith@trimerge.com", role: "staff", createdAt: new Date("2024-01-15"), lastLogin: new Date("2025-03-24") },
-  { id: "2", name: "Sarah Johnson", email: "sarah.j@trimerge.com", role: "user", createdAt: new Date("2024-02-20"), lastLogin: new Date("2025-03-23") },
-  { id: "3", name: "Michael Chen", email: "m.chen@trimerge.com", role: "user", createdAt: new Date("2024-03-10"), lastLogin: new Date("2025-03-22") },
-  { id: "4", name: "Emily Davis", email: "emily.d@trimerge.com", role: "user", createdAt: new Date("2024-03-15"), lastLogin: new Date("2025-03-20") },
-];
+const INITIAL_STAFF: StaffMember[] = [];
 
-const RECENT_ACTIVITY = [
-  { user: "John Smith", action: "Created new staff profile", time: "2 minutes ago", type: "success" },
-  { user: "Sarah Johnson", action: "Updated staff access", time: "15 minutes ago", type: "info" },
-  { user: "Michael Chen", action: "Deleted user account", time: "1 hour ago", type: "warning" },
-  { user: "System", action: "Automated backup completed", time: "3 hours ago", type: "success" },
-] as const;
+const INITIAL_ADMINS: StaffMember[] = [];
+
+const INITIAL_SKILLS: SkillItem[] = [];
+
+const INITIAL_SERVICES: ServiceItem[] = [];
+
+const INITIAL_POSITIONS: PositionItem[] = [];
+
+const SECTION_META: Record<
+  AdminSection,
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    addLabel: string;
+  }
+> = {
+  skills: { label: "Skills Management", icon: Wrench, addLabel: "Add New" },
+  position: { label: "Position Management", icon: User, addLabel: "Add New" },
+  staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
+  services: { label: "Services Management", icon: Briefcase, addLabel: "Add New" },
+  admin: { label: "Admin Management", icon: UserCog, addLabel: "Add New" },
+};
 
 export default function AdminPage({ onLogout }: AdminPageProps) {
-  const [activeTab, setActiveTab] = useState<"users" | "monitoring">("users");
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [activeSection, setActiveSection] = useState<AdminSection>("services");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState<"all" | "staff" | "user">("all");
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showUserModal, setShowUserModal] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
+  const [openModal, setOpenModal] = useState<CreateModal>(null);
+
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(INITIAL_STAFF);
+  const [adminMembers, setAdminMembers] = useState<StaffMember[]>(INITIAL_ADMINS);
+  const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
+  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("trimerge_admin_email");
-    if (storedEmail) {
-      setLoggedInEmail(storedEmail);
-    }
+    if (storedEmail) setLoggedInEmail(storedEmail);
   }, []);
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter((user) => {
-        const matchesSearch =
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = filterRole === "all" || user.role === filterRole;
-        return matchesSearch && matchesRole;
-      }),
-    [filterRole, searchQuery, users],
-  );
+  const activeSectionMeta = SECTION_META[activeSection];
 
-  const staffCount = useMemo(
-    () => users.filter((user) => user.role === "staff").length,
-    [users],
-  );
+  const filteredStaff = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return staffMembers;
+    return staffMembers.filter(
+      (member) => {
+        const positionName = positions.find((position) => position.id === member.positionId)?.title ?? "";
+        return (
+          member.name.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query) ||
+          positionName.toLowerCase().includes(query)
+        );
+      },
+    );
+  }, [positions, searchQuery, staffMembers]);
 
-  const openNewUserModal = () => {
-    setEditingUser({
-      id: "",
-      name: "",
-      email: "",
-      role: "user",
-      createdAt: new Date(),
-      lastLogin: new Date(),
+  const filteredAdmins = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return adminMembers;
+    return adminMembers.filter(
+      (member) =>
+        member.name.toLowerCase().includes(query) || member.email.toLowerCase().includes(query),
+    );
+  }, [adminMembers, searchQuery]);
+
+  const filteredSkills = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return skills;
+    return skills.filter(
+      (skill) =>
+        skill.name.toLowerCase().includes(query) || skill.description.toLowerCase().includes(query),
+    );
+  }, [searchQuery, skills]);
+
+  const filteredServices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return services;
+    return services.filter((service) => {
+      const skillNames = service.skillIds
+        .map((skillId) => skills.find((skill) => skill.id === skillId)?.name ?? "")
+        .join(" ");
+      const positionNames = service.positionIds
+        .map((positionId) => positions.find((position) => position.id === positionId)?.title ?? "")
+        .join(" ");
+      return (
+        service.name.toLowerCase().includes(query) ||
+        service.description.toLowerCase().includes(query) ||
+        skillNames.toLowerCase().includes(query) ||
+        positionNames.toLowerCase().includes(query)
+      );
     });
-    setShowUserModal(true);
-  };
+  }, [positions, searchQuery, services, skills]);
 
-  const openNewStaffModal = () => {
-    setActiveTab("users");
-    setEditingUser({
-      id: "",
-      name: "",
-      email: "",
-      role: "staff",
-      createdAt: new Date(),
-      lastLogin: new Date(),
+  const filteredPositions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return positions;
+    return positions.filter((position) => {
+      const skillNames = position.skillIds
+        .map((skillId) => skills.find((skill) => skill.id === skillId)?.name ?? "")
+        .join(" ");
+      return (
+        position.title.toLowerCase().includes(query) ||
+        position.description.toLowerCase().includes(query) ||
+        position.responsibilities.join(" ").toLowerCase().includes(query) ||
+        skillNames.toLowerCase().includes(query)
+      );
     });
-    setShowUserModal(true);
+  }, [positions, searchQuery, skills]);
+
+  const activeCount = {
+    staff: staffMembers.length,
+    admin: adminMembers.length,
+    position: positions.length,
+    skills: skills.length,
+    services: services.length,
+  }[activeSection];
+
+  const openCreateModal = () => setOpenModal(activeSection);
+  const removeSkill = (skillId: string) => {
+    setSkills((current) => current.filter((item) => item.id !== skillId));
+    setPositions((current) =>
+      current.map((position) => ({
+        ...position,
+        skillIds: position.skillIds.filter((item) => item !== skillId),
+      })),
+    );
+    setServices((current) =>
+      current.map((service) => ({
+        ...service,
+        skillIds: service.skillIds.filter((item) => item !== skillId),
+      })),
+    );
   };
-
-  const handleSaveUser = (user: User) => {
-    if (user.id) {
-      setUsers((current) => current.map((item) => (item.id === user.id ? user : item)));
-    } else {
-      setUsers((current) => [
-        ...current,
-        {
-          ...user,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-          lastLogin: new Date(),
-        },
-      ]);
-    }
-
-    setShowUserModal(false);
-    setEditingUser(null);
+  const removePosition = (positionId: string) => {
+    setPositions((current) => current.filter((item) => item.id !== positionId));
+    setStaffMembers((current) =>
+      current.map((member) =>
+        member.positionId === positionId ? { ...member, positionId: undefined } : member,
+      ),
+    );
+    setServices((current) =>
+      current.map((service) => ({
+        ...service,
+        positionIds: service.positionIds.filter((item) => item !== positionId),
+      })),
+    );
   };
 
   return (
-    <div className="page-shell min-h-[calc(100vh-80px)] bg-gray-100 xl:flex">
-      <aside className="relative bg-gradient-to-b from-[#1e5ba8] to-[#174a8f] text-white shadow-2xl page-section xl:sticky xl:top-[81px] xl:h-[calc(100vh-81px)] xl:w-64">
-        <div className="border-b border-white/20 p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#d4af37]">
-              <Shield className="h-6 w-6 text-gray-900" />
+    <div className="page-shell min-h-[calc(100vh-80px)] bg-[#f6f8fc] xl:flex">
+      <aside className="relative bg-[linear-gradient(180deg,#1f5fb5_0%,#255da7_56%,#25569a_100%)] text-white shadow-[8px_0_24px_rgba(10,31,68,0.12)] page-section xl:sticky xl:top-[81px] xl:h-[calc(100vh-81px)] xl:w-[270px]">
+        <div className="border-b border-white/12 p-5">
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0ca44] text-[#1e2838] shadow-[0_8px_20px_rgba(0,0,0,0.15)]">
+              <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Admin Panel</h2>
-              <p className="text-xs text-blue-200">TriMerge Consulting</p>
+              <h2 className="text-[15px] font-semibold tracking-tight text-white">Savvy Manuel</h2>
+              <p className="text-xs text-white/64">Admin Panel</p>
             </div>
           </div>
         </div>
 
         <nav className="space-y-2 p-4">
-          <SidebarButton active={activeTab === "users"} icon={Users} label="User Management" onClick={() => setActiveTab("users")} />
-          <SidebarButton active={false} icon={Plus} label="New Staff Member" onClick={openNewStaffModal} />
-          <SidebarButton active={activeTab === "monitoring"} icon={Activity} label="System Monitoring" onClick={() => setActiveTab("monitoring")} />
+          {(Object.keys(SECTION_META) as AdminSection[]).map((section) => {
+            const item = SECTION_META[section];
+            return (
+              <SidebarButton
+                key={section}
+                active={activeSection === section}
+                icon={item.icon}
+                label={item.label}
+                onClick={() => {
+                  setActiveSection(section);
+                  setSearchQuery("");
+                }}
+              />
+            );
+          })}
         </nav>
 
-        <div className="border-t border-white/20 p-4 xl:absolute xl:bottom-0 xl:w-64">
-          <div className="mb-3">
-            <p className="text-xs text-blue-200">Logged in as:</p>
-            <p className="text-sm font-semibold text-white">{loggedInEmail}</p>
+        <div className="border-t border-white/12 p-4 xl:absolute xl:bottom-0 xl:w-[270px]">
+          <div className="rounded-2xl bg-white/[0.05] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/48">Logged in as:</p>
+            <p className="mt-2 break-all text-sm font-semibold text-white/94">{loggedInEmail}</p>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="interactive-button mt-4 flex w-full items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/16"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="interactive-button flex w-full items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 font-medium text-white hover:bg-white/20"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
         </div>
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <div className="border-b border-gray-200 bg-white shadow-sm page-section">
-          <div className="px-8 py-6">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="border-b border-[#e3e8f2] bg-white shadow-[0_8px_18px_rgba(36,55,89,0.04)]">
+          <div className="px-8 py-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  {activeTab === "users" ? "User Management" : "System Monitoring"}
+                <h1 className="text-[42px] font-semibold tracking-tight text-[#1e2431]">
+                  {activeSectionMeta.label}
                 </h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  {activeTab === "users"
-                    ? `Manage ${users.length} registered users`
-                    : "View system logs and activity"}
-                </p>
+                <p className="mt-2 text-sm text-[#697587]">Manage {activeCount} registry</p>
               </div>
 
-              {activeTab === "users" && (
-                <button
-                  type="button"
-                  onClick={openNewUserModal}
-                  className="interactive-button flex items-center gap-2 rounded-lg bg-[#1e5ba8] px-5 py-2.5 font-semibold text-white shadow-md hover:bg-[#174a8f]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add User
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="interactive-button inline-flex items-center gap-2 rounded-xl bg-[#2865ba] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.24)] hover:bg-[#2159a8]"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{activeSectionMeta.addLabel}</span>
+              </button>
             </div>
 
-            {activeTab === "users" && (
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    className="interactive-input w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
-                  />
-                </div>
-                <select
-                  value={filterRole}
-                  onChange={(event) => setFilterRole(event.target.value as "all" | "staff" | "user")}
-                  className="interactive-input rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
-                >
-                  <option value="all">All Roles</option>
-                  <option value="staff">Staff</option>
-                  <option value="user">User</option>
-                </select>
-              </div>
-            )}
+            <div className="mt-6 relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a1abbb]" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="interactive-input w-full rounded-xl border border-[#e5e9f1] bg-white py-3.5 pl-11 pr-4 text-sm text-[#24324a] shadow-[0_4px_14px_rgba(34,54,88,0.05)] outline-none focus:ring-2 focus:ring-[#2865ba]"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 bg-gray-50 p-8 page-section [animation-delay:120ms]">
-          {activeTab === "users" && (
-            <TableShell headers={["User", "Email", "Role", "Created", "Last Login", "Actions"]}>
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="interactive-base hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#174a8f] font-semibold text-white">
-                        {user.name.split(" ").map((part) => part[0]).join("")}
-                      </div>
-                      <div className="font-medium text-gray-900">{user.name}</div>
-                    </div>
+        <div className="flex-1 px-8 py-8">
+          {activeSection === "staff" && (
+            <ManagementTable
+              headers={["Name", "Email", "Position", "Created", "Actions"]}
+              emptyMessage="No staff members found."
+            >
+              {filteredStaff.map((member) => (
+                <tr key={member.id} className="border-t border-[#eef2f8]">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{member.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.email}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                    {positions.find((position) => position.id === member.positionId)?.title ?? "Unassigned"}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">{user.email}</td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <select
-                      value={user.role}
-                      onChange={(event) =>
-                        setUsers((current) =>
-                          current.map((item) =>
-                            item.id === user.id ? { ...item, role: event.target.value as "staff" | "user" } : item,
-                          ),
-                        )
-                      }
-                      className={`interactive-input rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                        user.role === "staff" ? "bg-[#d4af37] text-gray-900" : "bg-gray-200 text-gray-800"
-                      }`}
-                    >
-                      <option value="user">User</option>
-                      <option value="staff">Staff</option>
-                    </select>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">{user.createdAt.toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">{user.lastLogin.toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                    <div className="flex items-center justify-end gap-2">
-                      <ActionIconButton
-                        color="blue"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setShowUserModal(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </ActionIconButton>
-                      <ActionIconButton
-                        color="red"
-                        onClick={() =>
-                          setUsers((current) => current.filter((item) => item.id !== user.id))
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </ActionIconButton>
-                    </div>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton onClick={() => setStaffMembers((current) => current.filter((item) => item.id !== member.id))} />
                   </td>
                 </tr>
               ))}
-            </TableShell>
+            </ManagementTable>
           )}
 
-          {activeTab === "monitoring" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard icon={Users} accent="from-[#1e5ba8] to-[#174a8f]" value={users.length.toString()} label="Total Users" trend="+12%" />
-                <StatCard icon={Shield} accent="from-[#d4af37] to-[#c19a2e]" value={staffCount.toString()} label="Staff Accounts" trend="+2%" dark />
-                <StatCard icon={Check} accent="from-green-500 to-green-600" value="Online" label="System Status" trend="99.9%" />
-              </div>
+          {activeSection === "admin" && (
+            <ManagementTable
+              headers={["Name", "Email", "Created", "Actions"]}
+              emptyMessage="No admin members found."
+            >
+              {filteredAdmins.map((member) => (
+                <tr key={member.id} className="border-t border-[#eef2f8]">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{member.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.email}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton onClick={() => setAdminMembers((current) => current.filter((item) => item.id !== member.id))} />
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
 
-              <div className="card-lift rounded-xl border border-gray-200 bg-white p-6 shadow-md">
-                <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900">
-                  <Activity className="h-5 w-5 text-[#1e5ba8]" />
-                  Recent Activity
-                </h3>
-                <div className="space-y-4">
-                  {RECENT_ACTIVITY.map((activity) => (
-                    <div
-                      key={`${activity.user}-${activity.time}`}
-                      className="interactive-base flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div
-                        className={`h-2 w-2 rounded-full ${
-                          activity.type === "success"
-                            ? "bg-green-500"
-                            : activity.type === "warning"
-                              ? "bg-yellow-500"
-                              : "bg-blue-500"
-                        }`}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">
-                          <span className="font-semibold">{activity.user}</span> {activity.action}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">{activity.time}</p>
-                      </div>
+          {activeSection === "skills" && (
+            <ManagementTable
+              headers={["Name", "Description", "Created", "Actions"]}
+              emptyMessage="No skills found."
+            >
+              {filteredSkills.map((skill) => (
+                <tr key={skill.id} className="border-t border-[#eef2f8]">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{skill.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.description}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton onClick={() => removeSkill(skill.id)} />
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "services" && (
+            <ManagementTable
+              headers={["Name", "Description", "Skills", "Positions", "Created", "Actions"]}
+              emptyMessage="No services found."
+            >
+              {filteredServices.map((service) => (
+                <tr key={service.id} className="border-t border-[#eef2f8] align-top">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{service.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{service.description}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                    <div className="flex flex-wrap gap-2">
+                      {service.skillIds.length > 0 ? service.skillIds.map((skillId) => {
+                        const skill = skills.find((item) => item.id === skillId);
+                        if (!skill) return null;
+                        return (
+                          <span key={skillId} className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]">
+                            {skill.name}
+                          </span>
+                        );
+                      }) : <span className="text-[#8b97a7]">None</span>}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                    <div className="flex flex-wrap gap-2">
+                      {service.positionIds.length > 0 ? service.positionIds.map((positionId) => {
+                        const position = positions.find((item) => item.id === positionId);
+                        if (!position) return null;
+                        return (
+                          <span key={positionId} className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]">
+                            {position.title}
+                          </span>
+                        );
+                      }) : <span className="text-[#8b97a7]">None</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{service.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton onClick={() => setServices((current) => current.filter((item) => item.id !== service.id))} />
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "position" && (
+            <ManagementTable
+              headers={["Name", "Description", "Skills", "Actions"]}
+              emptyMessage="No positions found."
+            >
+              {filteredPositions.map((position) => (
+                <tr key={position.id} className="border-t border-[#eef2f8] align-top">
+                  <td className="px-6 py-5">
+                    <p className="text-sm font-semibold text-[#263247]">{position.title}</p>
+                    <div className="mt-4 space-y-1.5 text-sm text-[#5f6b7c]">
+                      {position.responsibilities.map((responsibility) => (
+                        <div key={`${position.id}-${responsibility}`} className="flex items-start gap-2">
+                          <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#6d7a8c]" />
+                          <span>{responsibility}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                    <div className="flex flex-wrap gap-2">
+                      {position.skillIds.map((skillId) => {
+                        const skill = skills.find((item) => item.id === skillId);
+                        if (!skill) return null;
+                        return (
+                          <span
+                            key={skillId}
+                            className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
+                          >
+                            {skill.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton onClick={() => removePosition(position.id)} />
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
           )}
         </div>
       </div>
 
-      {showUserModal && editingUser && (
-        <UserModal
-          user={editingUser}
-          onSave={handleSaveUser}
-          onClose={() => {
-            setShowUserModal(false);
-            setEditingUser(null);
+      {openModal === "staff" && (
+        <PersonModal
+          title="Add New Staff Member"
+          positions={positions}
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            setStaffMembers((current) => [
+              ...current,
+              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+            ]);
+            setOpenModal(null);
+          }}
+        />
+      )}
+
+      {openModal === "admin" && (
+        <PersonModal
+          title="Add New Admin Member"
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            setAdminMembers((current) => [
+              ...current,
+              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+            ]);
+            setOpenModal(null);
+          }}
+        />
+      )}
+
+      {openModal === "skills" && (
+        <RegistryModal
+          title="Add New Skill"
+          nameLabel="Title"
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            setSkills((current) => [
+              ...current,
+              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+            ]);
+            setOpenModal(null);
+          }}
+        />
+      )}
+
+      {openModal === "services" && (
+        <ServiceModal
+          title="Add New Service"
+          skills={skills}
+          positions={positions}
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            setServices((current) => [
+              ...current,
+              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+            ]);
+            setOpenModal(null);
+          }}
+        />
+      )}
+
+      {openModal === "position" && (
+        <PositionModal
+          skills={skills}
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            setPositions((current) => [
+              ...current,
+              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+            ]);
+            setOpenModal(null);
           }}
         />
       )}
@@ -340,167 +528,472 @@ function SidebarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`interactive-button flex w-full items-center gap-3 rounded-lg px-4 py-3 font-medium ${
-        active ? "bg-[#d4af37] text-gray-900 shadow-lg" : "text-white hover:bg-white/10"
+      className={`interactive-button flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-medium transition ${
+        active
+          ? "bg-[#f0ca44] text-[#243145] shadow-[0_10px_20px_rgba(0,0,0,0.15)]"
+          : "text-white/88 hover:bg-white/[0.08]"
       }`}
     >
-      <Icon className="h-5 w-5" />
-      {label}
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
     </button>
   );
 }
 
-function TableShell({
+function ManagementTable({
   headers,
   children,
+  emptyMessage,
 }: {
   headers: string[];
   children: React.ReactNode;
+  emptyMessage: string;
 }) {
+  const childCount = Array.isArray(children) ? children.length : children ? 1 : 0;
+
   return (
-    <div className="card-lift overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md">
+    <div className="overflow-hidden rounded-2xl border border-[#edf1f7] bg-white shadow-[0_8px_24px_rgba(29,48,81,0.06)]">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+        <table className="w-full min-w-[760px]">
+          <thead className="bg-[#fbfcff]">
             <tr>
               {headers.map((header) => (
-                <th key={header} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
+                <th
+                  key={header}
+                  className="px-6 py-5 text-left text-xs font-semibold uppercase tracking-[0.12em] text-[#4f5d72]"
+                >
                   {header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">{children}</tbody>
+          <tbody>
+            {childCount > 0 ? (
+              children
+            ) : (
+              <tr>
+                <td colSpan={headers.length} className="px-6 py-14 text-center text-sm text-[#7b8798]">
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
       </div>
     </div>
   );
 }
 
-function ActionIconButton({
-  color,
-  onClick,
-  children,
-}: {
-  color: "blue" | "red";
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function DeleteButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`interactive-button rounded-lg p-2 ${
-        color === "blue" ? "text-[#1e5ba8] hover:bg-blue-50" : "text-red-600 hover:bg-red-50"
-      }`}
+      className="interactive-button rounded-full p-2 text-[#f26a8a] hover:bg-[#fff1f5]"
     >
-      {children}
+      <Trash2 className="h-4 w-4" />
     </button>
   );
 }
 
-function StatCard({
-  icon: Icon,
-  accent,
-  value,
-  label,
-  trend,
-  dark = false,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  accent: string;
-  value: string;
-  label: string;
-  trend: string;
-  dark?: boolean;
-}) {
-  return (
-    <div className="card-lift rounded-xl border border-gray-200 bg-white p-6 shadow-md">
-      <div className="mb-4 flex items-center justify-between">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br ${accent} ${
-            dark ? "text-gray-900" : "text-white"
-          }`}
-        >
-          <Icon className="h-6 w-6" />
-        </div>
-        <span className="text-sm font-semibold text-green-600">{trend}</span>
-      </div>
-      <h3 className="mb-1 text-2xl font-bold text-gray-900">{value}</h3>
-      <p className="text-sm text-gray-600">{label}</p>
-    </div>
-  );
-}
-
-function UserModal({
-  user,
+function PersonModal({
+  title,
+  positions,
   onSave,
   onClose,
 }: {
-  user: User;
-  onSave: (user: User) => void;
+  title: string;
+  positions?: PositionItem[];
+  onSave: (payload: { name: string; email: string; positionId?: string }) => void;
   onClose: () => void;
 }) {
-  const [formData, setFormData] = useState<User>(user);
-  const isCreating = !user.id;
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [positionId, setPositionId] = useState("");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-rise">
-      <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-[#1e5ba8] to-[#174a8f] p-6">
-          <h3 className="text-xl font-bold text-white">
-            {isCreating
-              ? formData.role === "staff"
-                ? "Add New Staff Member"
-                : "Add New User"
-              : "Edit Team Member"}
-          </h3>
-          <button type="button" onClick={onClose} className="interactive-button rounded-lg p-2 hover:bg-white/20">
-            <X className="h-5 w-5 text-white" />
-          </button>
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSave(formData);
-          }}
-          className="space-y-4 p-6"
-        >
-          <FormField label="Name">
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
-              required
-            />
-          </FormField>
-          <FormField label="Email">
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
-              required
-            />
-          </FormField>
-          <FormField label="Position">
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({ name: name.trim(), email: email.trim(), positionId: positionId || undefined });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label="Name">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Email">
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        {positions && (
+          <ModalField label="Position">
             <select
-              value=""
-              onChange={() => undefined}
-              className="interactive-input w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+              value={positionId}
+              onChange={(event) => setPositionId(event.target.value)}
+              className="interactive-input w-full rounded-xl border border-[#dfe5ef] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
             >
-              <option value="" />
+              <option value="">{positions.length > 0 ? "No position assigned" : "Create a position first"}</option>
+              {positions.map((position) => (
+                <option key={position.id} value={position.id}>
+                  {position.title}
+                </option>
+              ))}
             </select>
-          </FormField>
-          <ModalActions onClose={onClose} />
-        </form>
+            {positions.length === 0 && (
+              <p className="mt-2 text-xs text-[#7b8798]">
+                Positions created in `Position Management` will appear here automatically.
+              </p>
+            )}
+          </ModalField>
+        )}
+
+        <ModalActions onClose={onClose} />
+      </form>
+    </BaseModal>
+  );
+}
+
+function RegistryModal({
+  title,
+  nameLabel,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  nameLabel: string;
+  onSave: (payload: { name: string; description: string }) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  return (
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({ name: name.trim(), description: description.trim() });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label={nameLabel}>
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalActions onClose={onClose} />
+      </form>
+    </BaseModal>
+  );
+}
+
+function ServiceModal({
+  title,
+  skills,
+  positions,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  skills: SkillItem[];
+  positions: PositionItem[];
+  onSave: (payload: Omit<ServiceItem, "id" | "createdAt">) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [selectedPositionIds, setSelectedPositionIds] = useState<string[]>([]);
+
+  const toggleSkill = (skillId: string) => {
+    setSelectedSkillIds((current) =>
+      current.includes(skillId) ? current.filter((item) => item !== skillId) : [...current, skillId],
+    );
+  };
+
+  const togglePosition = (positionId: string) => {
+    setSelectedPositionIds((current) =>
+      current.includes(positionId) ? current.filter((item) => item !== positionId) : [...current, positionId],
+    );
+  };
+
+  return (
+    <BaseModal title={title} onClose={onClose} wide>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({
+            name: name.trim(),
+            description: description.trim(),
+            skillIds: selectedSkillIds,
+            positionIds: selectedPositionIds,
+          });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label="Title">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Skills">
+          {skills.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {skills.map((skill) => (
+                <label key={skill.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                  <input
+                    type="checkbox"
+                    checked={selectedSkillIds.includes(skill.id)}
+                    onChange={() => toggleSkill(skill.id)}
+                    className="h-4 w-4 rounded border-[#d6dce8]"
+                  />
+                  <span>{skill.name}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+              No skills yet. Create skills first and they will appear here automatically.
+            </p>
+          )}
+        </ModalField>
+
+        <ModalField label="Positions">
+          {positions.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {positions.map((position) => (
+                <label key={position.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                  <input
+                    type="checkbox"
+                    checked={selectedPositionIds.includes(position.id)}
+                    onChange={() => togglePosition(position.id)}
+                    className="h-4 w-4 rounded border-[#d6dce8]"
+                  />
+                  <span>{position.title}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+              No positions yet. Create positions first and they will appear here automatically.
+            </p>
+          )}
+        </ModalField>
+
+        <ModalActions onClose={onClose} />
+      </form>
+    </BaseModal>
+  );
+}
+
+function PositionModal({
+  skills,
+  onSave,
+  onClose,
+}: {
+  skills: SkillItem[];
+  onSave: (payload: Omit<PositionItem, "id" | "createdAt">) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [responsibilities, setResponsibilities] = useState<string[]>([""]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+
+  const updateResponsibility = (index: number, value: string) => {
+    setResponsibilities((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? value : item)),
+    );
+  };
+
+  const removeResponsibility = (index: number) => {
+    setResponsibilities((current) => (current.length === 1 ? [""] : current.filter((_, itemIndex) => itemIndex !== index)));
+  };
+
+  const toggleSkill = (skillId: string) => {
+    setSelectedSkillIds((current) =>
+      current.includes(skillId) ? current.filter((item) => item !== skillId) : [...current, skillId],
+    );
+  };
+
+  return (
+    <BaseModal title="Add New Position" onClose={onClose} maxWidthClass="max-w-[760px]">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({
+            title: title.trim(),
+            description: description.trim(),
+            responsibilities: responsibilities.map((item) => item.trim()).filter(Boolean),
+            skillIds: selectedSkillIds,
+          });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label="Title">
+          <input
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Responsibilities">
+          <div className="space-y-3">
+            {responsibilities.map((responsibility, index) => (
+              <div key={`responsibility-${index}`} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={responsibility}
+                  onChange={(event) => updateResponsibility(index, event.target.value)}
+                  placeholder={`Responsibility ${index + 1}`}
+                  className="interactive-input flex-1 rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeResponsibility(index)}
+                  className="interactive-button rounded-xl px-3 py-3 text-sm font-medium text-[#df5f7c] hover:bg-[#fff0f4]"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setResponsibilities((current) => [...current, ""])}
+              className="interactive-button rounded-xl bg-[#2865ba] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2159a8]"
+            >
+              + Add responsibility
+            </button>
+          </div>
+        </ModalField>
+
+        <ModalField label="Skills">
+          {skills.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {skills.map((skill) => (
+                <label
+                  key={skill.id}
+                  className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSkillIds.includes(skill.id)}
+                    onChange={() => toggleSkill(skill.id)}
+                    className="h-4 w-4 rounded border-[#d6dce8]"
+                  />
+                  <span>{skill.name}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+              No skills yet. Create skills first and then link them to this position.
+            </p>
+          )}
+        </ModalField>
+
+        <ModalActions onClose={onClose} />
+      </form>
+    </BaseModal>
+  );
+}
+
+function BaseModal({
+  title,
+  onClose,
+  children,
+  wide = false,
+  maxWidthClass,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+  maxWidthClass?: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/35 p-3 backdrop-blur-[2px] sm:p-4">
+      <div className="flex min-h-full items-center justify-center">
+        <div
+          className={`my-4 w-full ${maxWidthClass ?? (wide ? "max-w-[960px]" : "max-w-[640px]")} overflow-hidden rounded-[22px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.18)]`}
+        >
+          <div className="flex items-center justify-between bg-[linear-gradient(90deg,#1f5fb5_0%,#2865ba_100%)] px-6 py-5">
+            <h3 className="text-[28px] font-semibold tracking-tight text-white">{title}</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="interactive-button rounded-full p-1.5 text-white/90 hover:bg-white/12"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="max-h-[calc(100vh-11rem)] overflow-y-auto px-6 py-6">{children}</div>
+        </div>
       </div>
     </div>
   );
 }
 
-function FormField({
+function ModalField({
   label,
   children,
 }: {
@@ -509,7 +1002,7 @@ function FormField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-gray-700">{label}</span>
+      <span className="mb-2 block text-sm font-semibold text-[#4f5d72]">{label}</span>
       {children}
     </label>
   );
@@ -517,17 +1010,17 @@ function FormField({
 
 function ModalActions({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex gap-3 pt-4">
+    <div className="flex gap-4 pt-3">
       <button
         type="button"
         onClick={onClose}
-        className="interactive-button flex-1 rounded-lg border-2 border-gray-300 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-50"
+        className="interactive-button flex-1 rounded-xl border border-[#d9e1ec] bg-white px-4 py-3.5 text-base font-semibold text-[#5a6576] hover:bg-[#f8fafc]"
       >
         Cancel
       </button>
       <button
         type="submit"
-        className="interactive-button flex-1 rounded-lg bg-[#1e5ba8] px-4 py-2.5 font-semibold text-white shadow-md hover:bg-[#174a8f]"
+        className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8]"
       >
         Save
       </button>
