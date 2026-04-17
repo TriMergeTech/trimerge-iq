@@ -12,7 +12,9 @@ export default function AdminRoute() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   useEffect(() => {
-    setIsAdminAuthenticated(Boolean(localStorage.getItem("trimerge_admin_auth")));
+    setIsAdminAuthenticated(
+      Boolean(localStorage.getItem("trimerge_admin_auth") || localStorage.getItem("trimerge_access_token")),
+    );
     setIsReady(true);
   }, []);
 
@@ -24,6 +26,11 @@ export default function AdminRoute() {
   const handleLogout = () => {
     localStorage.removeItem("trimerge_admin_auth");
     localStorage.removeItem("trimerge_admin_email");
+    localStorage.removeItem("trimerge_access_token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("token");
+    localStorage.removeItem("trimerge_refresh_token");
+    localStorage.removeItem("refreshToken");
     setIsAdminAuthenticated(false);
     router.push("/");
     router.refresh();

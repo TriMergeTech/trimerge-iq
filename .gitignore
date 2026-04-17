@@ -42,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ignore AI / generated files
+.agents/
+.agents/**
+
+# Ignore nested repository
+trimerge-iq/
+
+

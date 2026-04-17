@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   LogOut,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -55,6 +56,228 @@ interface AdminPageProps {
   onLogout: () => void;
 }
 
+// Positions API integration (GET/POST/GET by ID/PUT/DELETE) with env-based base URL and optional bearer token.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://trimerge-iq.onrender.com";
+
+interface PositionApiModel {
+  _id?: string;
+  id?: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  responsibility?: string[];
+  responsibilities?: string[];
+  skills?: string[];
+  skillIds?: string[];
+  createdAt?: string;
+}
+
+interface PositionListResponseEnvelope {
+  data?: PositionApiModel[];
+  positions?: PositionApiModel[];
+  items?: PositionApiModel[];
+}
+
+class PositionApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function getPositionAuthToken() {
+  if (typeof window === "undefined") return "";
+
+  const tokenKeys = ["trimerge_access_token", "accessToken", "token"];
+  const token = tokenKeys
+    .map((key) => localStorage.getItem(key) ?? "")
+    .find((value) => value.trim().length > 0);
+
+  return token ?? "";
+}
+
+function getPositionRefreshToken() {
+  if (typeof window === "undefined") return "";
+
+  const refreshTokenKeys = ["trimerge_refresh_token", "refreshToken"];
+  const refreshToken = refreshTokenKeys
+    .map((key) => localStorage.getItem(key) ?? "")
+    .find((value) => value.trim().length > 0);
+
+  return refreshToken ?? "";
+}
+
+async function refreshPositionAccessToken() {
+  const refreshToken = getPositionRefreshToken();
+  if (!refreshToken) return "";
+
+  const parseTokens = (
+    payload: {
+      access_token?: string;
+      accessToken?: string;
+      token?: string;
+      refresh_token?: string;
+      refreshToken?: string;
+      data?: {
+        access_token?: string;
+        accessToken?: string;
+        token?: string;
+        refresh_token?: string;
+        refreshToken?: string;
+      };
+    },
+  ) => {
+    const source = payload.data ?? payload;
+    return {
+      accessToken: source.access_token ?? source.accessToken ?? source.token ?? "",
+      nextRefreshToken: source.refresh_token ?? source.refreshToken ?? "",
+    };
+  };
+
+  const tryRefresh = async (includeAuthHeader: boolean) => fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(includeAuthHeader ? { Authorization: `Bearer ${refreshToken}` } : {}),
+    },
+    body: JSON.stringify({
+      refresh_token: refreshToken,
+      refreshToken,
+      token: refreshToken,
+    }),
+  });
+
+  let response = await tryRefresh(true);
+  if (!response.ok) {
+    response = await tryRefresh(false);
+  }
+
+  if (!response.ok) return "";
+
+  const data = (await response.json()) as {
+    access_token?: string;
+    accessToken?: string;
+    token?: string;
+    refresh_token?: string;
+    refreshToken?: string;
+    data?: {
+      access_token?: string;
+      accessToken?: string;
+      token?: string;
+      refresh_token?: string;
+      refreshToken?: string;
+    };
+  };
+
+  const { accessToken, nextRefreshToken } = parseTokens(data);
+
+  if (!accessToken) return "";
+
+  localStorage.setItem("trimerge_access_token", accessToken);
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("token", accessToken);
+
+  if (nextRefreshToken) {
+    localStorage.setItem("trimerge_refresh_token", nextRefreshToken);
+    localStorage.setItem("refreshToken", nextRefreshToken);
+  }
+
+  return accessToken;
+}
+
+function toPositionItem(position: PositionApiModel): PositionItem {
+  const createdAt = position.createdAt ? new Date(position.createdAt) : new Date();
+  const responsibilities = Array.isArray(position.responsibilities)
+    ? position.responsibilities
+    : (Array.isArray(position.responsibility) ? position.responsibility : []);
+  const skills = Array.isArray(position.skillIds)
+    ? position.skillIds
+    : (Array.isArray(position.skills) ? position.skills : []);
+
+  return {
+    id: position._id ?? position.id ?? crypto.randomUUID(),
+    title: position.title ?? position.name ?? "Untitled Position",
+    description: position.description ?? "",
+    responsibilities,
+    skillIds: skills,
+    createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
+  };
+}
+
+function toPositionApiPayload(
+  payload: Omit<PositionItem, "id" | "createdAt">,
+  availableSkills: SkillItem[],
+) {
+  const skillNames = payload.skillIds
+    .map((skillId) => availableSkills.find((skill) => skill.id === skillId)?.name ?? skillId)
+    .filter(Boolean);
+
+  return {
+    name: payload.title,
+    description: payload.description,
+    responsibility: payload.responsibilities,
+    skills: skillNames,
+  };
+}
+
+function normalizePositionListResponse(
+  response: PositionApiModel[] | PositionListResponseEnvelope,
+): PositionApiModel[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response.positions)) {
+    return response.positions;
+  }
+
+  if (Array.isArray(response.items)) {
+    return response.items;
+  }
+
+  return [];
+}
+
+async function requestPositions<T>(path: string, init?: RequestInit, canRetry = true): Promise<T> {
+  const token = getPositionAuthToken();
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (response.status === 401 && canRetry) {
+    const refreshedToken = await refreshPositionAccessToken();
+    if (refreshedToken) {
+      return requestPositions<T>(path, init, false);
+    }
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new PositionApiError(
+      response.status,
+      errorText || `Positions API request failed (${response.status})`,
+    );
+  }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  return (await response.json()) as T;
+}
+
 const INITIAL_STAFF: StaffMember[] = [];
 
 const INITIAL_ADMINS: StaffMember[] = [];
@@ -91,10 +314,54 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
   const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
+  const [isPositionsLoading, setIsPositionsLoading] = useState(false);
+  const [positionsApiError, setPositionsApiError] = useState("");
+  const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
+  const [isPositionEditLoading, setIsPositionEditLoading] = useState(false);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("trimerge_admin_email");
     if (storedEmail) setLoggedInEmail(storedEmail);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    // GET /positions: load all positions for the management table.
+    const loadPositions = async () => {
+      setIsPositionsLoading(true);
+      try {
+        const response = await requestPositions<PositionApiModel[] | PositionListResponseEnvelope>("/positions");
+        const records = normalizePositionListResponse(response);
+        if (!active) return;
+
+        setPositions(records.map(toPositionItem));
+        setPositionsApiError("");
+      } catch (error) {
+        console.error("Failed to load positions from API", error);
+        if (!active) return;
+
+        const status = error instanceof PositionApiError ? error.status : 0;
+        const message = error instanceof Error ? error.message : "";
+        setPositionsApiError(
+          status === 401
+            ? "Unauthorized: please sign in to load positions."
+            : status === 403
+              ? "Forbidden: your account does not have permission to view positions."
+              : status === 0
+                ? `Could not load positions API. ${message}`
+                : `Could not load positions API (status ${status}). ${message}`,
+        );
+      } finally {
+        if (active) setIsPositionsLoading(false);
+      }
+    };
+
+    void loadPositions();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const loggedInName = useMemo(() => {
@@ -171,7 +438,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return positions;
     return positions.filter((position) => {
       const skillNames = position.skillIds
-        .map((skillId) => skills.find((skill) => skill.id === skillId)?.name ?? "")
+        .map((skillId) => skills.find((skill) => skill.id === skillId)?.name ?? skillId)
         .join(" ");
       return (
         position.title.toLowerCase().includes(query) ||
@@ -206,19 +473,97 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       })),
     );
   };
-  const removePosition = (positionId: string) => {
-    setPositions((current) => current.filter((item) => item.id !== positionId));
-    setStaffMembers((current) =>
-      current.map((member) =>
-        member.positionId === positionId ? { ...member, positionId: undefined } : member,
-      ),
-    );
-    setServices((current) =>
-      current.map((service) => ({
-        ...service,
-        positionIds: service.positionIds.filter((item) => item !== positionId),
-      })),
-    );
+  const removePosition = async (positionId: string) => {
+    // DELETE /positions/{id}: remove a position by id.
+    try {
+      await requestPositions(`/positions/${positionId}`, { method: "DELETE" });
+      setPositions((current) => current.filter((item) => item.id !== positionId));
+      setStaffMembers((current) =>
+        current.map((member) =>
+          member.positionId === positionId ? { ...member, positionId: undefined } : member,
+        ),
+      );
+      setServices((current) =>
+        current.map((service) => ({
+          ...service,
+          positionIds: service.positionIds.filter((item) => item !== positionId),
+        })),
+      );
+      setPositionsApiError("");
+    } catch (error) {
+      console.error("Failed to delete position", error);
+      const status = error instanceof PositionApiError ? error.status : 0;
+      setPositionsApiError(
+        status === 400
+          ? "Invalid position ID."
+          : status === 401
+            ? "Unauthorized: please sign in to delete positions."
+            : status === 403
+              ? "Forbidden: staff or admin access is required."
+              : status === 404
+                ? "Position not found."
+                : "Delete failed: position API is unavailable.",
+      );
+    }
+  };
+
+  const startEditPosition = async (positionId: string) => {
+    // GET /positions/{id}: fetch one position before opening edit modal.
+    setIsPositionEditLoading(true);
+    try {
+      const response = await requestPositions<PositionApiModel | { data?: PositionApiModel }>(`/positions/${positionId}`);
+      const details = (response as { data?: PositionApiModel }).data ?? (response as PositionApiModel);
+      setEditingPosition(toPositionItem(details));
+      setPositionsApiError("");
+    } catch (error) {
+      console.error("Failed to fetch position details", error);
+      const status = error instanceof PositionApiError ? error.status : 0;
+      setPositionsApiError(
+        status === 400
+          ? "Invalid position ID."
+          : status === 401
+            ? "Unauthorized: please sign in to access position details."
+            : status === 404
+              ? "Position not found."
+              : "Edit failed: could not load position details from API.",
+      );
+    } finally {
+      setIsPositionEditLoading(false);
+    }
+  };
+
+  const savePositionUpdate = async (positionId: string, payload: Omit<PositionItem, "id" | "createdAt">) => {
+    // PUT /positions/{id}: persist updates from the edit modal.
+    try {
+      const response = await requestPositions<PositionApiModel | { data?: PositionApiModel }>(`/positions/${positionId}`, {
+        method: "PUT",
+        body: JSON.stringify(toPositionApiPayload(payload, skills)),
+      });
+
+      const updated = (response as { data?: PositionApiModel }).data ?? (response as PositionApiModel);
+      const normalized = toPositionItem({ ...updated, _id: updated._id ?? updated.id ?? positionId });
+
+      setPositions((current) =>
+        current.map((item) => (item.id === positionId ? { ...normalized, id: positionId } : item)),
+      );
+
+      setPositionsApiError("");
+      setEditingPosition(null);
+    } catch (error) {
+      console.error("Failed to update position", error);
+      const status = error instanceof PositionApiError ? error.status : 0;
+      setPositionsApiError(
+        status === 400
+          ? "Invalid ID or no valid fields to update."
+          : status === 401
+            ? "Unauthorized: please sign in to update positions."
+            : status === 403
+              ? "Forbidden: staff or admin access is required."
+              : status === 404
+                ? "Position not found."
+                : "Update failed: position API is unavailable.",
+      );
+    }
   };
 
   return (
@@ -407,46 +752,65 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           )}
 
           {activeSection === "position" && (
-            <ManagementTable
-              headers={["Name", "Description", "Skills", "Actions"]}
-              emptyMessage="No positions found."
-            >
-              {filteredPositions.map((position) => (
-                <tr key={position.id} className="border-t border-[#eef2f8] align-top">
-                  <td className="px-6 py-5">
-                    <p className="text-sm font-semibold text-[#263247]">{position.title}</p>
-                    <div className="mt-4 space-y-1.5 text-sm text-[#5f6b7c]">
-                      {position.responsibilities.map((responsibility) => (
-                        <div key={`${position.id}-${responsibility}`} className="flex items-start gap-2">
-                          <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#6d7a8c]" />
-                          <span>{responsibility}</span>
+            <>
+              {positionsApiError && (
+                <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {positionsApiError}
+                </p>
+              )}
+
+              {isPositionsLoading ? (
+                <div className="rounded-2xl border border-[#e6edf8] bg-white px-6 py-5 text-sm text-[#5f6b7c]">
+                  Loading positions...
+                </div>
+              ) : (
+                <ManagementTable
+                  headers={["Name", "Description", "Skills", "Actions"]}
+                  emptyMessage="No positions found."
+                >
+                  {filteredPositions.map((position) => (
+                    <tr key={position.id} className="border-t border-[#eef2f8] align-top">
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-semibold text-[#263247]">{position.title}</p>
+                        <div className="mt-4 space-y-1.5 text-sm text-[#5f6b7c]">
+                          {position.responsibilities.map((responsibility) => (
+                            <div key={`${position.id}-${responsibility}`} className="flex items-start gap-2">
+                              <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#6d7a8c]" />
+                              <span>{responsibility}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <div className="flex flex-wrap gap-2">
-                      {position.skillIds.map((skillId) => {
-                        const skill = skills.find((item) => item.id === skillId);
-                        if (!skill) return null;
-                        return (
-                          <span
-                            key={skillId}
-                            className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
-                          >
-                            {skill.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => removePosition(position.id)} />
-                  </td>
-                </tr>
-              ))}
-            </ManagementTable>
+                      </td>
+                      <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
+                      <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                        <div className="flex flex-wrap gap-2">
+                          {position.skillIds.map((skillId) => {
+                            const skill = skills.find((item) => item.id === skillId);
+                            return (
+                              <span
+                                key={skillId}
+                                className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
+                              >
+                                {skill?.name ?? skillId}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-2">
+                          <EditButton
+                            onClick={() => void startEditPosition(position.id)}
+                            disabled={isPositionEditLoading}
+                          />
+                          <DeleteButton onClick={() => void removePosition(position.id)} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </ManagementTable>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -514,13 +878,37 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       {openModal === "position" && (
         <PositionModal
           skills={skills}
+          title="Add New Position"
           onClose={() => setOpenModal(null)}
-          onSave={(payload) => {
-            setPositions((current) => [
-              ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-            ]);
-            setOpenModal(null);
+          onSave={async (payload) => {
+            // POST /positions: create a new position from modal form values.
+            try {
+              const response = await requestPositions<PositionApiModel | { data?: PositionApiModel }>("/positions", {
+                method: "POST",
+                body: JSON.stringify(toPositionApiPayload(payload, skills)),
+              });
+
+              const created = (response as { data?: PositionApiModel }).data ?? (response as PositionApiModel);
+              setPositions((current) => [...current, toPositionItem(created)]);
+              setPositionsApiError("");
+              setOpenModal(null);
+            } catch (error) {
+              console.error("Failed to create position", error);
+              setPositionsApiError("Create failed: position API is unavailable or unauthorized.");
+            }
+          }}
+        />
+      )}
+
+      {editingPosition && (
+        <PositionModal
+          skills={skills}
+          title="Edit Position"
+          initialValues={editingPosition}
+          submitLabel="Update"
+          onClose={() => setEditingPosition(null)}
+          onSave={async (payload) => {
+            await savePositionUpdate(editingPosition.id, payload);
           }}
         />
       )}
@@ -607,6 +995,19 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
       className="interactive-button rounded-full p-2 text-[#f26a8a] hover:bg-[#fff1f5]"
     >
       <Trash2 className="h-4 w-4" />
+    </button>
+  );
+}
+
+function EditButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="interactive-button rounded-full p-2 text-[#2865ba] hover:bg-[#eef4ff] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Pencil className="h-4 w-4" />
     </button>
   );
 }
@@ -848,17 +1249,25 @@ function ServiceModal({
 
 function PositionModal({
   skills,
+  title,
+  initialValues,
+  submitLabel,
   onSave,
   onClose,
 }: {
   skills: SkillItem[];
-  onSave: (payload: Omit<PositionItem, "id" | "createdAt">) => void;
+  title: string;
+  initialValues?: Omit<PositionItem, "createdAt">;
+  submitLabel?: string;
+  onSave: (payload: Omit<PositionItem, "id" | "createdAt">) => void | Promise<void>;
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [responsibilities, setResponsibilities] = useState<string[]>([""]);
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [positionTitle, setPositionTitle] = useState(initialValues?.title ?? "");
+  const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [responsibilities, setResponsibilities] = useState<string[]>(
+    initialValues?.responsibilities.length ? initialValues.responsibilities : [""],
+  );
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(initialValues?.skillIds ?? []);
 
   const updateResponsibility = (index: number, value: string) => {
     setResponsibilities((current) =>
@@ -877,12 +1286,12 @@ function PositionModal({
   };
 
   return (
-    <BaseModal title="Add New Position" onClose={onClose} maxWidthClass="max-w-[760px]">
+    <BaseModal title={title} onClose={onClose} maxWidthClass="max-w-[760px]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           onSave({
-            title: title.trim(),
+            title: positionTitle.trim(),
             description: description.trim(),
             responsibilities: responsibilities.map((item) => item.trim()).filter(Boolean),
             skillIds: selectedSkillIds,
@@ -893,8 +1302,8 @@ function PositionModal({
         <ModalField label="Title">
           <input
             type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            value={positionTitle}
+            onChange={(event) => setPositionTitle(event.target.value)}
             className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
             required
           />
@@ -966,7 +1375,7 @@ function PositionModal({
           )}
         </ModalField>
 
-        <ModalActions onClose={onClose} />
+        <ModalActions onClose={onClose} submitLabel={submitLabel} />
       </form>
     </BaseModal>
   );
@@ -1023,7 +1432,13 @@ function ModalField({
   );
 }
 
-function ModalActions({ onClose }: { onClose: () => void }) {
+function ModalActions({
+  onClose,
+  submitLabel = "Save",
+}: {
+  onClose: () => void;
+  submitLabel?: string;
+}) {
   return (
     <div className="flex gap-4 pt-3">
       <button
@@ -1037,7 +1452,7 @@ function ModalActions({ onClose }: { onClose: () => void }) {
         type="submit"
         className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8]"
       >
-        Save
+        {submitLabel}
       </button>
     </div>
   );

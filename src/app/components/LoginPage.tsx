@@ -19,6 +19,20 @@ interface LoginPageProps {
 
 type ViewMode = "login" | "forgotPassword" | "resetSent";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://trimerge-iq.onrender.com";
+
+interface LoginResponse {
+  access_token?: string;
+  refresh_token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  token?: string;
+}
+
+interface LoginResponseEnvelope {
+  data?: LoginResponse;
+}
+
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [email, setEmail] = useState("");
@@ -28,7 +42,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
 
@@ -44,12 +58,50 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
 
     setIsLoading(true);
-    window.setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError("Invalid credentials.");
+        } else if (response.status === 403) {
+          setError("Account not verified.");
+        } else {
+          setError("Login failed. Please check credentials.");
+        }
+        return;
+      }
+
+      const raw = (await response.json()) as LoginResponse | LoginResponseEnvelope;
+      const data = "data" in raw && raw.data ? raw.data : raw;
+      const accessToken = data.access_token ?? data.accessToken ?? data.token ?? "";
+      const refreshToken = data.refresh_token ?? data.refreshToken ?? "";
+
+      if (!accessToken) {
+        setError("Login succeeded but no access token was returned.");
+        return;
+      }
+
       localStorage.setItem("trimerge_admin_auth", "true");
-      localStorage.setItem("trimerge_admin_email", email);
+      localStorage.setItem("trimerge_admin_email", email.trim());
+      localStorage.setItem("trimerge_access_token", accessToken);
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("token", accessToken);
+      if (refreshToken) {
+        localStorage.setItem("trimerge_refresh_token", refreshToken);
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+
       onLoginSuccess();
+    } catch {
+      setError("Could not reach login API.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleForgotPassword = (event: React.FormEvent) => {
