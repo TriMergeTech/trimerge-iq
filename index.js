@@ -8,6 +8,7 @@ const Mailgun = require('mailgun.js');
 const swaggerUi = require('swagger-ui-express');
 const { OAuth2Client } = require('google-auth-library');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const allowedOrigins = [
   'http://localhost:3000',
@@ -697,6 +698,22 @@ const createServicesRouter = require('./routes/services');
 const createSkillsRouter = require('./routes/skills');
 const createClientsRouter = require('./routes/clients');
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { message: 'Too many login attempts, please try again in 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { message: 'Too many refresh attempts, please try again in 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.get('/', (req, res) => {
   res.json({ status: 'Authentication API is running' });
 });
@@ -781,7 +798,7 @@ app.post('/auth/verify', async (req, res) => {
   return res.json({ message: 'Account verified', refresh_token });
 });
 
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
@@ -810,7 +827,7 @@ app.post('/auth/login', async (req, res) => {
   return res.json({ access_token, refresh_token });
 });
 
-app.post('/auth/refresh', async (req, res) => {
+app.post('/auth/refresh', refreshLimiter, async (req, res) => {
   const { refresh_token } = req.body;
   if (!refresh_token) {
     return res.status(400).json({ message: 'Refresh token is required' });
