@@ -1,25 +1,17 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Clock3, FileText, FolderPlus, Image as ImageIcon, Lightbulb, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Send, Sparkles, X } from "lucide-react";
+import { ChevronDown, Clock3, FileText, Image as ImageIcon, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, X } from "lucide-react";
 
-interface UploadedFile { name: string; size: number; type: string; }
-interface Message { id: number; content: string; sender: "user" | "ai"; timestamp: Date; files?: UploadedFile[]; }
-interface Project { id: number; name: string; createdAt: Date; description?: string; service?: string; team?: string[]; projectManager?: string; client?: string; pinned?: boolean; archived?: boolean; }
-interface Conversation { id: number; title: string; updatedAt: Date; messages: Message[]; projectId: number | null; pinned?: boolean; archived?: boolean; }
-
-const serviceOptions = [
-  "Strategy Consulting",
-  "Digital Transformation",
-  "Operational Excellence",
-] as const;
-
-const staffOptions = [
-  "John Smith",
-  "Sarah Johnson",
-  "Michael Chen",
-  "Emily Davis",
-] as const;
+import ChatComposer from "./ChatComposer";
+import ConversationMenuItem from "./ConversationMenuItem";
+import ConversationView from "./ConversationView";
+import CreateProjectModal from "./CreateProjectModal";
+import ProjectHomePanel from "./ProjectHomePanel";
+import { serviceOptions, staffOptions, type Conversation, type Project, type UploadedFile } from "./chatPageTypes";
+import { formatFileSize } from "./chatPageUtils";
+import { useConversationActions } from "./useConversationActions";
+import { useProjectActions } from "./useProjectActions";
 
 export default function ChatPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -116,331 +108,91 @@ export default function ChatPage() {
     event.target.value = "";
   };
 
-  const startNewChat = () => {
-    setActiveConversationId(null); setInputMessage(""); setAttachedFiles([]); setIsTyping(false); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null);
-  };
+  const {
+    closeCreateProjectModal,
+    handleArchiveProject,
+    handleCreateProject,
+    handleDeleteProject,
+    handlePinProject,
+    handleRenameProject,
+    handleSelectProject,
+    handleShareProject,
+    openCreateProjectModal,
+    toggleTeamMember,
+  } = useProjectActions({
+    newProjectClient,
+    newProjectDescription,
+    newProjectManager,
+    newProjectName,
+    newProjectService,
+    newProjectTeam,
+    selectedProjectId,
+    setActiveConversationId,
+    setAttachedFiles,
+    setConversationSearch,
+    setConversations,
+    setInputMessage,
+    setIsAttachmentMenuOpen,
+    setIsCreateProjectModalOpen,
+    setIsProjectMenuOpen,
+    setNewProjectClient,
+    setNewProjectDescription,
+    setNewProjectManager,
+    setNewProjectName,
+    setNewProjectService,
+    setNewProjectTeam,
+    setOpenConversationMenuId,
+    setOpenProjectActionMenuId,
+    setProjectHomeTab,
+    setProjects,
+    setSelectedProjectId,
+  });
 
-  const openCreateProjectModal = () => {
-    setIsProjectMenuOpen(false);
-    setNewProjectName("");
-    setNewProjectDescription("");
-    setNewProjectService(serviceOptions[0]);
-    setNewProjectTeam([]);
-    setNewProjectManager(staffOptions[0]);
-    setNewProjectClient("");
-    setIsCreateProjectModalOpen(true);
-  };
-
-  const closeCreateProjectModal = () => {
-    setIsCreateProjectModalOpen(false);
-    setNewProjectName("");
-    setNewProjectDescription("");
-    setNewProjectService(serviceOptions[0]);
-    setNewProjectTeam([]);
-    setNewProjectManager(staffOptions[0]);
-    setNewProjectClient("");
-  };
-
-  const handleCreateProject = () => {
-    const nextName = newProjectName.trim();
-    if (!nextName) return;
-    const newProject: Project = {
-      id: Date.now(),
-      name: nextName,
-      createdAt: new Date(),
-      description: newProjectDescription.trim(),
-      service: newProjectService,
-      team: newProjectTeam,
-      projectManager: newProjectManager,
-      client: newProjectClient.trim(),
-    };
-    setProjects((current) => [newProject, ...current]);
-    setSelectedProjectId(newProject.id);
-    setActiveConversationId(null);
-    setInputMessage("");
-    setAttachedFiles([]);
-    setConversationSearch("");
-    setIsAttachmentMenuOpen(false);
-    setOpenConversationMenuId(null);
-    setOpenProjectActionMenuId(null);
-    setIsProjectMenuOpen(false);
-    closeCreateProjectModal();
-  };
-
-  const handleSelectProject = (projectId: number | null) => {
-    setSelectedProjectId(projectId);
-    setActiveConversationId(null);
-    setProjectHomeTab("chats");
-    setOpenConversationMenuId(null);
-    setOpenProjectActionMenuId(null);
-    setIsProjectMenuOpen(false);
-  };
-
-  const toggleTeamMember = (member: string) => {
-    setNewProjectTeam((current) =>
-      current.includes(member) ? current.filter((item) => item !== member) : [...current, member],
-    );
-  };
-
-  const updateConversation = (conversationId: number, updater: (conversation: Conversation) => Conversation | null) => {
-    setConversations((current) => current.map((conversation) => conversation.id === conversationId ? updater(conversation) : conversation).filter(Boolean) as Conversation[]);
-  };
-
-  const handleRenameConversation = (conversation: Conversation) => {
-    const nextTitle = window.prompt("Rename conversation", conversation.title)?.trim();
-    if (!nextTitle) return;
-    updateConversation(conversation.id, (current) => ({ ...current, title: nextTitle, updatedAt: new Date() }));
-    setOpenConversationMenuId(null);
-  };
-  const handleDeleteConversation = (conversationId: number) => {
-    updateConversation(conversationId, () => null);
-    if (activeConversationId === conversationId) setActiveConversationId(null);
-    setOpenConversationMenuId(null);
-  };
-  const handlePinConversation = (conversationId: number) => {
-    updateConversation(conversationId, (current) => ({ ...current, pinned: !current.pinned, updatedAt: new Date() }));
-    setOpenConversationMenuId(null);
-  };
-  const handleArchiveConversation = (conversationId: number) => {
-    updateConversation(conversationId, (current) => ({ ...current, archived: true, updatedAt: new Date() }));
-    if (activeConversationId === conversationId) setActiveConversationId(null);
-    setOpenConversationMenuId(null);
-  };
-  const handleShareConversation = async (conversation: Conversation) => {
-    const shareLabel = `TriMerge chat: ${conversation.title}`;
-    try { await navigator.clipboard.writeText(shareLabel); } catch { window.prompt("Copy this conversation label", shareLabel); }
-    setOpenConversationMenuId(null);
-  };
-
-  const updateProject = (projectId: number, updater: (project: Project) => Project | null) => {
-    setProjects((current) => current.map((project) => project.id === projectId ? updater(project) : project).filter(Boolean) as Project[]);
-  };
-
-  const handleRenameProject = (project: Project) => {
-    const nextName = window.prompt("Rename project", project.name)?.trim();
-    if (!nextName) return;
-    updateProject(project.id, (current) => ({ ...current, name: nextName }));
-    setOpenProjectActionMenuId(null);
-  };
-
-  const handlePinProject = (projectId: number) => {
-    updateProject(projectId, (current) => ({ ...current, pinned: !current.pinned }));
-    setOpenProjectActionMenuId(null);
-  };
-
-  const handleArchiveProject = (projectId: number) => {
-    updateProject(projectId, (current) => ({ ...current, archived: true }));
-    if (selectedProjectId === projectId) {
-      setSelectedProjectId(null);
-      setActiveConversationId(null);
-    }
-    setOpenProjectActionMenuId(null);
-  };
-
-  const handleDeleteProject = (projectId: number) => {
-    setProjects((current) => current.filter((project) => project.id !== projectId));
-    setConversations((current) =>
-      current.map((conversation) =>
-        conversation.projectId === projectId ? { ...conversation, projectId: null } : conversation,
-      ),
-    );
-    if (selectedProjectId === projectId) {
-      setSelectedProjectId(null);
-      setActiveConversationId(null);
-    }
-    setOpenProjectActionMenuId(null);
-  };
-
-  const handleShareProject = async (project: Project) => {
-    const shareLabel = `TriMerge project: ${project.name}`;
-    try { await navigator.clipboard.writeText(shareLabel); } catch { window.prompt("Copy this project label", shareLabel); }
-    setOpenProjectActionMenuId(null);
-  };
-
-  const handleClearActiveChat = () => {
-    if (!activeConversation) return;
-    updateConversation(activeConversation.id, (current) => ({ ...current, messages: [], updatedAt: new Date() }));
-    setIsWorkspaceMenuOpen(false);
-  };
-
-  const sendMessage = (prompt?: string) => {
-    const content = (prompt ?? inputMessage).trim();
-    if (!content && attachedFiles.length === 0) return;
-    const conversationId = activeConversationId ?? Date.now();
-    const isNewConversation = activeConversationId === null;
-    const newTitle = content ? content.slice(0, 38) + (content.length > 38 ? "..." : "") : "Shared files";
-    const userMessage: Message = { id: Date.now(), content: content || "Shared files", sender: "user", timestamp: new Date(), files: attachedFiles.length > 0 ? [...attachedFiles] : undefined };
-
-    setConversations((current) => {
-      const existingConversation = current.find((conversation) => conversation.id === conversationId);
-      if (!existingConversation) {
-        return [{ id: conversationId, title: newTitle, updatedAt: new Date(), projectId: selectedProjectId, messages: [userMessage] }, ...current];
-      }
-      return current.map((conversation) => conversation.id === conversationId ? { ...conversation, title: conversation.title === "New chat" && content ? newTitle : conversation.title, updatedAt: new Date(), messages: [...conversation.messages, userMessage] } : conversation).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-    });
-
-    setActiveConversationId(conversationId);
-    setInputMessage(""); setAttachedFiles([]); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); setIsTyping(true);
-
-    window.setTimeout(() => {
-      const aiMessage: Message = { id: Date.now() + 1, content: getAIResponse(content, userMessage.files?.length ?? 0), sender: "ai", timestamp: new Date() };
-      setConversations((current) => current.map((conversation) => conversation.id === conversationId ? { ...conversation, updatedAt: new Date(), messages: [...conversation.messages, aiMessage] } : conversation).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()));
-      setIsTyping(false);
-    }, isNewConversation ? 1000 : 1200);
-  };
+  const {
+    handleArchiveConversation,
+    handleClearActiveChat,
+    handleDeleteConversation,
+    handlePinConversation,
+    handleRenameConversation,
+    handleShareConversation,
+    sendMessage,
+    startNewChat,
+  } = useConversationActions({
+    activeConversation,
+    activeConversationId,
+    attachedFiles,
+    inputMessage,
+    selectedProjectId,
+    setActiveConversationId,
+    setAttachedFiles,
+    setConversations,
+    setInputMessage,
+    setIsAttachmentMenuOpen,
+    setIsTyping,
+    setIsWorkspaceMenuOpen,
+    setOpenConversationMenuId,
+  });
 
   return (
     <section className="relative h-[calc(100vh-81px)] overflow-hidden bg-gradient-to-br from-slate-950 via-[#0d1f3a] to-slate-950 text-white">
       {isCreateProjectModalOpen && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm">
-          <div className="flex max-h-[calc(100vh-170px)] w-full max-w-[980px] flex-col overflow-hidden rounded-[16px] border border-white/8 bg-[#232323] shadow-[0_30px_80px_rgba(0,0,0,0.55)] animate-fade-rise">
-            <div className="flex items-start justify-between gap-4 border-b border-white/8 px-6 py-5 sm:px-8">
-              <h2 className="text-[20px] font-medium tracking-tight text-white">Create project</h2>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  aria-label="Close create project dialog"
-                  onClick={closeCreateProjectModal}
-                  className="interactive-button flex h-10 w-10 items-center justify-center rounded-full text-white/88 hover:bg-white/8"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="chat-scrollbar overflow-y-auto px-6 pb-4 pt-6 sm:px-8">
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label htmlFor="project-name" className="mb-3 block text-[15px] font-medium text-white/95">
-                  Name
-                </label>
-                <div className="flex items-center gap-3 rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5">
-                  <FolderPlus className="h-5 w-5 text-white/55" />
-                  <input
-                    id="project-name"
-                    ref={projectNameInputRef}
-                    type="text"
-                    value={newProjectName}
-                    onChange={(event) => setNewProjectName(event.target.value)}
-                    placeholder="Copenhagen Trip"
-                    className="w-full bg-transparent text-[16px] text-white outline-none placeholder:text-white/35"
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <label htmlFor="project-description" className="mb-3 block text-[15px] font-medium text-white/95">
-                  Description
-                </label>
-                <textarea
-                  id="project-description"
-                  value={newProjectDescription}
-                  onChange={(event) => setNewProjectDescription(event.target.value)}
-                  placeholder="Briefly describe the project scope and goals."
-                  rows={3}
-                  className="w-full resize-none rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/35"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="project-service" className="mb-3 block text-[15px] font-medium text-white/95">
-                  Service
-                </label>
-                <select
-                  id="project-service"
-                  value={newProjectService}
-                  onChange={(event) => setNewProjectService(event.target.value as (typeof serviceOptions)[number])}
-                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none"
-                >
-                  {serviceOptions.map((service) => (
-                    <option key={service} value={service} className="bg-[#252525]">
-                      {service}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="project-client" className="mb-3 block text-[15px] font-medium text-white/95">
-                  Client
-                </label>
-                <input
-                  id="project-client"
-                  type="text"
-                  value={newProjectClient}
-                  onChange={(event) => setNewProjectClient(event.target.value)}
-                  placeholder="Client name"
-                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/35"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="project-manager" className="mb-3 block text-[15px] font-medium text-white/95">
-                  Project manager
-                </label>
-                <select
-                  id="project-manager"
-                  value={newProjectManager}
-                  onChange={(event) => setNewProjectManager(event.target.value as (typeof staffOptions)[number])}
-                  className="w-full rounded-[12px] border border-white/10 bg-[#252525] px-4 py-3.5 text-[15px] text-white outline-none"
-                >
-                  {staffOptions.map((staff) => (
-                    <option key={staff} value={staff} className="bg-[#252525]">
-                      {staff}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-3 block text-[15px] font-medium text-white/95">
-                  Team
-                </label>
-                <div className="flex flex-wrap gap-2 rounded-[12px] border border-white/10 bg-[#252525] px-3 py-3">
-                  {staffOptions.map((staff) => {
-                    const isSelected = newProjectTeam.includes(staff);
-                    return (
-                      <button
-                        key={staff}
-                        type="button"
-                        onClick={() => toggleTeamMember(staff)}
-                        className={`interactive-button rounded-full px-3 py-2 text-sm ${isSelected ? "bg-[#d4af37] text-[#111214]" : "bg-white/8 text-white/88 hover:bg-white/12"}`}
-                      >
-                        {staff}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            </div>
-
-            <div className="border-t border-white/8 bg-[#232323] px-6 pb-5 pt-4 sm:px-8">
-            <div className="rounded-[14px] bg-[#4b4b4b] px-4 py-5 text-white/92">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6">
-                  <Lightbulb className="h-4 w-4 text-white" />
-                </div>
-                <p className="text-[16px] leading-7 text-white/92">
-                  Projects keep chats, files, and custom instructions in one place. Use them for ongoing work, or just to keep things tidy.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={handleCreateProject}
-                disabled={!newProjectName.trim()}
-                className="interactive-button rounded-full bg-[#626262] px-7 py-3.5 text-[17px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[#737373] disabled:cursor-not-allowed disabled:bg-[#5a5a5a] disabled:text-white/45"
-              >
-                Create project
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
+        <CreateProjectModal
+          newProjectClient={newProjectClient}
+          newProjectDescription={newProjectDescription}
+          newProjectManager={newProjectManager}
+          newProjectName={newProjectName}
+          newProjectService={newProjectService}
+          newProjectTeam={newProjectTeam}
+          onClose={closeCreateProjectModal}
+          onCreateProject={handleCreateProject}
+          projectNameInputRef={projectNameInputRef}
+          setNewProjectClient={setNewProjectClient}
+          setNewProjectDescription={setNewProjectDescription}
+          setNewProjectManager={setNewProjectManager}
+          setNewProjectName={setNewProjectName}
+          setNewProjectService={setNewProjectService}
+          toggleTeamMember={toggleTeamMember}
+        />
       )}
 
       <div className="pointer-events-none absolute inset-0">
@@ -594,193 +346,46 @@ export default function ChatPage() {
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(30,91,168,0.18),transparent_28%),linear-gradient(180deg,#11161f_0%,#0c1118_100%)]">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {activeConversation ? (
-              <div className="chat-scrollbar min-h-0 flex-1 overflow-y-auto px-8 py-8 lg:px-16 lg:py-8 xl:px-20">
-                <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">{selectedProject?.name ?? "Workspace"}</p>
-                      <h1 className="mt-2 text-[34px] font-semibold tracking-tight text-white/95">{activeConversation.title}</h1>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleClearActiveChat}
-                        className="interactive-button flex items-center gap-2 rounded-2xl border border-[#d4af37]/30 bg-[#101827]/75 px-4 py-2.5 text-sm font-medium text-[#f6edd0] hover:border-[#d4af37]/55 hover:bg-[#13233f] hover:text-white"
-                      >
-                        <span>🧹</span>
-                        <span>Clear chat</span>
-                      </button>
-
-                      <div className="relative" ref={workspaceMenuRef}>
-                        <button
-                          type="button"
-                          aria-label="Chat options"
-                          onClick={() => setIsWorkspaceMenuOpen((current) => !current)}
-                          className="interactive-button flex h-10 w-10 items-center justify-center rounded-full border border-[#d4af37]/28 bg-[#101827]/75 text-[#f6edd0] hover:border-[#d4af37]/52 hover:bg-[#13233f] hover:text-white"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-
-                        {isWorkspaceMenuOpen && (
-                          <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                            <ConversationMenuItem emoji="🔗" label="Share" onClick={() => handleShareConversation(activeConversation)} />
-                            <ConversationMenuItem emoji="✏️" label="Rename" onClick={() => handleRenameConversation(activeConversation)} />
-                            <ConversationMenuItem emoji={activeConversation.pinned ? "📍" : "📌"} label={activeConversation.pinned ? "Unpin chat" : "Pin chat"} onClick={() => handlePinConversation(activeConversation.id)} />
-                            <ConversationMenuItem emoji="🗂️" label="Archive" onClick={() => handleArchiveConversation(activeConversation.id)} />
-                            <ConversationMenuItem emoji="🗑️" label="Delete" danger onClick={() => handleDeleteConversation(activeConversation.id)} />
-                          </div>
-                        )}
-                      </div>
-
-                      <button type="button" onClick={startNewChat} className="interactive-button rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white hover:bg-white/[0.08] lg:hidden">New chat</button>
-                    </div>
-                  </div>
-
-                  {activeConversation.messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-rise`}>
-                      <div className={`max-w-[80%] rounded-[30px] px-7 py-6 ${message.sender === "user" ? "border border-[#7aa7ff]/20 bg-[linear-gradient(180deg,#295dba_0%,#1c427f_100%)] text-white shadow-[0_20px_48px_rgba(30,91,168,0.24)]" : "border border-[#d4af37]/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] text-white/88 shadow-[0_16px_40px_rgba(0,0,0,0.16)]"}`}>
-                        <div className="mb-4 flex items-center gap-2 text-xs text-white/42">
-                          <span className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${message.sender === "user" ? "bg-white/20 text-white" : "bg-[#d4af37]/14 text-[#f4e4a4]"}`}>{message.sender === "user" ? "U" : "AI"}</span>
-                          {message.timestamp.toLocaleTimeString()}
-                        </div>
-                        <div className="text-[15px] leading-8">{message.content}</div>
-                        {message.files && message.files.length > 0 && (
-                          <div className="mt-5 space-y-2">
-                            {message.files.map((file) => (
-                              <div key={`${message.id}-${file.name}`} className="flex items-center gap-2 rounded-2xl bg-white/8 px-3 py-2.5">
-                                {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                                <span className="flex-1 truncate text-sm">{file.name}</span>
-                                <span className="text-xs text-white/50">{formatFileSize(file.size)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-
-                  {isTyping && (
-                    <div className="flex justify-start animate-fade-rise">
-                      <div className="rounded-[30px] border border-[#d4af37]/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-7 py-6 shadow-[0_16px_40px_rgba(0,0,0,0.16)]">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d4af37]/14 font-bold text-[#f4e4a4]">AI</span>
-                          <div className="flex gap-1">
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-[#d4af37]/70" />
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-[#d4af37]/70 [animation-delay:150ms]" />
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-[#d4af37]/70 [animation-delay:300ms]" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
+              <ConversationView
+                activeConversation={activeConversation}
+                formatFileSize={formatFileSize}
+                isTyping={isTyping}
+                isWorkspaceMenuOpen={isWorkspaceMenuOpen}
+                onArchiveConversation={handleArchiveConversation}
+                onClearActiveChat={handleClearActiveChat}
+                onDeleteConversation={handleDeleteConversation}
+                onPinConversation={handlePinConversation}
+                onRenameConversation={handleRenameConversation}
+                onShareConversation={handleShareConversation}
+                onStartNewChat={startNewChat}
+                onToggleWorkspaceMenu={() => setIsWorkspaceMenuOpen((current) => !current)}
+                selectedProjectName={selectedProject?.name}
+                workspaceMenuRef={workspaceMenuRef}
+              />
             ) : (
-              <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
-                <div className="flex w-full max-w-[1200px] flex-col items-center justify-center text-center">
-                  <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">{selectedProject?.name ?? "Workspace"}</p>
-                  <p className="text-3xl font-light tracking-tight text-white/92 md:text-4xl">
-                    {selectedProject ? `Ready to chat inside ${selectedProject.name}.` : "Ready when you are."}
-                  </p>
-
-                  <div className="mt-10 w-full max-w-[980px]">
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        sendMessage();
-                      }}
-                      className="relative rounded-[34px] border border-[#d4af37]/34 bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(12,17,24,0.94))] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.ppt,.pptx"
-                        onChange={handleFileSelect}
-                      />
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        multiple
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                      />
-
-                      <div className="flex items-center gap-3">
-                        <div className="relative" ref={attachmentMenuRef}>
-                          {isAttachmentMenuOpen && (
-                            <div className="absolute bottom-[calc(100%+14px)] left-0 z-20 w-64 rounded-3xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                              <SidebarAction icon={<ImageIcon className="h-5 w-5" />} label="Upload photos" caption="Add images to your message" onClick={() => { imageInputRef.current?.click(); setIsAttachmentMenuOpen(false); }} />
-                              <SidebarAction icon={<FileText className="h-5 w-5" />} label="Upload files" caption="Attach documents and spreadsheets" onClick={() => { fileInputRef.current?.click(); setIsAttachmentMenuOpen(false); }} />
-                              <SidebarAction icon={<Sparkles className="h-5 w-5" />} label="Create prompt" caption="Insert a suggested request" onClick={() => { setInputMessage("Help me create a client-ready plan."); setIsAttachmentMenuOpen(false); }} />
-                            </div>
-                          )}
-
-                          <button type="button" onClick={() => setIsAttachmentMenuOpen((current) => !current)} className={`interactive-button flex h-12 w-12 items-center justify-center rounded-full border text-white ${isAttachmentMenuOpen ? "border-[#d4af37]/50 bg-[#162235]" : "border-[#d4af37]/30 bg-[#101827]/80 hover:bg-[#13233f]"}`}>
-                            <Plus className={`h-6 w-6 transition-transform duration-300 ${isAttachmentMenuOpen ? "rotate-45" : ""}`} />
-                          </button>
-                        </div>
-
-                        <input type="text" value={inputMessage} onChange={(event) => setInputMessage(event.target.value)} placeholder="Ask anything" className="flex-1 bg-transparent px-3 py-3 text-[17px] font-light text-white outline-none placeholder:text-[#d8dbe3]/38" />
-                        <button type="submit" disabled={(!inputMessage.trim() && attachedFiles.length === 0) || isTyping} className="interactive-button flex h-14 w-14 items-center justify-center rounded-full bg-[#d4af37] text-[#111214] shadow-[0_12px_30px_rgba(212,175,55,0.3)] hover:bg-[#e0bc49] disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-5 w-5" /></button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {selectedProject && (
-                    <div className="mt-12 w-full max-w-[980px] text-left">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setProjectHomeTab("chats")}
-                          className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "chats" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
-                        >
-                          Chats
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProjectHomeTab("sources")}
-                          className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "sources" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
-                        >
-                          Sources
-                        </button>
-                      </div>
-
-                      {projectHomeTab === "chats" ? (
-                        <div className="mt-8 space-y-3">
-                          {projectRecentConversations.length > 0 ? (
-                            projectRecentConversations.map((conversation) => (
-                              <button
-                                key={conversation.id}
-                                type="button"
-                                onClick={() => setActiveConversationId(conversation.id)}
-                                className="interactive-button flex w-full items-center justify-between rounded-[24px] border border-white/8 bg-white/[0.03] px-5 py-4 text-left text-white/88 hover:border-[#d4af37]/28 hover:bg-white/[0.05]"
-                              >
-                                <div className="min-w-0">
-                                  <p className="truncate text-lg font-medium text-white/92">{conversation.pinned ? "📌 " : ""}{conversation.title}</p>
-                                  <p className="mt-1 text-sm text-white/40">{conversation.messages.length} messages</p>
-                                </div>
-                                <span className="shrink-0 pl-6 text-sm text-white/42">{conversation.updatedAt.toLocaleDateString()}</span>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
-                              This project does not have recent chats yet.
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-8 rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
-                          Sources for this project will appear here.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ProjectHomePanel
+                composer={
+                  <ChatComposer
+                    attachedFiles={attachedFiles}
+                    attachmentMenuRef={attachmentMenuRef}
+                    fileInputRef={fileInputRef}
+                    imageInputRef={imageInputRef}
+                    inputMessage={inputMessage}
+                    inputTextClassName="flex-1 bg-transparent px-3 py-3 text-[17px] font-light text-white outline-none placeholder:text-[#d8dbe3]/38"
+                    isAttachmentMenuOpen={isAttachmentMenuOpen}
+                    isTyping={isTyping}
+                    onFileSelect={handleFileSelect}
+                    onInputMessageChange={setInputMessage}
+                    onSubmit={() => sendMessage()}
+                    setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
+                  />
+                }
+                onOpenConversation={setActiveConversationId}
+                onProjectHomeTabChange={setProjectHomeTab}
+                projectHomeTab={projectHomeTab}
+                projectRecentConversations={projectRecentConversations}
+                selectedProject={selectedProject}
+              />
             )}
 
             {attachedFiles.length > 0 && (
@@ -800,29 +405,20 @@ export default function ChatPage() {
             {activeConversation && (
               <div className="border-t border-[#d4af37]/18 bg-[#0c1118]/95 px-8 pb-8 pt-5 lg:px-16 xl:px-20 backdrop-blur-xl">
               <div className="mx-auto max-w-[1480px]">
-                <form onSubmit={(event) => { event.preventDefault(); sendMessage(); }} className="relative rounded-[34px] border border-[#d4af37]/34 bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(12,17,24,0.94))] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
-                  <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.ppt,.pptx" onChange={handleFileSelect} />
-                  <input ref={imageInputRef} type="file" multiple className="hidden" accept="image/*" onChange={handleFileSelect} />
-
-                  <div className="flex items-center gap-3">
-                    <div className="relative" ref={attachmentMenuRef}>
-                      {isAttachmentMenuOpen && (
-                        <div className="absolute bottom-[calc(100%+14px)] left-0 z-20 w-64 rounded-3xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                          <SidebarAction icon={<ImageIcon className="h-5 w-5" />} label="Upload photos" caption="Add images to your message" onClick={() => { imageInputRef.current?.click(); setIsAttachmentMenuOpen(false); }} />
-                          <SidebarAction icon={<FileText className="h-5 w-5" />} label="Upload files" caption="Attach documents and spreadsheets" onClick={() => { fileInputRef.current?.click(); setIsAttachmentMenuOpen(false); }} />
-                          <SidebarAction icon={<Sparkles className="h-5 w-5" />} label="Create prompt" caption="Insert a suggested request" onClick={() => { setInputMessage("Help me create a client-ready plan."); setIsAttachmentMenuOpen(false); }} />
-                        </div>
-                      )}
-
-                      <button type="button" onClick={() => setIsAttachmentMenuOpen((current) => !current)} className={`interactive-button flex h-12 w-12 items-center justify-center rounded-full border text-white ${isAttachmentMenuOpen ? "border-[#d4af37]/50 bg-[#162235]" : "border-[#d4af37]/30 bg-[#101827]/80 hover:bg-[#13233f]"}`}>
-                        <Plus className={`h-6 w-6 transition-transform duration-300 ${isAttachmentMenuOpen ? "rotate-45" : ""}`} />
-                      </button>
-                    </div>
-
-                    <input type="text" value={inputMessage} onChange={(event) => setInputMessage(event.target.value)} placeholder="Ask anything" className="flex-1 bg-transparent px-3 py-3 text-[22px] font-light text-white outline-none placeholder:text-[#d8dbe3]/38" />
-                    <button type="submit" disabled={(!inputMessage.trim() && attachedFiles.length === 0) || isTyping} className="interactive-button flex h-14 w-14 items-center justify-center rounded-full bg-[#d4af37] text-[#111214] shadow-[0_12px_30px_rgba(212,175,55,0.3)] hover:bg-[#e0bc49] disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-5 w-5" /></button>
-                  </div>
-                </form>
+                <ChatComposer
+                  attachedFiles={attachedFiles}
+                  attachmentMenuRef={attachmentMenuRef}
+                  fileInputRef={fileInputRef}
+                  imageInputRef={imageInputRef}
+                  inputMessage={inputMessage}
+                  inputTextClassName="flex-1 bg-transparent px-3 py-3 text-[22px] font-light text-white outline-none placeholder:text-[#d8dbe3]/38"
+                  isAttachmentMenuOpen={isAttachmentMenuOpen}
+                  isTyping={isTyping}
+                  onFileSelect={handleFileSelect}
+                  onInputMessageChange={setInputMessage}
+                  onSubmit={() => sendMessage()}
+                  setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
+                />
               </div>
               </div>
             )}
@@ -831,44 +427,5 @@ export default function ChatPage() {
       </div>
     </section>
   );
-}
-
-function SidebarAction({ icon, label, caption, onClick }: { icon: React.ReactNode; label: string; caption: string; onClick: () => void; }) {
-  return (
-    <button type="button" onClick={onClick} className="interactive-button flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white hover:bg-[#162235]">
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d4af37]/18 bg-[#101827] text-[#f2e7bb]">{icon}</span>
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-[#d8dbe3]/42">{caption}</span>
-      </span>
-    </button>
-  );
-}
-
-function ConversationMenuItem({ emoji, label, onClick, danger = false }: { emoji: string; label: string; onClick: () => void; danger?: boolean; }) {
-  return (
-    <button type="button" onClick={onClick} className={`interactive-button flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${danger ? "text-red-300 hover:bg-red-500/10" : "text-white hover:bg-[#162235]"}`}>
-      <span className="text-base">{emoji}</span>
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function getAIResponse(userMessage: string, fileCount: number): string {
-  if (fileCount > 0) return `I've received your message and ${fileCount} file(s). I can help you analyze these materials and turn them into a usable summary, plan, or recommendation.`;
-  const lowerMessage = userMessage.toLowerCase();
-  if (lowerMessage.includes("strategic") || lowerMessage.includes("consulting")) return "A strong consulting response starts by clarifying the business objective, diagnosing the gap, prioritizing the highest-value opportunities, and then sequencing initiatives into an execution roadmap.";
-  if (lowerMessage.includes("operational") || lowerMessage.includes("efficiency")) return "To improve operational efficiency, begin with process mapping, identify the biggest friction points, assign measurable targets, and then pair quick wins with one or two structural improvements.";
-  if (lowerMessage.includes("digital") || lowerMessage.includes("transformation")) return "The latest transformation work usually blends automation, better internal data visibility, leaner workflows, and clearer governance so teams can scale without adding complexity.";
-  if (lowerMessage.includes("financial") || lowerMessage.includes("analysis")) return "For financial analysis, I would frame the work around revenue drivers, margin pressure, cash timing, and scenario planning so leadership can make decisions with clearer tradeoffs.";
-  return `I can help with that. If you want, I can turn "${userMessage}" into a structured answer, a client-ready summary, or a step-by-step plan.`;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
 }
 
