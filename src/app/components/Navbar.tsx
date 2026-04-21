@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { MessageSquare, Search, Shield } from "lucide-react";
 
 const navItems = [
@@ -13,11 +12,6 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [userEmail, setUserEmail] = useState("");
-
-  useEffect(() => {
-    setUserEmail(localStorage.getItem("trimerge_admin_email") ?? "");
-  }, [pathname]);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur page-section">
@@ -64,15 +58,6 @@ export default function Navbar() {
             );
           })}
         </div>
-
-        {pathname === "/admin" && userEmail ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-right interactive-base">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Logged in as
-            </p>
-            <p className="text-sm font-semibold text-slate-900">{userEmail}</p>
-          </div>
-        ) : null}
       </div>
     </nav>
   );

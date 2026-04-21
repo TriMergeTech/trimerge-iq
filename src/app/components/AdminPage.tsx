@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   LogOut,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -55,6 +56,28 @@ interface AdminPageProps {
   onLogout: () => void;
 }
 
+interface PositionApiRecord {
+  id?: string;
+  _id?: string;
+  name?: string;
+  title?: string;
+  description?: string;
+  responsibility?: string[];
+  responsibilities?: string[];
+  skills?: string[];
+  createdAt?: string;
+  created_at?: string;
+}
+
+interface SkillApiRecord {
+  id?: string;
+  _id?: string;
+  name?: string;
+  description?: string;
+  createdAt?: string;
+  created_at?: string;
+}
+
 const INITIAL_STAFF: StaffMember[] = [];
 
 const INITIAL_ADMINS: StaffMember[] = [];
@@ -64,6 +87,88 @@ const INITIAL_SKILLS: SkillItem[] = [];
 const INITIAL_SERVICES: ServiceItem[] = [];
 
 const INITIAL_POSITIONS: PositionItem[] = [];
+const API_BASE_URL = "https://trimerge-iq.onrender.com";
+
+function mapSkillFromApi(skill: SkillApiRecord): SkillItem {
+  return {
+    id: skill.id ?? skill._id ?? `${skill.name ?? "skill"}-${skill.createdAt ?? skill.created_at ?? "local"}`,
+    name: skill.name ?? "Untitled Skill",
+    description: skill.description ?? "",
+    createdAt: skill.createdAt || skill.created_at ? new Date(skill.createdAt ?? skill.created_at ?? "") : new Date(),
+  };
+}
+
+function mapPositionFromApi(position: PositionApiRecord, skills: SkillItem[]): PositionItem {
+  const skillIds = (position.skills ?? [])
+    .map((skillName) => skills.find((skill) => skill.name === skillName)?.id)
+    .filter((skillId): skillId is string => Boolean(skillId));
+
+  return {
+    id:
+      position.id ??
+      position._id ??
+      `${position.name ?? position.title ?? "position"}-${position.createdAt ?? position.created_at ?? "local"}`,
+    title: position.name ?? position.title ?? "Untitled Position",
+    description: position.description ?? "",
+    responsibilities: position.responsibility ?? position.responsibilities ?? [],
+    skillIds,
+    createdAt:
+      position.createdAt || position.created_at
+        ? new Date(position.createdAt ?? position.created_at ?? "")
+        : new Date(),
+  };
+}
+
+function extractPositionRecords(payload: unknown): PositionApiRecord[] {
+  if (Array.isArray(payload)) return payload as PositionApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; position?: unknown; positions?: unknown };
+    if (Array.isArray(typedPayload.positions)) return typedPayload.positions as PositionApiRecord[];
+    if (typedPayload.position && typeof typedPayload.position === "object") {
+      return [typedPayload.position as PositionApiRecord];
+    }
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as PositionApiRecord[];
+
+    if (data && typeof data === "object") return [data as PositionApiRecord];
+    return [payload as PositionApiRecord];
+  }
+
+  return [];
+}
+
+function extractSkillRecords(payload: unknown): SkillApiRecord[] {
+  if (Array.isArray(payload)) return payload as SkillApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; skill?: unknown; skills?: unknown };
+    if (Array.isArray(typedPayload.skills)) return typedPayload.skills as SkillApiRecord[];
+    if (typedPayload.skill && typeof typedPayload.skill === "object") {
+      return [typedPayload.skill as SkillApiRecord];
+    }
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as SkillApiRecord[];
+
+    if (data && typeof data === "object") return [data as SkillApiRecord];
+    return [payload as SkillApiRecord];
+  }
+
+  return [];
+}
+
+async function parseJsonSafely(response: Response): Promise<unknown> {
+  const responseText = await response.text();
+  if (!responseText) return null;
+
+  try {
+    return JSON.parse(responseText) as unknown;
+  } catch {
+    return null;
+  }
+}
 
 const SECTION_META: Record<
   AdminSection,
@@ -84,7 +189,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>("services");
   const [searchQuery, setSearchQuery] = useState("");
   const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
+  const [accessToken, setAccessToken] = useState("");
   const [openModal, setOpenModal] = useState<CreateModal>(null);
+  const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
+  const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+  const [isSavingSkill, setIsSavingSkill] = useState(false);
+  const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
+  const [isSavingPosition, setIsSavingPosition] = useState(false);
+  const [skillError, setSkillError] = useState("");
+  const [positionError, setPositionError] = useState("");
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(INITIAL_STAFF);
   const [adminMembers, setAdminMembers] = useState<StaffMember[]>(INITIAL_ADMINS);
@@ -94,8 +209,100 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("trimerge_admin_email");
+    const storedAccessToken = localStorage.getItem("trimerge_admin_access_token");
     if (storedEmail) setLoggedInEmail(storedEmail);
+    if (storedAccessToken) setAccessToken(storedAccessToken);
   }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadSkills = async () => {
+      try {
+        setIsLoadingSkills(true);
+        setSkillError("");
+
+        const response = await fetch(`${API_BASE_URL}/skills`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load skills (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiSkills = extractSkillRecords(payload).map(mapSkillFromApi);
+
+        if (!ignore) {
+          setSkills(apiSkills);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setSkillError(error instanceof Error ? error.message : "Unable to load skills.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingSkills(false);
+        }
+      }
+    };
+
+    void loadSkills();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadPositions = async () => {
+      try {
+        setIsLoadingPositions(true);
+        setPositionError("");
+
+        const response = await fetch(`${API_BASE_URL}/positions`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load positions (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiPositions = extractPositionRecords(payload).map((position) =>
+          mapPositionFromApi(position, skills),
+        );
+
+        if (!ignore) {
+          setPositions(apiPositions);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setPositionError(error instanceof Error ? error.message : "Unable to load positions.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingPositions(false);
+        }
+      }
+    };
+
+    void loadPositions();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, skills]);
 
   const loggedInName = useMemo(() => {
     const localPart = loggedInEmail.split("@")[0] ?? "";
@@ -190,35 +397,299 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     services: services.length,
   }[activeSection];
 
-  const openCreateModal = () => setOpenModal(activeSection);
-  const removeSkill = (skillId: string) => {
-    setSkills((current) => current.filter((item) => item.id !== skillId));
-    setPositions((current) =>
-      current.map((position) => ({
-        ...position,
-        skillIds: position.skillIds.filter((item) => item !== skillId),
-      })),
-    );
-    setServices((current) =>
-      current.map((service) => ({
-        ...service,
-        skillIds: service.skillIds.filter((item) => item !== skillId),
-      })),
-    );
+  const openCreateModal = () => {
+    if (activeSection === "skills") {
+      setEditingSkill(null);
+      setSkillError("");
+    }
+    if (activeSection === "position") {
+      setEditingPosition(null);
+      setPositionError("");
+    }
+    setOpenModal(activeSection);
   };
-  const removePosition = (positionId: string) => {
-    setPositions((current) => current.filter((item) => item.id !== positionId));
-    setStaffMembers((current) =>
-      current.map((member) =>
-        member.positionId === positionId ? { ...member, positionId: undefined } : member,
-      ),
-    );
-    setServices((current) =>
-      current.map((service) => ({
-        ...service,
-        positionIds: service.positionIds.filter((item) => item !== positionId),
-      })),
-    );
+
+  const saveSkill = async (payload: { name: string; description: string }) => {
+    try {
+      setIsSavingSkill(true);
+      setSkillError("");
+
+      if (editingSkill && accessToken) {
+        const response = await fetch(`${API_BASE_URL}/skills/${editingSkill.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to update skill (${response.status})`);
+        }
+
+        const updatedPayload = await parseJsonSafely(response);
+        const updatedSkill = extractSkillRecords(updatedPayload)[0];
+
+        if (updatedSkill) {
+          const nextSkill = mapSkillFromApi(updatedSkill);
+          setSkills((current) =>
+            current.map((skill) => (skill.id === editingSkill.id ? nextSkill : skill)),
+          );
+        } else {
+          setSkills((current) =>
+            current.map((skill) =>
+              skill.id === editingSkill.id ? { ...skill, ...payload } : skill,
+            ),
+          );
+        }
+      } else if (accessToken) {
+        const response = await fetch(`${API_BASE_URL}/skills`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to create skill (${response.status})`);
+        }
+
+        const createdPayload = await parseJsonSafely(response);
+        const createdSkill = extractSkillRecords(createdPayload)[0];
+
+        setSkills((current) => [
+          ...current,
+          createdSkill
+            ? mapSkillFromApi(createdSkill)
+            : { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+        ]);
+      } else if (editingSkill) {
+        setSkills((current) =>
+          current.map((skill) =>
+            skill.id === editingSkill.id ? { ...skill, ...payload } : skill,
+          ),
+        );
+      } else {
+        setSkills((current) => [
+          ...current,
+          { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+        ]);
+      }
+
+      setEditingSkill(null);
+      setOpenModal(null);
+    } catch (error) {
+      setSkillError(error instanceof Error ? error.message : "Unable to save skill.");
+    } finally {
+      setIsSavingSkill(false);
+    }
+  };
+
+  const openEditSkillModal = async (skillId: string) => {
+    try {
+      setIsLoadingSkillDetails(true);
+      setSkillError("");
+
+      if (accessToken) {
+        const response = await fetch(`${API_BASE_URL}/skills/${skillId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load skill (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const skill = extractSkillRecords(payload)[0];
+
+        if (!skill) {
+          throw new Error("Unable to load skill.");
+        }
+
+        setEditingSkill(mapSkillFromApi(skill));
+      } else {
+        const existingSkill = skills.find((item) => item.id === skillId);
+        if (!existingSkill) {
+          throw new Error("Unable to load skill.");
+        }
+        setEditingSkill(existingSkill);
+      }
+
+      setOpenModal("skills");
+    } catch (error) {
+      setSkillError(error instanceof Error ? error.message : "Unable to load skill.");
+    } finally {
+      setIsLoadingSkillDetails(false);
+    }
+  };
+
+  const removeSkill = async (skillId: string) => {
+    try {
+      setSkillError("");
+
+      if (accessToken) {
+        const response = await fetch(`${API_BASE_URL}/skills/${skillId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to delete skill (${response.status})`);
+        }
+      }
+
+      setSkills((current) => current.filter((item) => item.id !== skillId));
+      setPositions((current) =>
+        current.map((position) => ({
+          ...position,
+          skillIds: position.skillIds.filter((item) => item !== skillId),
+        })),
+      );
+      setServices((current) =>
+        current.map((service) => ({
+          ...service,
+          skillIds: service.skillIds.filter((item) => item !== skillId),
+        })),
+      );
+    } catch (error) {
+      setSkillError(error instanceof Error ? error.message : "Unable to delete skill.");
+    }
+  };
+  const removePosition = async (positionId: string) => {
+    try {
+      if (accessToken) {
+        setPositionError("");
+
+        const response = await fetch(`${API_BASE_URL}/positions/${positionId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to delete position (${response.status})`);
+        }
+      }
+
+      setPositions((current) => current.filter((item) => item.id !== positionId));
+      setStaffMembers((current) =>
+        current.map((member) =>
+          member.positionId === positionId ? { ...member, positionId: undefined } : member,
+        ),
+      );
+      setServices((current) =>
+        current.map((service) => ({
+          ...service,
+          positionIds: service.positionIds.filter((item) => item !== positionId),
+        })),
+      );
+    } catch (error) {
+      setPositionError(error instanceof Error ? error.message : "Unable to delete position.");
+    }
+  };
+
+  const openEditPositionModal = (positionId: string) => {
+    const existingPosition = positions.find((item) => item.id === positionId);
+    if (!existingPosition) {
+      setPositionError("Unable to load position.");
+      return;
+    }
+
+    setPositionError("");
+    setEditingPosition(existingPosition);
+    setOpenModal("position");
+  };
+
+  const savePosition = async (payload: Omit<PositionItem, "id" | "createdAt">) => {
+    try {
+      setIsSavingPosition(true);
+      setPositionError("");
+
+      if (accessToken && editingPosition) {
+        const response = await fetch(`${API_BASE_URL}/positions/${editingPosition.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.title,
+            description: payload.description,
+            responsibility: payload.responsibilities,
+            skills: payload.skillIds
+              .map((skillId) => skills.find((skill) => skill.id === skillId)?.name)
+              .filter((skillName): skillName is string => Boolean(skillName)),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to update position (${response.status})`);
+        }
+
+        const updatedPayload = await parseJsonSafely(response);
+        const updatedPosition = extractPositionRecords(updatedPayload)[0];
+        const nextPosition = updatedPosition
+          ? mapPositionFromApi(updatedPosition, skills)
+          : { ...editingPosition, ...payload };
+
+        setPositions((current) =>
+          current.map((position) => (position.id === editingPosition.id ? nextPosition : position)),
+        );
+      } else if (accessToken) {
+        const response = await fetch(`${API_BASE_URL}/positions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.title,
+            description: payload.description,
+            responsibility: payload.responsibilities,
+            skills: payload.skillIds
+              .map((skillId) => skills.find((skill) => skill.id === skillId)?.name)
+              .filter((skillName): skillName is string => Boolean(skillName)),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to create position (${response.status})`);
+        }
+
+        const createdPayload = await parseJsonSafely(response);
+        const createdPosition = extractPositionRecords(createdPayload)[0];
+
+        if (createdPosition) {
+          setPositions((current) => [...current, mapPositionFromApi(createdPosition, skills)]);
+        }
+      } else if (editingPosition) {
+        setPositions((current) =>
+          current.map((position) =>
+            position.id === editingPosition.id ? { ...position, ...payload } : position,
+          ),
+        );
+      } else {
+        setPositions((current) => [
+          ...current,
+          { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+        ]);
+      }
+
+      setEditingPosition(null);
+      setOpenModal(null);
+    } catch (error) {
+      setPositionError(error instanceof Error ? error.message : "Unable to save position.");
+    } finally {
+      setIsSavingPosition(false);
+    }
   };
 
   return (
@@ -305,6 +776,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         </div>
 
         <div className="flex-1 px-8 py-8">
+          {activeSection === "skills" && skillError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {skillError}
+            </div>
+          )}
+
+          {activeSection === "position" && positionError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {positionError}
+            </div>
+          )}
+
           {activeSection === "staff" && (
             <ManagementTable
               headers={["Name", "Email", "Position", "Created", "Actions"]}
@@ -347,7 +830,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "skills" && (
             <ManagementTable
               headers={["Name", "Description", "Created", "Actions"]}
-              emptyMessage="No skills found."
+              emptyMessage={isLoadingSkills ? "Loading skills..." : "No skills found."}
             >
               {filteredSkills.map((skill) => (
                 <tr key={skill.id} className="border-t border-[#eef2f8]">
@@ -355,7 +838,19 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.description}</td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.createdAt.toLocaleDateString()}</td>
                   <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => removeSkill(skill.id)} />
+                    <div className="flex justify-end gap-2">
+                      <EditButton
+                        disabled={isLoadingSkillDetails}
+                        onClick={() => {
+                          void openEditSkillModal(skill.id);
+                        }}
+                      />
+                      <DeleteButton
+                        onClick={() => {
+                          void removeSkill(skill.id);
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -409,7 +904,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "position" && (
             <ManagementTable
               headers={["Name", "Description", "Skills", "Actions"]}
-              emptyMessage="No positions found."
+              emptyMessage={isLoadingPositions ? "Loading positions..." : "No positions found."}
             >
               {filteredPositions.map((position) => (
                 <tr key={position.id} className="border-t border-[#eef2f8] align-top">
@@ -442,7 +937,14 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     </div>
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => removePosition(position.id)} />
+                    <div className="flex justify-end gap-2">
+                      <EditButton
+                        onClick={() => {
+                          openEditPositionModal(position.id);
+                        }}
+                      />
+                      <DeleteButton onClick={() => { void removePosition(position.id); }} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -482,16 +984,19 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
       {openModal === "skills" && (
         <RegistryModal
-          title="Add New Skill"
+          title={editingSkill ? "Edit Skill" : "Add New Skill"}
           nameLabel="Title"
-          onClose={() => setOpenModal(null)}
-          onSave={(payload) => {
-            setSkills((current) => [
-              ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-            ]);
+          initialDescription={editingSkill?.description ?? ""}
+          initialName={editingSkill?.name ?? ""}
+          isSaving={isSavingSkill}
+          onClose={() => {
+            setEditingSkill(null);
             setOpenModal(null);
           }}
+          onSave={(payload) => {
+            void saveSkill(payload);
+          }}
+          submitLabel={editingSkill ? "Save changes" : "Create skill"}
         />
       )}
 
@@ -514,13 +1019,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       {openModal === "position" && (
         <PositionModal
           skills={skills}
-          onClose={() => setOpenModal(null)}
-          onSave={(payload) => {
-            setPositions((current) => [
-              ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-            ]);
+          initialDescription={editingPosition?.description ?? ""}
+          initialResponsibilities={editingPosition?.responsibilities ?? [""]}
+          initialSkillIds={editingPosition?.skillIds ?? []}
+          initialTitle={editingPosition?.title ?? ""}
+          isSaving={isSavingPosition}
+          title={editingPosition ? "Edit Position" : "Add New Position"}
+          onClose={() => {
+            setEditingPosition(null);
             setOpenModal(null);
+          }}
+          onSave={(payload) => {
+            void savePosition(payload);
           }}
         />
       )}
@@ -611,6 +1121,25 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+function EditButton({
+  disabled = false,
+  onClick,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="interactive-button rounded-full p-2 text-[#2865ba] hover:bg-[#eef4ff] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Pencil className="h-4 w-4" />
+    </button>
+  );
+}
+
 function PersonModal({
   title,
   positions,
@@ -684,18 +1213,31 @@ function PersonModal({
 }
 
 function RegistryModal({
+  initialDescription = "",
+  initialName = "",
+  isSaving = false,
   title,
   nameLabel,
   onSave,
   onClose,
+  submitLabel = "Save",
 }: {
+  initialDescription?: string;
+  initialName?: string;
+  isSaving?: boolean;
   title: string;
   nameLabel: string;
   onSave: (payload: { name: string; description: string }) => void;
   onClose: () => void;
+  submitLabel?: string;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+
+  useEffect(() => {
+    setName(initialName);
+    setDescription(initialDescription);
+  }, [initialDescription, initialName]);
 
   return (
     <BaseModal title={title} onClose={onClose}>
@@ -726,7 +1268,11 @@ function RegistryModal({
           />
         </ModalField>
 
-        <ModalActions onClose={onClose} />
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : submitLabel}
+        />
       </form>
     </BaseModal>
   );
@@ -847,18 +1393,32 @@ function ServiceModal({
 }
 
 function PositionModal({
+  title,
   skills,
+  initialTitle = "",
+  initialDescription = "",
+  initialResponsibilities = [""],
+  initialSkillIds = [],
+  isSaving = false,
   onSave,
   onClose,
 }: {
+  title?: string;
   skills: SkillItem[];
+  initialTitle?: string;
+  initialDescription?: string;
+  initialResponsibilities?: string[];
+  initialSkillIds?: string[];
+  isSaving?: boolean;
   onSave: (payload: Omit<PositionItem, "id" | "createdAt">) => void;
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [responsibilities, setResponsibilities] = useState<string[]>([""]);
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [positionTitle, setPositionTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [responsibilities, setResponsibilities] = useState<string[]>(
+    initialResponsibilities.length > 0 ? initialResponsibilities : [""],
+  );
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(initialSkillIds);
 
   const updateResponsibility = (index: number, value: string) => {
     setResponsibilities((current) =>
@@ -877,12 +1437,12 @@ function PositionModal({
   };
 
   return (
-    <BaseModal title="Add New Position" onClose={onClose} maxWidthClass="max-w-[760px]">
+    <BaseModal title={title ?? "Add New Position"} onClose={onClose} maxWidthClass="max-w-[760px]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           onSave({
-            title: title.trim(),
+            title: positionTitle.trim(),
             description: description.trim(),
             responsibilities: responsibilities.map((item) => item.trim()).filter(Boolean),
             skillIds: selectedSkillIds,
@@ -893,8 +1453,8 @@ function PositionModal({
         <ModalField label="Title">
           <input
             type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            value={positionTitle}
+            onChange={(event) => setPositionTitle(event.target.value)}
             className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
             required
           />
@@ -966,7 +1526,11 @@ function PositionModal({
           )}
         </ModalField>
 
-        <ModalActions onClose={onClose} />
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : "Save"}
+        />
       </form>
     </BaseModal>
   );
@@ -1023,7 +1587,15 @@ function ModalField({
   );
 }
 
-function ModalActions({ onClose }: { onClose: () => void }) {
+function ModalActions({
+  onClose,
+  submitDisabled = false,
+  submitLabel = "Save",
+}: {
+  onClose: () => void;
+  submitDisabled?: boolean;
+  submitLabel?: string;
+}) {
   return (
     <div className="flex gap-4 pt-3">
       <button
@@ -1035,9 +1607,10 @@ function ModalActions({ onClose }: { onClose: () => void }) {
       </button>
       <button
         type="submit"
-        className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8]"
+        disabled={submitDisabled}
+        className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Save
+        {submitLabel}
       </button>
     </div>
   );
