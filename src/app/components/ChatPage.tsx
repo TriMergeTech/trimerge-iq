@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Clock3, FileText, Image as ImageIcon, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, X } from "lucide-react";
 
 import ChatComposer from "./ChatComposer";
+import { fetchConversations, fetchMessages, getChatProfile } from "./chatApi";
 import ConversationMenuItem from "./ConversationMenuItem";
 import ConversationView from "./ConversationView";
 import CreateProjectModal from "./CreateProjectModal";
@@ -23,6 +24,8 @@ export default function ChatPage() {
   const [conversationSearch, setConversationSearch] = useState("");
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingChatData, setIsLoadingChatData] = useState(true);
+  const [lastChatError, setLastChatError] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [openConversationMenuId, setOpenConversationMenuId] = useState<number | null>(null);
@@ -39,6 +42,7 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
+  const projectsRef = useRef<Project[]>([]);
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
   const conversationMenuRef = useRef<HTMLDivElement>(null);
   const projectMenuRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,124 @@ export default function ChatPage() {
     [projects],
   );
   const projectRecentConversations = useMemo(() => visibleConversations.slice(0, 6), [visibleConversations]);
+
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadConversations = async () => {
+      setIsLoadingChatData(true);
+      setLastChatError("");
+
+      try {
+        const profile = getChatProfile();
+        const apiConversations = await fetchConversations(profile, selectedProject?.name);
+        if (isCancelled) return;
+
+        setConversations((current) => {
+          const currentMap = new Map(current.map((conversation) => [conversation.id, conversation]));
+
+          return apiConversations
+            .map((conversation) => {
+              const existingConversation = currentMap.get(conversation.id);
+
+              return {
+                ...conversation,
+                projectId:
+                  existingConversation?.projectId ??
+                  projectsRef.current.find((project) => project.name === conversation.projectName)?.id ??
+                  null,
+                pinned: existingConversation?.pinned,
+                archived: existingConversation?.archived,
+                messages: existingConversation?.messages ?? [],
+                updatedAt: existingConversation?.updatedAt ?? conversation.updatedAt,
+              };
+            })
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        });
+      } catch (error) {
+        if (!isCancelled) {
+          setLastChatError(error instanceof Error ? error.message : "Unable to load conversations right now.");
+        }
+      } finally {
+        if (!isCancelled) setIsLoadingChatData(false);
+      }
+    };
+
+    void loadConversations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedProject?.name]);
+
+  useEffect(() => {
+    const inferredProjects = Array.from(
+      new Set(
+        conversations
+          .map((conversation) => conversation.projectName?.trim())
+          .filter((projectName): projectName is string => Boolean(projectName)),
+      ),
+    );
+
+    if (inferredProjects.length === 0) return;
+
+    setProjects((current) => {
+      const existingProjectNames = new Set(current.map((project) => project.name));
+      const nextProjects = inferredProjects
+        .filter((projectName) => !existingProjectNames.has(projectName))
+        .map((projectName) => ({
+          id: Date.now() + Math.floor(Math.random() * 100000),
+          name: projectName,
+          createdAt: new Date(),
+        }));
+
+      return nextProjects.length > 0 ? [...current, ...nextProjects] : current;
+    });
+  }, [conversations]);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    const activeWithMessages = conversations.find((conversation) => conversation.id === activeConversationId);
+    if (activeWithMessages?.messages.length) return;
+
+    let isCancelled = false;
+
+    const loadMessages = async () => {
+      setLastChatError("");
+
+      try {
+        const messages = await fetchMessages(activeConversationId);
+        if (isCancelled) return;
+
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === activeConversationId
+              ? {
+                  ...conversation,
+                  updatedAt: messages[messages.length - 1]?.timestamp ?? conversation.updatedAt,
+                  messages,
+                }
+              : conversation,
+          ),
+        );
+      } catch (error) {
+        if (!isCancelled) {
+          setLastChatError(error instanceof Error ? error.message : "Unable to load messages right now.");
+        }
+      }
+    };
+
+    void loadMessages();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeConversationId, conversations]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -163,6 +285,7 @@ export default function ChatPage() {
     attachedFiles,
     inputMessage,
     selectedProjectId,
+    selectedProjectName: selectedProject?.name,
     setActiveConversationId,
     setAttachedFiles,
     setConversations,
@@ -170,6 +293,7 @@ export default function ChatPage() {
     setIsAttachmentMenuOpen,
     setIsTyping,
     setIsWorkspaceMenuOpen,
+    setLastChatError,
     setOpenConversationMenuId,
   });
 
@@ -302,6 +426,11 @@ export default function ChatPage() {
             )}
             {isSidebarOpen && <div className="mb-5 px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/70">Recents</div>}
             {isSidebarOpen && <div className="space-y-2">
+              {isLoadingChatData && (
+                <div className="rounded-2xl border border-dashed border-[#d4af37]/26 bg-[#0f1726]/70 px-4 py-6 text-sm text-[#d8dbe3]/48">
+                  Loading conversations...
+                </div>
+              )}
               {visibleConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 return (
@@ -337,7 +466,7 @@ export default function ChatPage() {
                 );
               })}
 
-              {isSidebarOpen && visibleConversations.length === 0 && <div className="rounded-2xl border border-dashed border-[#d4af37]/26 bg-[#0f1726]/70 px-4 py-6 text-sm text-[#d8dbe3]/48">No conversations match that search yet.</div>}
+              {isSidebarOpen && !isLoadingChatData && visibleConversations.length === 0 && <div className="rounded-2xl border border-dashed border-[#d4af37]/26 bg-[#0f1726]/70 px-4 py-6 text-sm text-[#d8dbe3]/48">No conversations match that search yet.</div>}
             </div>}
           </div>
 
@@ -345,6 +474,13 @@ export default function ChatPage() {
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(30,91,168,0.18),transparent_28%),linear-gradient(180deg,#11161f_0%,#0c1118_100%)]">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {lastChatError && (
+              <div className="px-8 pt-5 lg:px-16 xl:px-20">
+                <div className="mx-auto max-w-[1480px] rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                  {lastChatError}
+                </div>
+              </div>
+            )}
             {activeConversation ? (
               <ConversationView
                 activeConversation={activeConversation}

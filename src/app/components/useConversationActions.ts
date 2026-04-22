@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 
+import { createConversation, createMessage, fetchMessages, getChatProfile, rememberMessageSender } from "./chatApi";
 import type { Conversation, UploadedFile } from "./chatPageTypes";
-import { getAIResponse } from "./chatPageUtils";
 
 interface UseConversationActionsProps {
   activeConversation: Conversation | null;
@@ -9,6 +9,7 @@ interface UseConversationActionsProps {
   attachedFiles: UploadedFile[];
   inputMessage: string;
   selectedProjectId: number | null;
+  selectedProjectName?: string;
   setActiveConversationId: Dispatch<SetStateAction<number | null>>;
   setAttachedFiles: Dispatch<SetStateAction<UploadedFile[]>>;
   setConversations: Dispatch<SetStateAction<Conversation[]>>;
@@ -16,6 +17,7 @@ interface UseConversationActionsProps {
   setIsAttachmentMenuOpen: Dispatch<SetStateAction<boolean>>;
   setIsTyping: Dispatch<SetStateAction<boolean>>;
   setIsWorkspaceMenuOpen: Dispatch<SetStateAction<boolean>>;
+  setLastChatError: Dispatch<SetStateAction<string>>;
   setOpenConversationMenuId: Dispatch<SetStateAction<number | null>>;
 }
 
@@ -25,6 +27,7 @@ export function useConversationActions({
   attachedFiles,
   inputMessage,
   selectedProjectId,
+  selectedProjectName,
   setActiveConversationId,
   setAttachedFiles,
   setConversations,
@@ -32,6 +35,7 @@ export function useConversationActions({
   setIsAttachmentMenuOpen,
   setIsTyping,
   setIsWorkspaceMenuOpen,
+  setLastChatError,
   setOpenConversationMenuId,
 }: UseConversationActionsProps) {
   const updateConversation = (
@@ -114,31 +118,32 @@ export function useConversationActions({
     setIsWorkspaceMenuOpen(false);
   };
 
-  const sendMessage = (prompt?: string) => {
+  const sendMessage = async (prompt?: string) => {
     const content = (prompt ?? inputMessage).trim();
     if (!content && attachedFiles.length === 0) return;
 
-    const conversationId = activeConversationId ?? Date.now();
-    const isNewConversation = activeConversationId === null;
+    const fallbackConversationId = activeConversationId ?? Date.now();
     const newTitle = content ? content.slice(0, 38) + (content.length > 38 ? "..." : "") : "Shared files";
+    const timestamp = new Date();
     const userMessage = {
       id: Date.now(),
       content: content || "Shared files",
       sender: "user" as const,
-      timestamp: new Date(),
+      timestamp,
       files: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
     };
 
     setConversations((current) => {
-      const existingConversation = current.find((conversation) => conversation.id === conversationId);
+      const existingConversation = current.find((conversation) => conversation.id === fallbackConversationId);
 
       if (!existingConversation) {
         return [
           {
-            id: conversationId,
+            id: fallbackConversationId,
             title: newTitle,
-            updatedAt: new Date(),
+            updatedAt: timestamp,
             projectId: selectedProjectId,
+            recentMessage: userMessage.content,
             messages: [userMessage],
           },
           ...current,
@@ -147,11 +152,12 @@ export function useConversationActions({
 
       return current
         .map((conversation) =>
-          conversation.id === conversationId
+          conversation.id === fallbackConversationId
             ? {
                 ...conversation,
                 title: conversation.title === "New chat" && content ? newTitle : conversation.title,
-                updatedAt: new Date(),
+                updatedAt: timestamp,
+                recentMessage: userMessage.content,
                 messages: [...conversation.messages, userMessage],
               }
             : conversation,
@@ -159,20 +165,76 @@ export function useConversationActions({
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     });
 
-    setActiveConversationId(conversationId);
+    setActiveConversationId(fallbackConversationId);
     setInputMessage("");
     setAttachedFiles([]);
     setIsAttachmentMenuOpen(false);
     setOpenConversationMenuId(null);
     setIsTyping(true);
+    setLastChatError("");
 
-    window.setTimeout(() => {
-      const aiMessage = {
-        id: Date.now() + 1,
-        content: getAIResponse(content, userMessage.files?.length ?? 0),
-        sender: "ai" as const,
-        timestamp: new Date(),
-      };
+    try {
+      const profile = getChatProfile();
+      const resolvedConversation =
+        activeConversationId === null
+          ? await createConversation({
+              title: newTitle,
+              profile,
+              memory: activeConversation?.memory ?? "initial context",
+              project: selectedProjectName ?? activeConversation?.projectName ?? undefined,
+              recent_message: userMessage.content,
+            })
+          : activeConversation;
+
+      if (!resolvedConversation) {
+        throw new Error("Unable to resolve the active conversation.");
+      }
+
+      const conversationId = resolvedConversation.id;
+
+      setConversations((current) => {
+        let foundFallbackConversation = false;
+
+        const nextConversations = current
+          .map((conversation) => {
+            if (conversation.id !== fallbackConversationId) return conversation;
+
+            foundFallbackConversation = true;
+            return {
+              ...conversation,
+              ...resolvedConversation,
+              projectId: conversation.projectId,
+              messages: conversation.messages,
+              updatedAt: timestamp,
+              recentMessage: userMessage.content,
+            };
+          });
+
+        if (!foundFallbackConversation) {
+          nextConversations.unshift({
+            ...resolvedConversation,
+            projectId: selectedProjectId,
+            messages: [userMessage],
+            updatedAt: timestamp,
+            recentMessage: userMessage.content,
+          });
+        }
+
+        return nextConversations.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      });
+      setActiveConversationId(conversationId);
+
+      const createdMessage = await createMessage({
+        conversation: conversationId,
+        text: userMessage.content,
+        attachment: userMessage.files ?? [],
+      });
+
+      if (createdMessage?.id) {
+        rememberMessageSender(conversationId, createdMessage.id, "user");
+      }
+
+      const remoteMessages = await fetchMessages(conversationId);
 
       setConversations((current) =>
         current
@@ -181,14 +243,18 @@ export function useConversationActions({
               ? {
                   ...conversation,
                   updatedAt: new Date(),
-                  messages: [...conversation.messages, aiMessage],
+                  recentMessage: userMessage.content,
+                  messages: remoteMessages.length > 0 ? remoteMessages : conversation.messages,
                 }
               : conversation,
           )
           .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
       );
+    } catch (error) {
+      setLastChatError(error instanceof Error ? error.message : "Unable to send the message right now.");
+    } finally {
       setIsTyping(false);
-    }, isNewConversation ? 1000 : 1200);
+    }
   };
 
   return {

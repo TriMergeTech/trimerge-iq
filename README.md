@@ -18,6 +18,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
+## Chat backend
+
+The chat UI reads its backend base URL from `NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL`.
+
+Local setup:
+
+```bash
+# already included locally in .env.local
+NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL=http://192.168.7.125:3002/v2
+```
+
+If the backend IP changes, update `.env.local` and restart `npm run dev`.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -31,6 +31,10 @@ export interface Conversation {
   updatedAt: Date;
   messages: Message[];
   projectId: number | null;
+  projectName?: string | null;
+  profile?: string;
+  memory?: string;
+  recentMessage?: string;
   pinned?: boolean;
   archived?: boolean;
 }
