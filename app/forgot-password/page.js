@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useMemo, useEffect, useState } from "react";
 import { post_request } from "../utils/services";
 
@@ -128,16 +127,13 @@ function InputField({ name, type, label, value, onChange, icon, error }) {
   );
 }
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordPage({ searchParams }) {
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [redirect, set_redirect] = useState(
-    searchParams?.get("redirect") || "home",
-  );
+  const [redirect, set_redirect] = useState(searchParams?.redirect || "home");
 
   let profile =
     redirect === "admin"
@@ -147,7 +143,7 @@ export default function ForgotPasswordPage() {
         : "832a4dc8-962a-49c0-a34d-54f0575692fb";
 
   useEffect(() => {
-    const emailParam = searchParams?.get("email");
+    const emailParam = searchParams.email;
     if (!emailParam) return;
 
     const email = String(emailParam).trim();

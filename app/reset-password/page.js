@@ -142,10 +142,9 @@ function InputField({
   );
 }
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordPage({ searchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const token = searchParams.token ?? "";
 
   const [formValues, setFormValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);

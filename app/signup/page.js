@@ -206,7 +206,7 @@ function InputField({
   );
 }
 
-export default function SignupPage() {
+export default function SignupPage({ searchParams }) {
   const [formValues, setFormValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -215,9 +215,7 @@ export default function SignupPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const passwordRule = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-  const searchParams = useSearchParams();
-
-  const redirect = searchParams?.get("redirect") ?? "";
+  const redirect = searchParams?.redirect ?? "";
 
   let profile =
     redirect === "admin"
