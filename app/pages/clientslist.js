@@ -5,10 +5,10 @@ import TableShell from "../components/table_shell";
 import ActionIconButton from "../components/action_icon_button";
 import Listempty from "../components/list_empty";
 
-const Skills_list = ({ data }) => {
+const Clients_list = ({ data }) => {
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
-      <TableShell headers={["Title", "Description", "Created", "Actions"]}>
+      <TableShell headers={["Name", "About", "Created", "Actions"]}>
         {!data ? (
           <tr>
             <td colSpan="6">
@@ -23,23 +23,23 @@ const Skills_list = ({ data }) => {
         ) : data.length === 0 ? (
           // Empty list component
           <Listempty
-            title="No skills found"
-            description="There are no skills to display. Add a new skill to get started."
+            title="No clients found"
+            description="There are no clients to display. Add a new client to get started."
           />
         ) : (
           data.map((item) => (
             <tr key={item._id} className="transition-colors hover:bg-gray-50">
               <td className="whitespace-nowrap px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="font-medium text-gray-900">{item.title}</div>
+                  <div className="font-medium text-gray-900">{item.name}</div>
                 </div>
               </td>
               <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                {item.description}
+                {item.about}
               </td>
 
               <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                {new Date(item.created_at).toLocaleDateString()}
+                {new Date(item.created).toLocaleDateString()}
               </td>
               {/* <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
                   {item.lastLogin.toLocaleDateString()}
@@ -66,4 +66,4 @@ const Skills_list = ({ data }) => {
   );
 };
 
-export default Skills_list;
+export default Clients_list;

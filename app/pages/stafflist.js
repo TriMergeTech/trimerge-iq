@@ -11,6 +11,8 @@ const Stafflist = ({ data }) => {
   let [staffs, set_staffs] = useState(data);
   let [positions, setPositions] = useState(null);
 
+  console.log(data);
+
   useEffect(() => {
     set_staffs(data);
   }, [data]);
@@ -110,7 +112,7 @@ const Stafflist = ({ data }) => {
                   }}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${"bg-gray-200 text-gray-800"}`}
                 >
-                  <option disabled value="">
+                  <option disabled selected value="">
                     -- Select Position --{" "}
                   </option>
 

@@ -22,6 +22,9 @@ import Skillslist from "./skillslist";
 import Serviceslist from "./serviceslist";
 import PositionModal from "./position_modal";
 import SkillModal from "./skills_modal";
+import Service_form from "./service_form";
+import Clients_list from "./clientslist";
+import ClientModal from "./client_modal";
 
 export default function AdminPage({ onLogout, profile }) {
   let searchParam = useSearchParams();
@@ -76,7 +79,9 @@ export default function AdminPage({ onLogout, profile }) {
               ? "get_skills"
               : activeTab === "services"
                 ? "get_services"
-                : null;
+                : activeTab === "clients"
+                  ? "get_clients"
+                  : null;
 
         let res =
           url &&
@@ -197,6 +202,12 @@ export default function AdminPage({ onLogout, profile }) {
               label: "Services Management",
               tab: "services",
             },
+            {
+              key: "clients",
+              icon: Users,
+              label: "Clients Management",
+              tab: "clients",
+            },
           ].map(({ key, icon, label, tab }) => (
             <SidebarButton
               key={key}
@@ -283,6 +294,8 @@ export default function AdminPage({ onLogout, profile }) {
           <Adminlist data={data} />
         ) : activeTab === "position" ? (
           <Positionlist data={data} />
+        ) : activeTab === "clients" ? (
+          <Clients_list data={data} />
         ) : activeTab === "skills" ? (
           <Skillslist data={data} />
         ) : activeTab === "services" ? (
@@ -311,8 +324,18 @@ export default function AdminPage({ onLogout, profile }) {
             setEditingUser(null);
           }}
         >
-          {activeTab === "position" ? (
+          {activeTab === "services" ? (
+            <Service_form
+              onClose={() => setShowUserModal(false)}
+              onSave={handleSave}
+            />
+          ) : activeTab === "position" ? (
             <PositionModal
+              onClose={() => setShowUserModal(false)}
+              onSave={handleSave}
+            />
+          ) : activeTab === "clients" ? (
+            <ClientModal
               onClose={() => setShowUserModal(false)}
               onSave={handleSave}
             />

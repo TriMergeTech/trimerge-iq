@@ -33,7 +33,6 @@ const Position_list = ({ data }) => {
       try {
         const res = await post_request("get_skills_by_id", { ids });
 
-        console.log(res);
         if (res?.ok) set_skills(res?.data);
       } catch (err) {
         console.error("Error fetching skills:", err);
@@ -41,7 +40,7 @@ const Position_list = ({ data }) => {
     };
 
     fetch_skills();
-  }, []);
+  }, [data]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-8">

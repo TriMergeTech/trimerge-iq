@@ -1,54 +1,64 @@
+let DEV = true;
+
 let Services = {
   profile: {
     url: "https://profile-api.savvyaisolution.com",
     api_key: process.env.NEXT_PUBLIC_PROFILE_API_KEY,
     "x-api-version": "v2",
   },
+  agency: {
+    url: DEV
+      ? "http://localhost:8002"
+      : "https://profile-api.savvyaisolution.com",
+    api_key: process.env.NEXT_PUBLIC_AGENCY_API_KEY,
+    "x-api-version": "v1",
+  },
 };
 
-let DEV = true;
 const BACKEND = DEV
   ? "http://localhost:8005"
   : "https://trimerge-iq-backend.vercel.app";
 
 const post_request = async (url, body) => {
   let ftch;
-  if (!url.startsWith("$")) {
-    url = `${BACKEND}/${url}`;
+  try {
+    if (!url.startsWith("$")) {
+      url = `${BACKEND}/${url}`;
 
-    let token = localStorage.getItem("token");
-    let headers = {
-      "Content-Type": "application/json",
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+      let token = localStorage.getItem("token");
+      let headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      console.log(headers);
+      console.log(url, "url");
+      ftch = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+    } else {
+      let service = url.split("/");
+      let name = service[0].slice(1).toLowerCase();
+
+      let service_conf = Services[name];
+
+      url = `${service_conf.url}/${service.slice(1).join("/")}`;
+
+      ftch = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-version": service_conf["x-api-version"],
+          "x-api-key": service_conf["api_key"],
+        },
+        body: JSON.stringify(body),
+      });
     }
 
-    ftch = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-  } else {
-    let service = url.split("/");
-    let name = service[0].slice(1).toLowerCase();
-
-    let service_conf = Services[name];
-
-    url = `${service_conf.url}/${service.slice(1).join("/")}`;
-
-    ftch = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-version": service_conf["x-api-version"],
-        "x-api-key": service_conf["api_key"],
-      },
-      body: JSON.stringify(body),
-    });
-  }
-
-  try {
     let res = await ftch.json();
 
     return res;

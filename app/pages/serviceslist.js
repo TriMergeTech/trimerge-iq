@@ -2,12 +2,49 @@
 
 import { Loader, Trash2 } from "lucide-react";
 import TableShell from "../components/table_shell";
-import ActionIconButton from "../components/action_icon_button";
+import { useEffect, useState } from "react";
+import { post_request } from "../utils/services";
+import Listempty from "../components/list_empty";
 
-const Serviceslist = ({ data }) => {
+const Service_list = ({ data }) => {
+  let [skills, set_skills] = useState(null);
+
+  useEffect(() => {
+    const fetch_skills = async () => {
+      if (!data || !Array.isArray(data)) return;
+      if (skills) return; // already have skills, no need to fetch again
+
+      // derive unique skill ids from the data array
+      const idsSet = data.reduce((set, item) => {
+        if (item?.skills && Array.isArray(item.skills)) {
+          item.skills.forEach((s) => {
+            if (s != null) set.add(s);
+          });
+        }
+        return set;
+      }, new Set());
+
+      const ids = Array.from(idsSet);
+      if (ids.length === 0) {
+        set_skills([]);
+        return;
+      }
+
+      try {
+        const res = await post_request("get_skills_by_id", { ids });
+
+        if (res?.ok) set_skills(res?.data);
+      } catch (err) {
+        console.error("Error fetching skills:", err);
+      }
+    };
+
+    fetch_skills();
+  }, [data]);
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
-      <TableShell headers={["Name", "Description", "Created", "Actions"]}>
+      <TableShell headers={["Name", "Description", "Skills", "Actions"]}>
         {!data ? (
           <tr>
             <td colSpan="6">
@@ -19,65 +56,57 @@ const Serviceslist = ({ data }) => {
               </div>
             </td>
           </tr>
+        ) : data?.length === 0 ? (
+          <Listempty
+            title="No positions found"
+            description="There are no positions to display. Add a new position to get started."
+          />
         ) : (
-          data.map((item) => (
-            <tr key={item._id} className="transition-colors hover:bg-gray-50">
-              <td className="whitespace-nowrap px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#174a8f] font-semibold text-white">
-                    {item?.name
-                      ?.split(" ")
-                      ?.map((part) => part[0])
-                      ?.join("")}{" "}
-                  </div>
-                  <div className="font-medium text-gray-900">
-                    {item.fullname}
+          data.map((item, idx) => (
+            <tr key={item.title ?? idx}>
+              <td className="px-4 py-3 align-top">
+                <div className="text-sm font-medium text-gray-900">
+                  {item.title}
+                </div>
+                {item.responsibilities?.length > 0 && (
+                  <ul className="mt-2 text-xs text-gray-600 list-disc list-inside">
+                    {item.responsibilities.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                )}
+              </td>
+
+              <td className="px-4 py-3 text-sm text-gray-700 align-top">
+                {item.description}
+              </td>
+
+              <td className="px-4 py-3 align-top">
+                <div className="flex items-center justify-start gap-2">
+                  <div className="flex flex-wrap gap-1">
+                    {item.skills?.map((s) => {
+                      let label =
+                        skills?.find((sk) => sk._id === s)?.title || s;
+                      return (
+                        <span
+                          key={s}
+                          className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                {item.email}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4">
-                <select
-                  value={item.profile}
-                  onChange={(event) =>
-                    setUsers((current) =>
-                      current.map((item) =>
-                        item._id === item._id
-                          ? { ...item, role: event.target.value }
-                          : item,
-                      ),
-                    )
-                  }
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                    item.role === "admin"
-                      ? "bg-[#d4af37] text-gray-900"
-                      : "bg-gray-200 text-gray-800"
-                  }`}
+              <td>
+                <button
+                  type="button"
+                  className="text-red-500 hover:text-red-700"
+                  aria-label={`Delete ${item.title}`}
                 >
-                  <option value="item">activeTab</option>
-                </select>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                {new Date(item.created).toLocaleDateString()}
-              </td>
-              {/* <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                  {item.lastLogin.toLocaleDateString()}
-                </td> */}
-              <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                <div className="flex items-center justify-end gap-2">
-                  <ActionIconButton
-                    color="red"
-                    onClick={() =>
-                      setUsers((current) =>
-                        current.filter((item) => item._id !== item._id),
-                      )
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </ActionIconButton>
-                </div>
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </td>
             </tr>
           ))
@@ -87,4 +116,4 @@ const Serviceslist = ({ data }) => {
   );
 };
 
-export default Serviceslist;
+export default Service_list;
