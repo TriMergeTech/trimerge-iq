@@ -44,7 +44,7 @@ export default function Navbar() {
           <img
             src="/trimerge-logo.png"
             alt="TriMerge Consulting Group"
-            className="h-auto w-[220px] sm:w-[260px]"
+            className="h-auto w-[200px] sm:w-[240px]"
           />
         </Link>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import Emitter from "semitter";
 
 import BrandHeader from "./sections/brandng_section";
 import HeroSection from "./sections/hero_section";
@@ -9,6 +10,8 @@ import FeaturesSection from "./sections/features_section";
 import IllustrationSection from "./sections/illustration_section";
 import CTASection from "./sections/landing_cta";
 import HomePage from "./home";
+
+let emitter = new Emitter();
 
 export default function Home() {
   const pathname = usePathname(); // 🔥 key trigger
@@ -59,3 +62,5 @@ export default function Home() {
     </main>
   );
 }
+
+export { emitter };

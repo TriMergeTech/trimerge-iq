@@ -29,14 +29,13 @@ import { formatFileSize } from "./chatPageUtils";
 import { useConversationActions } from "./useConversationActions";
 import { useProjectActions } from "./useProjectActions";
 import { post_request } from "../utils/services";
+import { emitter } from "../page";
 
 export default function ChatPage() {
   const [projects, setProjects] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
-    null,
-  );
+  const [selectedProject, setSelectedProject] = useState(null);
   const [projectHomeTab, setProjectHomeTab] = useState<"chats" | "sources">(
     "chats",
   );
@@ -65,6 +64,7 @@ export default function ChatPage() {
   const [newProjectManager, setNewProjectManager] = useState<
     (typeof staffOptions)[number]
   >(staffOptions[0]);
+  const [activeConversation, set_active_conversation] = useState(null);
   const [newProjectClient, setNewProjectClient] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -74,26 +74,36 @@ export default function ChatPage() {
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const projectActionMenuRef = useRef<HTMLDivElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
-  const [selectedProject, set_selected_project] = useState(null);
+  const [recent_message, set_recent_message] = useState(null);
 
-  let usr = localStorage.getItem("profile");
-  try {
-    usr = JSON.parse(usr);
-  } catch (e) {
-    usr = null;
-    setError(e.message);
-    setIsCreating(false);
-  } finally {
-  }
-  if (!usr) return;
+  const handle_select_project = (project) => {
+    setSelectedProject(project);
+    set_active_conversation(null);
+  };
 
+  const get_user = () => {
+    let usr = window.localStorage.getItem("profile");
+    try {
+      usr = JSON.parse(usr);
+    } catch (e) {
+      usr = null;
+      setError(e.message);
+      setIsCreating(false);
+    } finally {
+    }
+
+    return usr;
+  };
   useEffect(() => {
-    const controller = new AbortController();
+    let usr = get_user();
+    if (!usr) return;
+
     const load = async () => {
       try {
+        console.log(usr);
         const [projectsRes, conversationsRes] = await Promise.all([
-          post_request(`conversations`, { user: usr._id }),
           post_request("get_projects", { user: usr._id }),
+          post_request(`$AGENCY/conversations`, { user: usr._id }),
         ]);
 
         console.log(projectsRes, conversationsRes);
@@ -115,15 +125,10 @@ export default function ChatPage() {
     };
 
     load();
-    return () => controller.abort();
   }, []);
 
-  const activeConversation = useMemo(
-    () => conversations.find((c) => c._id === activeConversationId) ?? null,
-    [activeConversationId, conversations],
-  );
   // const selectedProject = useMemo(
-  //   () => projects.find((project) => project._id === selectedProjectId) ?? null,
+  //   () => projects.find((project) => project._id === selectedProject?._id) ?? null,
   //   [projects, selectedProjectId],
   // );
   // const filteredConversations = useMemo(() => {
@@ -232,6 +237,37 @@ export default function ChatPage() {
     event.target.value = "";
   };
 
+  const send_message = async () => {
+    let mesg = {
+      text: inputMessage,
+      user: get_user()?._id,
+    };
+    if (activeConversation) {
+      mesg.conversation = activeConversation?._id;
+    }
+    if (selectedProject) {
+      mesg.project = selectedProject?._id;
+    }
+
+    let res = await post_request(`$AGENCY/new_message`, mesg);
+
+    if (res.ok) {
+      if (res.data.conversation) {
+        let convo = res.data.conversation;
+        setConversations((prev) => [convo, ...prev]);
+        set_active_conversation(convo);
+      }
+      set_recent_message(res.data.message);
+
+      setInputMessage("");
+      emitter.emit("new_message", res.data.message);
+    }
+  };
+
+  const start_new_chat = () => {
+    set_active_conversation(null);
+  };
+
   const {
     closeCreateProjectModal,
     handleArchiveProject,
@@ -250,7 +286,6 @@ export default function ChatPage() {
     newProjectName,
     newProjectService,
     newProjectTeam,
-    selectedProjectId,
     setActiveConversationId,
     setAttachedFiles,
     setConversationSearch,
@@ -269,7 +304,6 @@ export default function ChatPage() {
     setOpenProjectActionMenuId,
     setProjectHomeTab,
     setProjects,
-    setSelectedProjectId,
   });
 
   const {
@@ -279,14 +313,12 @@ export default function ChatPage() {
     handlePinConversation,
     handleRenameConversation,
     handleShareConversation,
-    sendMessage,
     startNewChat,
   } = useConversationActions({
     activeConversation,
     activeConversationId,
     attachedFiles,
     inputMessage,
-    selectedProjectId,
     setActiveConversationId,
     setAttachedFiles,
     setConversations,
@@ -336,7 +368,7 @@ export default function ChatPage() {
 
             <button
               type="button"
-              onClick={startNewChat}
+              onClick={start_new_chat}
               className={`interactive-button flex w-full items-center rounded-2xl border border-[#d4af37]/35 bg-[linear-gradient(180deg,rgba(18,31,52,0.95),rgba(10,15,24,0.92))] py-3.5 text-left text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] hover:border-[#d4af37]/55 hover:bg-[linear-gradient(180deg,rgba(22,39,66,0.96),rgba(10,15,24,0.94))] ${isSidebarOpen ? "gap-3 px-4" : "justify-center px-0"}`}
             >
               <MessageSquarePlus className="h-5 w-5 text-[#d4af37]" />
@@ -401,16 +433,16 @@ export default function ChatPage() {
                     {projects.map((project) => (
                       <div
                         key={project._id}
-                        className={`group relative rounded-xl ${selectedProjectId === project._id ? "bg-[#162235]" : "hover:bg-[#162235]"}`}
+                        className={`group relative rounded-xl ${selectedProject?._id === project._id ? "bg-[#162235]" : "hover:bg-[#162235]"}`}
                       >
                         <button
                           type="button"
-                          onClick={() => handleSelectProject(project._id)}
-                          className={`interactive-button flex w-full items-center justify-between rounded-xl px-3 py-3 pr-12 text-left ${selectedProjectId === project._id ? "text-white" : "text-white/88"}`}
+                          onClick={() => handle_select_project(project)}
+                          className={`interactive-button flex w-full items-center justify-between rounded-xl px-3 py-3 pr-12 text-left ${selectedProject?._id === project._id ? "text-white" : "text-white/88"}`}
                         >
                           <span className="text-sm font-medium">
                             {project.pinned ? "📌 " : ""}
-                            {project.name}
+                            {project.title}
                           </span>
                         </button>
 
@@ -424,7 +456,7 @@ export default function ChatPage() {
                         >
                           <button
                             type="button"
-                            aria-label={`Project actions for ${project.name}`}
+                            aria-label={`Project actions for ${project.title}`}
                             onClick={(event) => {
                               event.stopPropagation();
                               setOpenProjectActionMenuId((current) =>
@@ -487,7 +519,7 @@ export default function ChatPage() {
             {isSidebarOpen && (
               <div className="space-y-2">
                 {conversations.map((conversation) => {
-                  const isActive = conversation._id === activeConversationId;
+                  const isActive = conversation._id === activeConversation?._id;
                   return (
                     <div
                       key={conversation._id}
@@ -496,7 +528,7 @@ export default function ChatPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setActiveConversationId(conversation._id);
+                          set_active_conversation(conversation);
                           setIsAttachmentMenuOpen(false);
                           setOpenConversationMenuId(null);
                         }}
@@ -510,7 +542,9 @@ export default function ChatPage() {
                               {conversation.title}
                             </p>
                             <p className="mt-1 text-xs text-[#d8dbe3]/42">
-                              {conversation.updatedAt.toLocaleDateString()}
+                              {new Date(
+                                conversation?.updated || conversation?.created,
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                         )}
@@ -635,11 +669,11 @@ export default function ChatPage() {
                     isTyping={isTyping}
                     onFileSelect={handleFileSelect}
                     onInputMessageChange={setInputMessage}
-                    onSubmit={() => sendMessage()}
+                    onSubmit={() => send_message()}
                     setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
                   />
                 }
-                onOpenConversation={setActiveConversationId}
+                onOpenConversation={set_active_conversation}
                 onProjectHomeTabChange={setProjectHomeTab}
                 projectHomeTab={projectHomeTab}
                 selectedProject={selectedProject}
@@ -693,7 +727,7 @@ export default function ChatPage() {
                     isTyping={isTyping}
                     onFileSelect={handleFileSelect}
                     onInputMessageChange={setInputMessage}
-                    onSubmit={() => sendMessage()}
+                    onSubmit={() => send_message()}
                     setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
                   />
                 </div>

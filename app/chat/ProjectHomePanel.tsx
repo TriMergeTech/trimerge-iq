@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-import type { Conversation, Project } from "./chatPageTypes";
+import type { Project } from "./chatPageTypes";
+import { post_request } from "../utils/services";
 
 interface ProjectHomePanelProps {
   composer: ReactNode;
@@ -23,15 +24,29 @@ export default function ProjectHomePanel({
     [],
   );
 
+  useEffect(() => {
+    let fetch_conversations = async () => {
+      let convos = await post_request(`$AGENCY/conversations`, {
+        project: selectedProject._id,
+      });
+
+      if (convos.ok) {
+        set_project_recent_conversations(convos.data);
+      }
+    };
+
+    fetch_conversations();
+  }, []);
+
   return (
     <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
       <div className="flex w-full max-w-[1200px] flex-col items-center justify-center text-center">
         <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">
-          {selectedProject?.name ?? "Workspace"}
+          {selectedProject?.title ?? "Workspace"}
         </p>
         <p className="text-3xl font-light tracking-tight text-white/92 md:text-4xl">
           {selectedProject
-            ? `Ready to chat inside ${selectedProject.name}.`
+            ? `Ready to chat inside ${selectedProject.title}.`
             : "Ready when you are."}
         </p>
 
@@ -61,9 +76,9 @@ export default function ProjectHomePanel({
                 {projectRecentConversations.length > 0 ? (
                   projectRecentConversations.map((conversation) => (
                     <button
-                      key={conversation.id}
+                      key={conversation._id}
                       type="button"
-                      onClick={() => onOpenConversation(conversation.id)}
+                      onClick={() => onOpenConversation(conversation)}
                       className="interactive-button flex w-full items-center justify-between rounded-[24px] border border-white/8 bg-white/[0.03] px-5 py-4 text-left text-white/88 hover:border-[#d4af37]/28 hover:bg-white/[0.05]"
                     >
                       <div className="min-w-0">
@@ -72,11 +87,11 @@ export default function ProjectHomePanel({
                           {conversation.title}
                         </p>
                         <p className="mt-1 text-sm text-white/40">
-                          {conversation.messages.length} messages
+                          {conversation.messages?.length} messages
                         </p>
                       </div>
                       <span className="shrink-0 pl-6 text-sm text-white/42">
-                        {conversation.updatedAt.toLocaleDateString()}
+                        {new Date(conversation.created).toLocaleDateString()}
                       </span>
                     </button>
                   ))

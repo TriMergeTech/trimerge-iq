@@ -1,10 +1,12 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { FileText, Image as ImageIcon, MoreHorizontal } from "lucide-react";
 
 import ConversationMenuItem from "./ConversationMenuItem";
 import type { Conversation } from "./chatPageTypes";
+import { post_request } from "../utils/services";
+import { emitter } from "../page";
 
 interface ConversationViewProps {
   activeConversation: Conversation;
@@ -39,6 +41,28 @@ export default function ConversationView({
   selectedProjectName,
   workspaceMenuRef,
 }: ConversationViewProps) {
+  let [messages, set_messages] = useState([]);
+
+  useEffect(() => {
+    const fetch_messages = async () => {
+      let messages = await post_request("$AGENCY/get_messages", {
+        conversation: activeConversation._id,
+      });
+
+      console.log(messages, activeConversation);
+
+      if (messages.ok) {
+        set_messages(messages.data);
+      }
+    };
+
+    fetch_messages();
+
+    emitter.single_listener("new_message", (msg) => {
+      set_messages((prev) => [...prev, msg]);
+    });
+  }, [activeConversation]);
+
   return (
     <div className="chat-scrollbar min-h-0 flex-1 overflow-y-auto px-8 py-8 lg:px-16 lg:py-8 xl:px-20">
       <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10">
@@ -115,9 +139,9 @@ export default function ConversationView({
           </div>
         </div>
 
-        {activeConversation.messages.map((message) => (
+        {messages.map((message) => (
           <div
-            key={message.id}
+            key={message._id}
             className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-rise`}
           >
             <div
@@ -129,14 +153,17 @@ export default function ConversationView({
                 >
                   {message.sender === "user" ? "U" : "AI"}
                 </span>
-                {message.timestamp.toLocaleTimeString()}
+                {(message.created
+                  ? new Date(message.created)
+                  : new Date()
+                ).toLocaleTimeString()}
               </div>
-              <div className="text-[15px] leading-8">{message.content}</div>
-              {message.files && message.files.length > 0 && (
+              <div className="text-[15px] leading-8">{message.text}</div>
+              {message.attachments && message.attachments.length > 0 && (
                 <div className="mt-5 space-y-2">
-                  {message.files.map((file) => (
+                  {message.attachments.map((file) => (
                     <div
-                      key={`${message.id}-${file.name}`}
+                      key={`${message._id}-${file.name}`}
                       className="flex items-center gap-2 rounded-2xl bg-white/8 px-3 py-2.5"
                     >
                       {file.type.startsWith("image/") ? (
