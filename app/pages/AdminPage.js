@@ -13,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { post_request } from "../utils/services";
 import Stafflist from "./stafflist";
 import Adminlist from "./adminlist";
@@ -26,12 +26,8 @@ import Service_form from "./service_form";
 import Clients_list from "./clientslist";
 import ClientModal from "./client_modal";
 
-export default function AdminPage({ onLogout, profile }) {
-  let searchParam = useSearchParams();
-
-  const [activeTab, setActiveTab] = useState(
-    searchParam?.get("tab") || "staff",
-  );
+export default function AdminPage({ searchParam, onLogout, profile }) {
+  const [activeTab, setActiveTab] = useState(searchParam.tab || "staff");
   const [admin, set_admin] = useState(profile || null);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUser, setEditingUser] = useState(null);

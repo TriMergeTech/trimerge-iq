@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AdminPage from "../pages/AdminPage";
 import Navbar from "../components/Navbar";
 
-export default function AdminRoute() {
+export default function AdminRoute({ searchParams }) {
   const router = useRouter();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,7 +55,11 @@ export default function AdminRoute() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      <AdminPage profile={logged_profile} onLogout={handleLogout} />
+      <AdminPage
+        searchParam={searchParams}
+        profile={logged_profile}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

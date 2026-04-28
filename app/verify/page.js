@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { post_request } from "../utils/services";
 
 const initialValues = {
@@ -129,16 +129,15 @@ function InputField({ name, type, label, value, onChange, icon, error }) {
   );
 }
 
-export default function VerifyPage() {
+export default function VerifyPage({ searchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const emailFromUrl = searchParams?.get("email") ?? "";
+  const emailFromUrl = searchParams?.email ?? "";
   const email = emailFromUrl;
-  const profileFromUrl = searchParams?.get("profile") ?? "";
+  const profileFromUrl = searchParams?.profile ?? "";
 
   const isDev = false && process.env.NODE_ENV !== "production";
-  const previewMode = searchParams.get("preview") || "";
+  const previewMode = searchParams.preview || "";
 
   const [formValues, setFormValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
