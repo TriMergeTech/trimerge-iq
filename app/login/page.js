@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { post_request } from "../utils/services";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const initialValues = {
   email: "",
@@ -190,14 +190,15 @@ function InputField({
   );
 }
 
-export default function LoginPage({ searchParams }) {
+export default function LoginPage({}) {
+  let searchParams = useSearchParams();
   const [formValues, setFormValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const [redirect] = useState(searchParams.redirect);
+  const [redirect, set_redirect] = useState(searchParams.get("redirect"));
 
   const [role, setRole] = useState(redirect || "staff");
 
