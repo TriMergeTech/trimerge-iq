@@ -56,7 +56,7 @@ export default function AdminRoute({ searchParams }) {
       <Navbar />
 
       <AdminPage
-        searchParam={searchParams}
+        searchParams={searchParams}
         profile={logged_profile}
         onLogout={handleLogout}
       />
