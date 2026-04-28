@@ -26,8 +26,8 @@ import Service_form from "./service_form";
 import Clients_list from "./clientslist";
 import ClientModal from "./client_modal";
 
-export default function AdminPage({ searchParam, onLogout, profile }) {
-  const [activeTab, setActiveTab] = useState(searchParam.tab || "staff");
+export default function AdminPage({ searchParams, onLogout, profile }) {
+  const [activeTab, setActiveTab] = useState(searchParams.tab || "staff");
   const [admin, set_admin] = useState(profile || null);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUser, setEditingUser] = useState(null);
@@ -59,7 +59,7 @@ export default function AdminPage({ searchParam, onLogout, profile }) {
 
       // sync active tab to URL (replace so tab switches don't fill history)
       try {
-        const params = new URLSearchParams(searchParam?.toString() || "");
+        const params = new URLSearchParams(searchParams?.toString() || "");
         params.set("tab", activeTab);
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         router.replace(newUrl);
