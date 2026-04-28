@@ -6,7 +6,7 @@ function CTASection() {
       <div className="max-w-4xl mx-auto text-center">
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link
-            href="/signup"
+            href="/signup?redirect=admin"
             className="group min-w-[270px] px-8 py-3.5 bg-blue-600 text-white font-semibold text-lg rounded-xl hover:bg-blue-700 transition-all shadow-[0_6px_16px_rgba(37,99,235,0.28)] flex items-center justify-center gap-2"
           >
             Sign Up
@@ -25,7 +25,7 @@ function CTASection() {
             </svg>
           </Link>
           <Link
-            href="/login"
+            href="/login?redirect=admin"
             className="group min-w-[270px] px-8 py-3.5 bg-white text-slate-800 font-semibold text-lg rounded-xl border-2 border-blue-300 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
           >
             Log In

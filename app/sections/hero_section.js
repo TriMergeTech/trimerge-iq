@@ -13,7 +13,7 @@ function HeroSection() {
         </p>
         <div className="mt-12 flex flex-col sm:flex-row gap-5 justify-center items-center">
           <Link
-            href="/signup"
+            href="/signup?redirect=admin"
             className="group min-w-[220px] px-12 py-[14px] h-[52px] bg-blue-600 text-white font-semibold text-[1.125rem] rounded-2xl hover:bg-blue-700 transition-all shadow-[0_10px_24px_rgba(37,99,235,0.30)] flex items-center justify-center gap-2"
           >
             Sign Up
@@ -32,7 +32,7 @@ function HeroSection() {
             </svg>
           </Link>
           <Link
-            href="/login"
+            href="/login?redirect=admin"
             className="group min-w-[220px] px-12 py-[14px] h-[52px] bg-white text-slate-800 font-semibold text-[1.125rem] rounded-2xl border-2 border-blue-300 hover:bg-blue-50 transition-all shadow-[0_8px_20px_rgba(15,23,42,0.07)] flex items-center justify-center gap-2"
           >
             Log In
