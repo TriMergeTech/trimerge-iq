@@ -27,7 +27,7 @@ export default function ProjectHomePanel({
   useEffect(() => {
     let fetch_conversations = async () => {
       let convos = await post_request(`$AGENCY/conversations`, {
-        project: selectedProject._id,
+        project: selectedProject?._id,
       });
 
       if (convos.ok) {
@@ -35,8 +35,8 @@ export default function ProjectHomePanel({
       }
     };
 
-    fetch_conversations();
-  }, []);
+    selectedProject && fetch_conversations();
+  }, [selectedProject]);
 
   return (
     <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
