@@ -1,4 +1,4 @@
-let DEV = true;
+let DEV = process.env.NODE_ENV !== "production";
 
 let Services = {
   profile: {
@@ -17,7 +17,7 @@ let Services = {
 
 const BACKEND = DEV
   ? "http://localhost:8005"
-  : "https://trimerge-iq-backend.vercel.app";
+  : "https://trimerge-iq-backend.vercel.app/";
 
 const post_request = async (url, body) => {
   let ftch;
@@ -33,8 +33,6 @@ const post_request = async (url, body) => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      console.log(headers);
-      console.log(url, "url");
       ftch = await fetch(url, {
         method: "POST",
         headers,
