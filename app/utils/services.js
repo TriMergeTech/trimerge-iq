@@ -9,7 +9,7 @@ let Services = {
   agency: {
     url: DEV
       ? "http://localhost:8002"
-      : "https://profile-api.savvyaisolution.com",
+      : "https://agency-omega-green.vercel.app",
     api_key: process.env.NEXT_PUBLIC_AGENCY_API_KEY,
     "x-api-version": "v1",
   },
