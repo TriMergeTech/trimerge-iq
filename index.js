@@ -530,6 +530,105 @@ const swaggerSpec = {
         },
       },
     },
+    '/projects': {
+      post: {
+        tags: ['Projects'],
+        summary: 'Create a new project',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'description', 'project_manager', 'team', 'client', 'service'],
+                properties: {
+                  name: { type: 'string', example: 'Q3 Audit' },
+                  description: { type: 'string', example: 'Quarterly audit for Acme Corp' },
+                  project_manager: { type: 'string', example: 'uuid-of-project-manager' },
+                  team: { type: 'array', items: { type: 'string' }, example: ['uuid-member-1', 'uuid-member-2'] },
+                  client: { type: 'string', example: 'uuid-of-client' },
+                  service: { type: 'string', example: 'uuid-of-service' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Project created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Projects'],
+        summary: 'Retrieve all projects',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all projects' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/projects/{id}': {
+      get: {
+        tags: ['Projects'],
+        summary: 'Retrieve a single project by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the project' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Project not found' },
+        },
+      },
+      put: {
+        tags: ['Projects'],
+        summary: 'Update a project by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  project_manager: { type: 'string' },
+                  team: { type: 'array', items: { type: 'string' } },
+                  client: { type: 'string' },
+                  service: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Project updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Project not found' },
+        },
+      },
+      delete: {
+        tags: ['Projects'],
+        summary: 'Delete a project by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Project deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Project not found' },
+        },
+      },
+    },
     '/clients/{id}': {
       get: {
         tags: ['Clients'],
@@ -617,6 +716,7 @@ let positions;
 let services;
 let skills;
 let clients;
+let projects;
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
@@ -686,6 +786,7 @@ async function connectDb() {
   services = db.collection('services');
   skills = db.collection('skills');
   clients = db.collection('clients');
+  projects = db.collection('projects');
   await users.createIndex({ email: 1 }, { unique: true });
   await otpVerifications.createIndex({ email: 1 });
   await otpVerifications.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
@@ -698,6 +799,7 @@ const createPositionsRouter = require('./routes/positions');
 const createServicesRouter = require('./routes/services');
 const createSkillsRouter = require('./routes/skills');
 const createClientsRouter = require('./routes/clients');
+const createProjectsRouter = require('./routes/projects');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -970,6 +1072,7 @@ connectDb()
     app.use('/services', createServicesRouter(services, authMiddleware, requireRole));
     app.use('/skills', createSkillsRouter(skills, authMiddleware, requireRole));
     app.use('/clients', createClientsRouter(clients, authMiddleware, requireRole));
+    app.use('/projects', createProjectsRouter(projects, authMiddleware, requireRole));
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });

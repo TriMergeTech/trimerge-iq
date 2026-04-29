@@ -6,6 +6,8 @@ A production-ready backend for the TriMerge IQ consulting platform. Built with N
 **Production URL:** https://trimerge-iq.onrender.com
 **API Docs (Swagger):** https://trimerge-iq.onrender.com/api-docs
 
+
+
 ---
 
 ## Tech Stack
@@ -16,7 +18,7 @@ A production-ready backend for the TriMerge IQ consulting platform. Built with N
 - **Email:** Mailgun (signup OTP, password reset)
 - **Rate Limiting:** express-rate-limit
 - **Docs:** Swagger UI (OpenAPI 3.0)
-- **Testing:** Jest + Supertest (115 tests, real MongoDB)
+- **Testing:** Jest + Supertest (141 tests, real MongoDB)
 - **Deployment:** Render
 
 ---
@@ -78,7 +80,7 @@ Exceeding the limit returns `429 Too Many Requests`.
 
 ---
 
-## All Endpoints (30 total)
+## All Endpoints (35 total)
 
 ### Auth
 
@@ -134,6 +136,16 @@ Exceeding the limit returns `429 Too Many Requests`.
 | POST | `/clients` | staff / admin | Create a client |
 | PUT | `/clients/:id` | staff / admin | Update a client |
 | DELETE | `/clients/:id` | staff / admin | Delete a client |
+
+### Projects
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/projects` | any role | Get all projects |
+| GET | `/projects/:id` | any role | Get one project |
+| POST | `/projects` | staff / admin | Create a project |
+| PUT | `/projects/:id` | staff / admin | Update a project |
+| DELETE | `/projects/:id` | staff / admin | Delete a project |
 
 ---
 
@@ -260,6 +272,23 @@ Response `201`: returns the created document with `_id`.
 
 ---
 
+### POST /projects
+```json
+{
+  "name": "Q3 Audit",
+  "description": "Quarterly audit for Acme Corp",
+  "project_manager": "<uuid>",
+  "team": ["<uuid>", "<uuid>"],
+  "client": "<uuid>",
+  "service": "<uuid>"
+}
+```
+> All ID fields (`project_manager`, `team` items, `client`, `service`) are UUID strings generated with `crypto.randomUUID()` — they are **not** MongoDB ObjectIds.
+
+Response `201`: returns the created document with `_id`.
+
+---
+
 ## Database Collections
 
 ### `users`
@@ -305,6 +334,17 @@ Response `201`: returns the created document with `_id`.
 | `about` | String | Required |
 | `created_at` | Date | |
 
+### `projects`
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `description` | String | Required |
+| `project_manager` | String (UUID) | Required — crypto.randomUUID() |
+| `team` | Array of Strings (UUID) | Required — array of crypto.randomUUID() |
+| `client` | String (UUID) | Required — crypto.randomUUID() |
+| `service` | String (UUID) | Required — crypto.randomUUID() |
+| `created_at` | Date | |
+
 ### `otp_verifications`
 | Field | Type | Notes |
 |---|---|---|
@@ -326,7 +366,7 @@ Same structure as `otp_verifications`.
 ---
 
 ## Testing
-115 tests across 5 test files, all hitting real MongoDB (no mocks).
+141 tests across 6 test files, all hitting real MongoDB (no mocks).
 
 ```bash
 npm test
@@ -339,6 +379,7 @@ npm test
 | `tests/services.test.js` | 22 |
 | `tests/skills.test.js` | 22 |
 | `tests/clients.test.js` | 21 |
+| `tests/projects.test.js` | 26 |
 
 ---
 
