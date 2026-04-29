@@ -17,7 +17,7 @@ let Services = {
 
 const BACKEND = DEV
   ? "http://localhost:8005"
-  : "https://trimerge-iq-backend.vercel.app/";
+  : "https://trimerge-iq-backend.vercel.app";
 
 const post_request = async (url, body) => {
   let ftch;
