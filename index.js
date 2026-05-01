@@ -629,6 +629,99 @@ const swaggerSpec = {
         },
       },
     },
+    '/staff': {
+      post: {
+        tags: ['Staff'],
+        summary: 'Create a new staff member',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'position'],
+                properties: {
+                  name: { type: 'string', example: 'Alice Ramirez' },
+                  email: { type: 'string', example: 'alice@trimergecpa.com' },
+                  position: { type: 'string', example: 'uuid-of-position' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Staff member created' },
+          400: { description: 'Missing required fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+        },
+      },
+      get: {
+        tags: ['Staff'],
+        summary: 'Retrieve all staff members',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Returns array of all staff members' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/staff/{id}': {
+      get: {
+        tags: ['Staff'],
+        summary: 'Retrieve a single staff member by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the staff member' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Staff member not found' },
+        },
+      },
+      put: {
+        tags: ['Staff'],
+        summary: 'Update a staff member by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  email: { type: 'string' },
+                  position: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Staff member updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Staff member not found' },
+        },
+      },
+      delete: {
+        tags: ['Staff'],
+        summary: 'Delete a staff member by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Staff member deleted' },
+          400: { description: 'Invalid ID' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden: staff or admin required' },
+          404: { description: 'Staff member not found' },
+        },
+      },
+    },
     '/clients/{id}': {
       get: {
         tags: ['Clients'],
@@ -717,6 +810,7 @@ let services;
 let skills;
 let clients;
 let projects;
+let staff;
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
@@ -787,6 +881,7 @@ async function connectDb() {
   skills = db.collection('skills');
   clients = db.collection('clients');
   projects = db.collection('projects');
+  staff = db.collection('staff_members');
   await users.createIndex({ email: 1 }, { unique: true });
   await otpVerifications.createIndex({ email: 1 });
   await otpVerifications.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
@@ -800,6 +895,7 @@ const createServicesRouter = require('./routes/services');
 const createSkillsRouter = require('./routes/skills');
 const createClientsRouter = require('./routes/clients');
 const createProjectsRouter = require('./routes/projects');
+const createStaffRouter = require('./routes/staff');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -1073,6 +1169,7 @@ connectDb()
     app.use('/skills', createSkillsRouter(skills, authMiddleware, requireRole));
     app.use('/clients', createClientsRouter(clients, authMiddleware, requireRole));
     app.use('/projects', createProjectsRouter(projects, authMiddleware, requireRole));
+    app.use('/staff', createStaffRouter(staff, authMiddleware, requireRole));
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
