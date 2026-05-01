@@ -413,7 +413,7 @@ export function mapMessagesFromApi(conversationId: ChatEntityId, records: ApiMes
   }));
 }
 
-export async function fetchConversations(profile: string, project?: string | null, page = 1, limit = 100) {
+export async function fetchConversations(profile: string, project?: string | null, page = 1, limit = 100, includeArchived = false) {
   const payload = await postJson<ApiConversationRecord[] | { conversations?: ApiConversationRecord[]; data?: ApiConversationRecord[] }>(
     "/conversations",
     {
@@ -421,6 +421,7 @@ export async function fetchConversations(profile: string, project?: string | nul
       ...(project ? { project } : {}),
       page,
       limit,
+      ...(includeArchived ? { include_archived: true } : {}),
     },
   );
 

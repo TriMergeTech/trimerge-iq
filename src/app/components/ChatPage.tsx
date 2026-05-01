@@ -333,9 +333,13 @@ export default function ChatPage() {
             ...(selectedProject?.name ? [selectedProject.name] : []),
           ]),
         );
+        const buildConversationRequests = (includeArchived: boolean) => [
+          fetchConversations(profile, null, 1, 100, includeArchived),
+          ...projectNames.map((projectName) => fetchConversations(profile, projectName, 1, 100, includeArchived)),
+        ];
         const conversationGroups = await Promise.all([
-          fetchConversations(profile, null),
-          ...projectNames.map((projectName) => fetchConversations(profile, projectName)),
+          ...buildConversationRequests(false),
+          ...buildConversationRequests(true),
         ]);
         const conversationMap = new Map<ChatEntityId, Conversation>();
 
