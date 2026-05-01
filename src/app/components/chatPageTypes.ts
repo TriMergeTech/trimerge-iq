@@ -4,8 +4,10 @@ export interface UploadedFile {
   type: string;
 }
 
+export type ChatEntityId = number | string;
+
 export interface Message {
-  id: number;
+  id: ChatEntityId;
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
@@ -13,7 +15,7 @@ export interface Message {
 }
 
 export interface Project {
-  id: number;
+  id: ChatEntityId;
   name: string;
   createdAt: Date;
   description?: string;
@@ -25,12 +27,17 @@ export interface Project {
   archived?: boolean;
 }
 
+export interface ProjectFormOption {
+  id: string;
+  label: string;
+}
+
 export interface Conversation {
-  id: number;
+  id: ChatEntityId;
   title: string;
   updatedAt: Date;
   messages: Message[];
-  projectId: number | null;
+  projectId: ChatEntityId | null;
   projectName?: string | null;
   profile?: string;
   memory?: string;

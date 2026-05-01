@@ -6,8 +6,8 @@ import { MessageSquare, Search, Shield } from "lucide-react";
 
 const navItems = [
   { href: "/search", label: "Search", icon: Search },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/admin", label: "Admin", icon: Shield },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
 ] as const;
 
 export default function Navbar() {

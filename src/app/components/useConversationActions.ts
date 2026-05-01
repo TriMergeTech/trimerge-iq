@@ -1,16 +1,28 @@
 import type { Dispatch, SetStateAction } from "react";
 
-import { createConversation, createMessage, fetchMessages, getChatProfile, rememberMessageSender } from "./chatApi";
-import type { Conversation, UploadedFile } from "./chatPageTypes";
+import {
+  archiveConversation,
+  createConversation,
+  createMessage,
+  createShareLink,
+  deleteConversation,
+  fetchMessages,
+  getChatProfile,
+  pinConversation,
+  rememberMessageSender,
+  renameConversation,
+} from "./chatApi";
+import { persistConversationOverride, rememberStoredProjectName } from "./chatLocalState";
+import type { ChatEntityId, Conversation, UploadedFile } from "./chatPageTypes";
 
 interface UseConversationActionsProps {
   activeConversation: Conversation | null;
-  activeConversationId: number | null;
+  activeConversationId: ChatEntityId | null;
   attachedFiles: UploadedFile[];
   inputMessage: string;
-  selectedProjectId: number | null;
+  selectedProjectId: ChatEntityId | null;
   selectedProjectName?: string;
-  setActiveConversationId: Dispatch<SetStateAction<number | null>>;
+  setActiveConversationId: Dispatch<SetStateAction<ChatEntityId | null>>;
   setAttachedFiles: Dispatch<SetStateAction<UploadedFile[]>>;
   setConversations: Dispatch<SetStateAction<Conversation[]>>;
   setInputMessage: Dispatch<SetStateAction<string>>;
@@ -18,7 +30,7 @@ interface UseConversationActionsProps {
   setIsTyping: Dispatch<SetStateAction<boolean>>;
   setIsWorkspaceMenuOpen: Dispatch<SetStateAction<boolean>>;
   setLastChatError: Dispatch<SetStateAction<string>>;
-  setOpenConversationMenuId: Dispatch<SetStateAction<number | null>>;
+  setOpenConversationMenuId: Dispatch<SetStateAction<ChatEntityId | null>>;
 }
 
 export function useConversationActions({
@@ -39,7 +51,7 @@ export function useConversationActions({
   setOpenConversationMenuId,
 }: UseConversationActionsProps) {
   const updateConversation = (
-    conversationId: number,
+    conversationId: ChatEntityId,
     updater: (conversation: Conversation) => Conversation | null,
   ) => {
     setConversations((current) =>
@@ -58,50 +70,119 @@ export function useConversationActions({
     setOpenConversationMenuId(null);
   };
 
-  const handleRenameConversation = (conversation: Conversation) => {
+  const handleRenameConversation = async (conversation: Conversation) => {
     const nextTitle = window.prompt("Rename conversation", conversation.title)?.trim();
     if (!nextTitle) return;
 
+    const previousTitle = conversation.title;
     updateConversation(conversation.id, (current) => ({
       ...current,
       title: nextTitle,
       updatedAt: new Date(),
     }));
     setOpenConversationMenuId(null);
+
+    try {
+      await renameConversation(conversation.id, nextTitle);
+      persistConversationOverride(conversation.id, { title: nextTitle });
+    } catch (error) {
+      updateConversation(conversation.id, (current) => ({
+        ...current,
+        title: previousTitle,
+        updatedAt: new Date(),
+      }));
+      setLastChatError(error instanceof Error ? error.message : "Unable to rename this conversation.");
+    }
   };
 
-  const handleDeleteConversation = (conversationId: number) => {
-    updateConversation(conversationId, () => null);
+  const handleDeleteConversation = async (conversationId: ChatEntityId) => {
+    const previousActiveConversationId = activeConversationId;
+    let deletedConversation: Conversation | null = null;
+
+    setConversations((current) => {
+      deletedConversation = current.find((conversation) => conversation.id === conversationId) ?? null;
+      return current.filter((conversation) => conversation.id !== conversationId);
+    });
     if (activeConversationId === conversationId) setActiveConversationId(null);
     setOpenConversationMenuId(null);
+
+    try {
+      await deleteConversation(conversationId, false);
+      persistConversationOverride(conversationId, { deleted: true });
+    } catch (error) {
+      if (deletedConversation) {
+        setConversations((current) => [deletedConversation as Conversation, ...current].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()));
+      }
+      setActiveConversationId(previousActiveConversationId);
+      setLastChatError(error instanceof Error ? error.message : "Unable to delete this conversation.");
+    }
   };
 
-  const handlePinConversation = (conversationId: number) => {
-    updateConversation(conversationId, (current) => ({
-      ...current,
-      pinned: !current.pinned,
-      updatedAt: new Date(),
-    }));
+  const handlePinConversation = async (conversationId: ChatEntityId) => {
+    let nextPinned = false;
+    updateConversation(conversationId, (current) => {
+      const pinned = !current.pinned;
+      nextPinned = pinned;
+
+      return {
+        ...current,
+        pinned,
+        updatedAt: new Date(),
+      };
+    });
     setOpenConversationMenuId(null);
+
+    try {
+      await pinConversation(conversationId, nextPinned);
+      persistConversationOverride(conversationId, { pinned: nextPinned });
+    } catch (error) {
+      updateConversation(conversationId, (current) => ({
+        ...current,
+        pinned: !nextPinned,
+        updatedAt: new Date(),
+      }));
+      setLastChatError(error instanceof Error ? error.message : "Unable to update the pin status.");
+    }
   };
 
-  const handleArchiveConversation = (conversationId: number) => {
+  const handleArchiveConversation = async (conversationId: ChatEntityId, archived = true) => {
+    const previousActiveConversationId = activeConversationId;
+
     updateConversation(conversationId, (current) => ({
       ...current,
-      archived: true,
+      archived,
       updatedAt: new Date(),
     }));
-    if (activeConversationId === conversationId) setActiveConversationId(null);
+    if (archived && activeConversationId === conversationId) setActiveConversationId(null);
     setOpenConversationMenuId(null);
+
+    try {
+      await archiveConversation(conversationId, archived);
+    } catch (error) {
+      updateConversation(conversationId, (current) => ({
+        ...current,
+        archived: !archived,
+        updatedAt: new Date(),
+      }));
+      if (archived) setActiveConversationId(previousActiveConversationId);
+      setLastChatError(error instanceof Error ? error.message : "Unable to archive this conversation.");
+    }
   };
 
   const handleShareConversation = async (conversation: Conversation) => {
-    const shareLabel = `TriMerge chat: ${conversation.title}`;
+    let shareLabel = "";
 
     try {
+      shareLabel = await createShareLink(conversation.id);
+      if (!shareLabel) throw new Error("Share link was not returned by the chat API.");
       await navigator.clipboard.writeText(shareLabel);
-    } catch {
-      window.prompt("Copy this conversation label", shareLabel);
+      window.prompt("Share link copied. You can also copy it here:", shareLabel);
+    } catch (error) {
+      if (shareLabel) {
+        window.prompt("Copy this share link", shareLabel);
+      } else {
+        setLastChatError(error instanceof Error ? error.message : "Unable to create a share link.");
+      }
     }
 
     setOpenConversationMenuId(null);
@@ -172,6 +253,7 @@ export function useConversationActions({
     setOpenConversationMenuId(null);
     setIsTyping(true);
     setLastChatError("");
+    if (selectedProjectName) rememberStoredProjectName(selectedProjectName);
 
     try {
       const profile = getChatProfile();

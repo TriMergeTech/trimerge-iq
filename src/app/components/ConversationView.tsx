@@ -1,20 +1,20 @@
 "use client";
 
 import type { RefObject } from "react";
-import { FileText, Image as ImageIcon, MoreHorizontal } from "lucide-react";
+import { Archive as ArchiveIcon, Eraser, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 
 import ConversationMenuItem from "./ConversationMenuItem";
-import type { Conversation } from "./chatPageTypes";
+import type { ChatEntityId, Conversation } from "./chatPageTypes";
 
 interface ConversationViewProps {
   activeConversation: Conversation;
   formatFileSize: (bytes: number) => string;
   isTyping: boolean;
   isWorkspaceMenuOpen: boolean;
-  onArchiveConversation: (conversationId: number) => void;
+  onArchiveConversation: (conversationId: ChatEntityId, archived?: boolean) => void;
   onClearActiveChat: () => void;
-  onDeleteConversation: (conversationId: number) => void;
-  onPinConversation: (conversationId: number) => void;
+  onDeleteConversation: (conversationId: ChatEntityId) => void;
+  onPinConversation: (conversationId: ChatEntityId) => void;
   onRenameConversation: (conversation: Conversation) => void;
   onShareConversation: (conversation: Conversation) => void;
   onStartNewChat: () => void;
@@ -57,7 +57,7 @@ export default function ConversationView({
               onClick={onClearActiveChat}
               className="interactive-button flex items-center gap-2 rounded-2xl border border-[#d4af37]/30 bg-[#101827]/75 px-4 py-2.5 text-sm font-medium text-[#f6edd0] hover:border-[#d4af37]/55 hover:bg-[#13233f] hover:text-white"
             >
-              <span>🧹</span>
+              <Eraser className="h-4 w-4" />
               <span>Clear chat</span>
             </button>
 
@@ -73,15 +73,19 @@ export default function ConversationView({
 
               {isWorkspaceMenuOpen && (
                 <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                  <ConversationMenuItem emoji="🔗" label="Share" onClick={() => onShareConversation(activeConversation)} />
-                  <ConversationMenuItem emoji="✏️" label="Rename" onClick={() => onRenameConversation(activeConversation)} />
+                  <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => onShareConversation(activeConversation)} />
+                  <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => onRenameConversation(activeConversation)} />
                   <ConversationMenuItem
-                    emoji={activeConversation.pinned ? "📍" : "📌"}
+                    icon={activeConversation.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                     label={activeConversation.pinned ? "Unpin chat" : "Pin chat"}
                     onClick={() => onPinConversation(activeConversation.id)}
                   />
-                  <ConversationMenuItem emoji="🗂️" label="Archive" onClick={() => onArchiveConversation(activeConversation.id)} />
-                  <ConversationMenuItem emoji="🗑️" label="Delete" danger onClick={() => onDeleteConversation(activeConversation.id)} />
+                  <ConversationMenuItem
+                    icon={<ArchiveIcon className="h-4 w-4" />}
+                    label={activeConversation.archived ? "Unarchive" : "Archive"}
+                    onClick={() => onArchiveConversation(activeConversation.id, !activeConversation.archived)}
+                  />
+                  <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => onDeleteConversation(activeConversation.id)} />
                 </div>
               )}
             </div>

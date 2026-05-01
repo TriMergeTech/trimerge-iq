@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Building2,
   Briefcase,
   LogOut,
   Pencil,
@@ -16,7 +17,14 @@ import {
   X,
 } from "lucide-react";
 
-type AdminSection = "staff" | "admin" | "position" | "skills" | "services";
+import {
+  readStoredAdminPeople,
+  writeStoredAdminPeople,
+  type StoredAdminPerson,
+} from "./adminRegistryState";
+import { ADMIN_API_BASE_URL, authenticatedAdminFetch } from "./adminAuth";
+
+type AdminSection = "staff" | "admin" | "position" | "skills" | "services" | "clients";
 type CreateModal = AdminSection | null;
 
 interface StaffMember {
@@ -40,6 +48,13 @@ interface ServiceItem {
   description: string;
   skillIds: string[];
   positionIds: string[];
+  createdAt: Date;
+}
+
+interface ClientItem {
+  id: string;
+  name: string;
+  about: string;
   createdAt: Date;
 }
 
@@ -78,16 +93,55 @@ interface SkillApiRecord {
   created_at?: string;
 }
 
-const INITIAL_STAFF: StaffMember[] = [];
+interface ServiceApiRecord {
+  id?: string;
+  _id?: string;
+  title?: string;
+  name?: string;
+  descriptions?: string;
+  description?: string;
+  skills?: string[];
+  createdAt?: string;
+  created_at?: string;
+}
 
-const INITIAL_ADMINS: StaffMember[] = [];
+interface ClientApiRecord {
+  id?: string;
+  _id?: string;
+  name?: string;
+  about?: string;
+  createdAt?: string;
+  created_at?: string;
+}
+
+interface UserApiRecord {
+  id?: string;
+  _id?: string;
+  user_id?: string;
+  uuid?: string;
+  fullName?: string;
+  full_name?: string;
+  name?: string;
+  email?: string;
+  profile?: string;
+  role?: string;
+  createdAt?: string;
+  created_at?: string;
+}
 
 const INITIAL_SKILLS: SkillItem[] = [];
 
-const INITIAL_SERVICES: ServiceItem[] = [];
-
 const INITIAL_POSITIONS: PositionItem[] = [];
-const API_BASE_URL = "https://trimerge-iq.onrender.com";
+const API_BASE_URL = ADMIN_API_BASE_URL;
+
+function uniqueById<T extends { id: string }>(records: T[]) {
+  const seenIds = new Set<string>();
+  return records.filter((record) => {
+    if (seenIds.has(record.id)) return false;
+    seenIds.add(record.id);
+    return true;
+  });
+}
 
 function mapSkillFromApi(skill: SkillApiRecord): SkillItem {
   return {
@@ -119,6 +173,59 @@ function mapPositionFromApi(position: PositionApiRecord, skills: SkillItem[]): P
   };
 }
 
+function mapServiceFromApi(service: ServiceApiRecord, skills: SkillItem[]): ServiceItem {
+  const skillIds = (service.skills ?? [])
+    .map((skillNameOrId) => {
+      const normalizedSkill = skillNameOrId.toLowerCase();
+      return skills.find(
+        (skill) => skill.id === skillNameOrId || skill.name.toLowerCase() === normalizedSkill,
+      )?.id;
+    })
+    .filter((skillId): skillId is string => Boolean(skillId));
+
+  return {
+    id:
+      service.id ??
+      service._id ??
+      `${service.title ?? service.name ?? "service"}-${service.createdAt ?? service.created_at ?? "local"}`,
+    name: service.title ?? service.name ?? "Untitled Service",
+    description: service.descriptions ?? service.description ?? "",
+    skillIds,
+    positionIds: [],
+    createdAt:
+      service.createdAt || service.created_at
+        ? new Date(service.createdAt ?? service.created_at ?? "")
+        : new Date(),
+  };
+}
+
+function mapClientFromApi(client: ClientApiRecord): ClientItem {
+  return {
+    id: client.id ?? client._id ?? `${client.name ?? "client"}-${client.createdAt ?? client.created_at ?? "local"}`,
+    name: client.name ?? "Untitled Client",
+    about: client.about ?? "",
+    createdAt:
+      client.createdAt || client.created_at
+        ? new Date(client.createdAt ?? client.created_at ?? "")
+        : new Date(),
+  };
+}
+
+function mapUserFromApi(user: UserApiRecord): StaffMember {
+  const email = user.email ?? "";
+  const fallbackName = email ? email.split("@")[0]?.replace(/[._-]+/g, " ") : "Unnamed user";
+
+  return {
+    id: user.id ?? user._id ?? user.user_id ?? user.uuid ?? email,
+    name: user.fullName ?? user.full_name ?? user.name ?? fallbackName,
+    email,
+    createdAt:
+      user.createdAt || user.created_at
+        ? new Date(user.createdAt ?? user.created_at ?? "")
+        : new Date(),
+  };
+}
+
 function extractPositionRecords(payload: unknown): PositionApiRecord[] {
   if (Array.isArray(payload)) return payload as PositionApiRecord[];
 
@@ -134,6 +241,65 @@ function extractPositionRecords(payload: unknown): PositionApiRecord[] {
 
     if (data && typeof data === "object") return [data as PositionApiRecord];
     return [payload as PositionApiRecord];
+  }
+
+  return [];
+}
+
+function extractServiceRecords(payload: unknown): ServiceApiRecord[] {
+  if (Array.isArray(payload)) return payload as ServiceApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; service?: unknown; services?: unknown };
+    if (Array.isArray(typedPayload.services)) return typedPayload.services as ServiceApiRecord[];
+    if (typedPayload.service && typeof typedPayload.service === "object") {
+      return [typedPayload.service as ServiceApiRecord];
+    }
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as ServiceApiRecord[];
+
+    if (data && typeof data === "object") return [data as ServiceApiRecord];
+    return [payload as ServiceApiRecord];
+  }
+
+  return [];
+}
+
+function extractClientRecords(payload: unknown): ClientApiRecord[] {
+  if (Array.isArray(payload)) return payload as ClientApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; client?: unknown; clients?: unknown };
+    if (Array.isArray(typedPayload.clients)) return typedPayload.clients as ClientApiRecord[];
+    if (typedPayload.client && typeof typedPayload.client === "object") {
+      return [typedPayload.client as ClientApiRecord];
+    }
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as ClientApiRecord[];
+
+    if (data && typeof data === "object") return [data as ClientApiRecord];
+    return [payload as ClientApiRecord];
+  }
+
+  return [];
+}
+
+function extractUserRecords(payload: unknown): UserApiRecord[] {
+  if (Array.isArray(payload)) return payload as UserApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; user?: unknown; users?: unknown; profile?: unknown };
+    if (Array.isArray(typedPayload.users)) return typedPayload.users as UserApiRecord[];
+    if (typedPayload.user && typeof typedPayload.user === "object") return [typedPayload.user as UserApiRecord];
+    if (typedPayload.profile && typeof typedPayload.profile === "object") return [typedPayload.profile as UserApiRecord];
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as UserApiRecord[];
+
+    if (data && typeof data === "object") return [data as UserApiRecord];
+    return [payload as UserApiRecord];
   }
 
   return [];
@@ -182,6 +348,7 @@ const SECTION_META: Record<
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
   services: { label: "Services Management", icon: Briefcase, addLabel: "Add New" },
+  clients: { label: "Clients Management", icon: Building2, addLabel: "Add New" },
   admin: { label: "Admin Management", icon: UserCog, addLabel: "Add New" },
 };
 
@@ -189,30 +356,193 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>("services");
   const [searchQuery, setSearchQuery] = useState("");
   const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
+  const [loggedInProfile, setLoggedInProfile] = useState("checking");
   const [accessToken, setAccessToken] = useState("");
   const [openModal, setOpenModal] = useState<CreateModal>(null);
   const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
   const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
   const [isSavingPosition, setIsSavingPosition] = useState(false);
+  const [isSavingService, setIsSavingService] = useState(false);
+  const [isSavingClient, setIsSavingClient] = useState(false);
   const [skillError, setSkillError] = useState("");
   const [positionError, setPositionError] = useState("");
+  const [serviceError, setServiceError] = useState("");
+  const [clientError, setClientError] = useState("");
+  const [userError, setUserError] = useState("");
 
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(INITIAL_STAFF);
-  const [adminMembers, setAdminMembers] = useState<StaffMember[]>(INITIAL_ADMINS);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() =>
+    readStoredAdminPeople().filter((person) => person.role === "staff"),
+  );
+  const [adminMembers, setAdminMembers] = useState<StaffMember[]>(() =>
+    readStoredAdminPeople().filter((person) => person.role === "admin"),
+  );
   const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
-  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [clients, setClients] = useState<ClientItem[]>([]);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("trimerge_admin_email");
     const storedAccessToken = localStorage.getItem("trimerge_admin_access_token");
+    const storedProfile = localStorage.getItem("trimerge_admin_profile");
     if (storedEmail) setLoggedInEmail(storedEmail);
     if (storedAccessToken) setAccessToken(storedAccessToken);
+    if (storedProfile) setLoggedInProfile(storedProfile);
   }, []);
+
+  const adminFetch = useCallback(
+    (pathOrUrl: string, init?: RequestInit) =>
+      authenticatedAdminFetch(pathOrUrl, {
+        ...init,
+        onTokenRefresh: setAccessToken,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await adminFetch(`${API_BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to verify current user (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const currentUser = extractUserRecords(payload)[0];
+        const currentProfile = (currentUser?.profile ?? currentUser?.role ?? "unknown").toLowerCase();
+        const currentEmail = currentUser?.email;
+        const currentStaffMember = currentUser ? mapUserFromApi(currentUser) : null;
+
+        if (!ignore) {
+          setLoggedInProfile(currentProfile);
+          localStorage.setItem("trimerge_admin_profile", currentProfile);
+
+          if (currentEmail) {
+            setLoggedInEmail(currentEmail);
+            localStorage.setItem("trimerge_admin_email", currentEmail);
+          }
+
+          if (currentStaffMember && currentProfile === "admin") {
+            setAdminMembers((current) => uniqueById([currentStaffMember, ...current]));
+          } else if (currentStaffMember && currentProfile === "staff") {
+            setStaffMembers((current) => uniqueById([currentStaffMember, ...current]));
+          }
+        }
+      } catch (error) {
+        if (!ignore) {
+          setLoggedInProfile("unknown");
+          setUserError(error instanceof Error ? error.message : "Unable to verify current user.");
+        }
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch]);
+
+  useEffect(() => {
+    const people: StoredAdminPerson[] = [
+      ...staffMembers.map((member) => ({ ...member, role: "staff" as const })),
+      ...adminMembers.map((member) => ({ ...member, role: "admin" as const })),
+    ];
+
+    writeStoredAdminPeople(uniqueById(people));
+  }, [adminMembers, staffMembers]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        setUserError("");
+
+        const response = await adminFetch(`${API_BASE_URL}/auth/admin/users`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.status === 403) {
+          if (!ignore) {
+            setUserError(
+              `Your backend role is "${loggedInProfile}". Listing all users requires a real backend admin token.`,
+            );
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Unable to load users (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const userRecords = extractUserRecords(payload);
+        const apiUsers = userRecords.map(mapUserFromApi);
+
+        if (!ignore) {
+          setStaffMembers((current) => uniqueById([
+            ...apiUsers.filter((user) => {
+              const original = userRecords.find((item) => {
+                const itemId = item.id ?? item._id ?? item.user_id ?? item.uuid ?? item.email;
+                return itemId === user.id;
+              });
+              const role = (original?.profile ?? original?.role ?? "").toLowerCase();
+              return role !== "admin";
+            }),
+            ...current,
+          ]));
+          setAdminMembers((current) => uniqueById([
+            ...apiUsers.filter((user) => {
+              const original = userRecords.find((item) => {
+                const itemId = item.id ?? item._id ?? item.user_id ?? item.uuid ?? item.email;
+                return itemId === user.id;
+              });
+              const role = (original?.profile ?? original?.role ?? "").toLowerCase();
+              return role === "admin";
+            }),
+            ...current,
+          ]));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setUserError(error instanceof Error ? error.message : "Unable to load users.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingUsers(false);
+        }
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch, loggedInProfile]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -224,7 +554,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingSkills(true);
         setSkillError("");
 
-        const response = await fetch(`${API_BASE_URL}/skills`, {
+        const response = await adminFetch(`${API_BASE_URL}/skills`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -256,7 +586,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return () => {
       ignore = true;
     };
-  }, [accessToken]);
+  }, [accessToken, adminFetch]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -268,7 +598,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingPositions(true);
         setPositionError("");
 
-        const response = await fetch(`${API_BASE_URL}/positions`, {
+        const response = await adminFetch(`${API_BASE_URL}/positions`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -302,7 +632,97 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return () => {
       ignore = true;
     };
-  }, [accessToken, skills]);
+  }, [accessToken, adminFetch, skills]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadServices = async () => {
+      try {
+        setIsLoadingServices(true);
+        setServiceError("");
+
+        const response = await adminFetch(`${API_BASE_URL}/services`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load services (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiServices = extractServiceRecords(payload).map((service) =>
+          mapServiceFromApi(service, skills),
+        );
+
+        if (!ignore) {
+          setServices((current) => uniqueById([...apiServices, ...current]));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setServiceError(error instanceof Error ? error.message : "Unable to load services.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingServices(false);
+        }
+      }
+    };
+
+    void loadServices();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch, skills]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadClients = async () => {
+      try {
+        setIsLoadingClients(true);
+        setClientError("");
+
+        const response = await adminFetch(`${API_BASE_URL}/clients`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load clients (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiClients = extractClientRecords(payload).map(mapClientFromApi);
+
+        if (!ignore) {
+          setClients((current) => uniqueById([...apiClients, ...current]));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setClientError(error instanceof Error ? error.message : "Unable to load clients.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingClients(false);
+        }
+      }
+    };
+
+    void loadClients();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch]);
 
   const loggedInName = useMemo(() => {
     const localPart = loggedInEmail.split("@")[0] ?? "";
@@ -373,6 +793,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     });
   }, [positions, searchQuery, services, skills]);
 
+  const filteredClients = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return clients;
+    return clients.filter(
+      (client) =>
+        client.name.toLowerCase().includes(query) || client.about.toLowerCase().includes(query),
+    );
+  }, [clients, searchQuery]);
+
   const filteredPositions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return positions;
@@ -395,6 +824,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     position: positions.length,
     skills: skills.length,
     services: services.length,
+    clients: clients.length,
   }[activeSection];
 
   const openCreateModal = () => {
@@ -406,6 +836,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setEditingPosition(null);
       setPositionError("");
     }
+    if (activeSection === "clients") {
+      setEditingClient(null);
+      setClientError("");
+    }
     setOpenModal(activeSection);
   };
 
@@ -413,9 +847,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     try {
       setIsSavingSkill(true);
       setSkillError("");
+      if (!accessToken) throw new Error("Sign in before saving skills.");
 
-      if (editingSkill && accessToken) {
-        const response = await fetch(`${API_BASE_URL}/skills/${editingSkill.id}`, {
+      if (editingSkill) {
+        const response = await adminFetch(`${API_BASE_URL}/skills/${editingSkill.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -443,8 +878,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             ),
           );
         }
-      } else if (accessToken) {
-        const response = await fetch(`${API_BASE_URL}/skills`, {
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/skills`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -460,23 +895,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         const createdPayload = await parseJsonSafely(response);
         const createdSkill = extractSkillRecords(createdPayload)[0];
 
-        setSkills((current) => [
-          ...current,
-          createdSkill
-            ? mapSkillFromApi(createdSkill)
-            : { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-        ]);
-      } else if (editingSkill) {
-        setSkills((current) =>
-          current.map((skill) =>
-            skill.id === editingSkill.id ? { ...skill, ...payload } : skill,
-          ),
-        );
-      } else {
-        setSkills((current) => [
-          ...current,
-          { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-        ]);
+        if (createdSkill) {
+          setSkills((current) => [...current, mapSkillFromApi(createdSkill)]);
+        }
       }
 
       setEditingSkill(null);
@@ -492,33 +913,26 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     try {
       setIsLoadingSkillDetails(true);
       setSkillError("");
+      if (!accessToken) throw new Error("Sign in before loading skills.");
 
-      if (accessToken) {
-        const response = await fetch(`${API_BASE_URL}/skills/${skillId}`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+      const response = await adminFetch(`${API_BASE_URL}/skills/${skillId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`Unable to load skill (${response.status})`);
-        }
-
-        const payload = await parseJsonSafely(response);
-        const skill = extractSkillRecords(payload)[0];
-
-        if (!skill) {
-          throw new Error("Unable to load skill.");
-        }
-
-        setEditingSkill(mapSkillFromApi(skill));
-      } else {
-        const existingSkill = skills.find((item) => item.id === skillId);
-        if (!existingSkill) {
-          throw new Error("Unable to load skill.");
-        }
-        setEditingSkill(existingSkill);
+      if (!response.ok) {
+        throw new Error(`Unable to load skill (${response.status})`);
       }
+
+      const payload = await parseJsonSafely(response);
+      const skill = extractSkillRecords(payload)[0];
+
+      if (!skill) {
+        throw new Error("Unable to load skill.");
+      }
+
+      setEditingSkill(mapSkillFromApi(skill));
 
       setOpenModal("skills");
     } catch (error) {
@@ -531,18 +945,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const removeSkill = async (skillId: string) => {
     try {
       setSkillError("");
+      if (!accessToken) throw new Error("Sign in before deleting skills.");
 
-      if (accessToken) {
-        const response = await fetch(`${API_BASE_URL}/skills/${skillId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+      const response = await adminFetch(`${API_BASE_URL}/skills/${skillId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`Unable to delete skill (${response.status})`);
-        }
+      if (!response.ok) {
+        throw new Error(`Unable to delete skill (${response.status})`);
       }
 
       setSkills((current) => current.filter((item) => item.id !== skillId));
@@ -564,19 +977,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
   const removePosition = async (positionId: string) => {
     try {
-      if (accessToken) {
-        setPositionError("");
+      setPositionError("");
+      if (!accessToken) throw new Error("Sign in before deleting positions.");
 
-        const response = await fetch(`${API_BASE_URL}/positions/${positionId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+      const response = await adminFetch(`${API_BASE_URL}/positions/${positionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`Unable to delete position (${response.status})`);
-        }
+      if (!response.ok) {
+        throw new Error(`Unable to delete position (${response.status})`);
       }
 
       setPositions((current) => current.filter((item) => item.id !== positionId));
@@ -612,9 +1024,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     try {
       setIsSavingPosition(true);
       setPositionError("");
+      if (!accessToken) throw new Error("Sign in before saving positions.");
 
-      if (accessToken && editingPosition) {
-        const response = await fetch(`${API_BASE_URL}/positions/${editingPosition.id}`, {
+      if (editingPosition) {
+        const response = await adminFetch(`${API_BASE_URL}/positions/${editingPosition.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -643,8 +1056,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setPositions((current) =>
           current.map((position) => (position.id === editingPosition.id ? nextPosition : position)),
         );
-      } else if (accessToken) {
-        const response = await fetch(`${API_BASE_URL}/positions`, {
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/positions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -670,17 +1083,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         if (createdPosition) {
           setPositions((current) => [...current, mapPositionFromApi(createdPosition, skills)]);
         }
-      } else if (editingPosition) {
-        setPositions((current) =>
-          current.map((position) =>
-            position.id === editingPosition.id ? { ...position, ...payload } : position,
-          ),
-        );
-      } else {
-        setPositions((current) => [
-          ...current,
-          { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-        ]);
       }
 
       setEditingPosition(null);
@@ -689,6 +1091,166 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setPositionError(error instanceof Error ? error.message : "Unable to save position.");
     } finally {
       setIsSavingPosition(false);
+    }
+  };
+
+  const saveService = async (payload: Omit<ServiceItem, "id" | "createdAt">) => {
+    try {
+      setIsSavingService(true);
+      setServiceError("");
+      if (!accessToken) throw new Error("Sign in before saving services.");
+
+      const response = await adminFetch(`${API_BASE_URL}/services`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          title: payload.name,
+          descriptions: payload.description,
+          skills: payload.skillIds
+            .map((skillId) => skills.find((skill) => skill.id === skillId)?.name)
+            .filter((skillName): skillName is string => Boolean(skillName)),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to create service (${response.status})`);
+      }
+
+      const createdPayload = await parseJsonSafely(response);
+      const createdService = extractServiceRecords(createdPayload)[0];
+
+      if (createdService) {
+        setServices((current) => [...current, mapServiceFromApi(createdService, skills)]);
+      }
+
+      setOpenModal(null);
+    } catch (error) {
+      setServiceError(error instanceof Error ? error.message : "Unable to save service.");
+    } finally {
+      setIsSavingService(false);
+    }
+  };
+
+  const removeService = async (serviceId: string) => {
+    try {
+      setServiceError("");
+      if (!accessToken) throw new Error("Sign in before deleting services.");
+
+      const response = await adminFetch(`${API_BASE_URL}/services/${serviceId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to delete service (${response.status})`);
+      }
+
+      setServices((current) => current.filter((item) => item.id !== serviceId));
+    } catch (error) {
+      setServiceError(error instanceof Error ? error.message : "Unable to delete service.");
+    }
+  };
+
+  const openEditClientModal = (clientId: string) => {
+    const existingClient = clients.find((item) => item.id === clientId);
+    if (!existingClient) {
+      setClientError("Unable to load client.");
+      return;
+    }
+
+    setClientError("");
+    setEditingClient(existingClient);
+    setOpenModal("clients");
+  };
+
+  const saveClient = async (payload: Omit<ClientItem, "id" | "createdAt">) => {
+    try {
+      setIsSavingClient(true);
+      setClientError("");
+      if (!accessToken) throw new Error("Sign in before saving clients.");
+
+      if (editingClient) {
+        const response = await adminFetch(`${API_BASE_URL}/clients/${editingClient.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            about: payload.about,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to update client (${response.status})`);
+        }
+
+        const updatedPayload = await parseJsonSafely(response);
+        const updatedClient = extractClientRecords(updatedPayload)[0];
+        const nextClient = updatedClient ? mapClientFromApi(updatedClient) : { ...editingClient, ...payload };
+
+        setClients((current) =>
+          current.map((client) => (client.id === editingClient.id ? nextClient : client)),
+        );
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/clients`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            about: payload.about,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to create client (${response.status})`);
+        }
+
+        const createdPayload = await parseJsonSafely(response);
+        const createdClient = extractClientRecords(createdPayload)[0];
+
+        if (createdClient) {
+          setClients((current) => [...current, mapClientFromApi(createdClient)]);
+        }
+      }
+
+      setEditingClient(null);
+      setOpenModal(null);
+    } catch (error) {
+      setClientError(error instanceof Error ? error.message : "Unable to save client.");
+    } finally {
+      setIsSavingClient(false);
+    }
+  };
+
+  const removeClient = async (clientId: string) => {
+    try {
+      setClientError("");
+      if (!accessToken) throw new Error("Sign in before deleting clients.");
+
+      const response = await adminFetch(`${API_BASE_URL}/clients/${clientId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to delete client (${response.status})`);
+      }
+
+      setClients((current) => current.filter((item) => item.id !== clientId));
+    } catch (error) {
+      setClientError(error instanceof Error ? error.message : "Unable to delete client.");
     }
   };
 
@@ -702,7 +1264,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             </div>
             <div>
               <h2 className="text-[15px] font-semibold tracking-tight text-white">{loggedInName}</h2>
-              <p className="text-xs text-white/64">Admin Panel</p>
+              <p className="text-xs text-white/64">Backend role: {loggedInProfile}</p>
             </div>
           </div>
         </div>
@@ -729,6 +1291,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           <div className="rounded-2xl bg-white/[0.05] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
             <p className="text-[11px] uppercase tracking-[0.18em] text-white/48">Logged in as:</p>
             <p className="mt-2 break-all text-sm font-semibold text-white/94">{loggedInEmail}</p>
+            <p className="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-[#f0ca44]">
+              {loggedInProfile}
+            </p>
             <button
               type="button"
               onClick={onLogout}
@@ -788,10 +1353,28 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             </div>
           )}
 
+          {activeSection === "services" && serviceError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {serviceError}
+            </div>
+          )}
+
+          {activeSection === "clients" && clientError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {clientError}
+            </div>
+          )}
+
+          {(activeSection === "staff" || activeSection === "admin") && userError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {userError}
+            </div>
+          )}
+
           {activeSection === "staff" && (
             <ManagementTable
               headers={["Name", "Email", "Position", "Created", "Actions"]}
-              emptyMessage="No staff members found."
+              emptyMessage={isLoadingUsers ? "Loading staff..." : "No staff members found."}
             >
               {filteredStaff.map((member) => (
                 <tr key={member.id} className="border-t border-[#eef2f8]">
@@ -812,7 +1395,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "admin" && (
             <ManagementTable
               headers={["Name", "Email", "Created", "Actions"]}
-              emptyMessage="No admin members found."
+              emptyMessage={isLoadingUsers ? "Loading admins..." : "No admin members found."}
             >
               {filteredAdmins.map((member) => (
                 <tr key={member.id} className="border-t border-[#eef2f8]">
@@ -860,7 +1443,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "services" && (
             <ManagementTable
               headers={["Name", "Description", "Skills", "Positions", "Created", "Actions"]}
-              emptyMessage="No services found."
+              emptyMessage={isLoadingServices ? "Loading services..." : "No services found."}
             >
               {filteredServices.map((service) => (
                 <tr key={service.id} className="border-t border-[#eef2f8] align-top">
@@ -894,7 +1477,32 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   </td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{service.createdAt.toLocaleDateString()}</td>
                   <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => setServices((current) => current.filter((item) => item.id !== service.id))} />
+                    <DeleteButton onClick={() => { void removeService(service.id); }} />
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "clients" && (
+            <ManagementTable
+              headers={["Name", "About", "Created", "Actions"]}
+              emptyMessage={isLoadingClients ? "Loading clients..." : "No clients found."}
+            >
+              {filteredClients.map((client) => (
+                <tr key={client.id} className="border-t border-[#eef2f8] align-top">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{client.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{client.about || "None"}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{client.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <div className="flex justify-end gap-2">
+                      <EditButton
+                        onClick={() => {
+                          openEditClientModal(client.id);
+                        }}
+                      />
+                      <DeleteButton onClick={() => { void removeClient(client.id); }} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1007,11 +1615,24 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           positions={positions}
           onClose={() => setOpenModal(null)}
           onSave={(payload) => {
-            setServices((current) => [
-              ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-            ]);
+            void saveService(payload);
+          }}
+          isSaving={isSavingService}
+        />
+      )}
+
+      {openModal === "clients" && (
+        <ClientModal
+          initialAbout={editingClient?.about ?? ""}
+          initialName={editingClient?.name ?? ""}
+          isSaving={isSavingClient}
+          title={editingClient ? "Edit Client" : "Add New Client"}
+          onClose={() => {
+            setEditingClient(null);
             setOpenModal(null);
+          }}
+          onSave={(payload) => {
+            void saveClient(payload);
           }}
         />
       )}
@@ -1037,7 +1658,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     </div>
   );
 }
-
 function SidebarButton({
   active,
   icon: Icon,
@@ -1278,16 +1898,80 @@ function RegistryModal({
   );
 }
 
+function ClientModal({
+  initialAbout = "",
+  initialName = "",
+  isSaving = false,
+  title,
+  onSave,
+  onClose,
+}: {
+  initialAbout?: string;
+  initialName?: string;
+  isSaving?: boolean;
+  title: string;
+  onSave: (payload: Omit<ClientItem, "id" | "createdAt">) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [about, setAbout] = useState(initialAbout);
+
+  useEffect(() => {
+    setName(initialName);
+    setAbout(initialAbout);
+  }, [initialAbout, initialName]);
+
+  return (
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({ name: name.trim(), about: about.trim() });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label="Name">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalField label="About">
+          <textarea
+            value={about}
+            onChange={(event) => setAbout(event.target.value)}
+            rows={4}
+            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            required
+          />
+        </ModalField>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : "Save"}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
 function ServiceModal({
   title,
   skills,
   positions,
+  isSaving = false,
   onSave,
   onClose,
 }: {
   title: string;
   skills: SkillItem[];
   positions: PositionItem[];
+  isSaving?: boolean;
   onSave: (payload: Omit<ServiceItem, "id" | "createdAt">) => void;
   onClose: () => void;
 }) {
@@ -1386,7 +2070,11 @@ function ServiceModal({
           )}
         </ModalField>
 
-        <ModalActions onClose={onClose} />
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : "Save"}
+        />
       </form>
     </BaseModal>
   );

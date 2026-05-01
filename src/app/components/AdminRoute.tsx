@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminPage from "./AdminPage";
 import LoginPage from "./LoginPage";
@@ -26,15 +26,24 @@ export default function AdminRoute() {
     router.replace("/admin");
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("trimerge_admin_auth");
     localStorage.removeItem("trimerge_admin_email");
+    localStorage.removeItem("trimerge_admin_profile");
     localStorage.removeItem("trimerge_admin_access_token");
     localStorage.removeItem("trimerge_admin_refresh_token");
     setIsAdminAuthenticated(false);
     router.push("/");
     router.refresh();
-  };
+  }, [router]);
+
+  useEffect(() => {
+    window.addEventListener("trimerge_admin_session_expired", handleLogout);
+
+    return () => {
+      window.removeEventListener("trimerge_admin_session_expired", handleLogout);
+    };
+  }, [handleLogout]);
 
   if (!isReady) {
     return (

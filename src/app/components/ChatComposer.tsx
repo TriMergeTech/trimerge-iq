@@ -46,7 +46,7 @@ export default function ChatComposer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative rounded-[34px] border border-[#d4af37]/34 bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(12,17,24,0.94))] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
+      className="group relative rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,25,38,0.90),rgba(10,15,23,0.94))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),inset_0_-1px_0_rgba(0,0,0,0.24),0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition focus-within:border-[#d4af37]/34 focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.30)]"
     >
       <input
         ref={fileInputRef}
@@ -65,7 +65,7 @@ export default function ChatComposer({
         onChange={onFileSelect}
       />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.055] bg-black/[0.10] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition group-focus-within:border-white/[0.09] group-focus-within:bg-black/[0.14]">
         <div className="relative" ref={attachmentMenuRef}>
           {isAttachmentMenuOpen && (
             <div className="absolute bottom-[calc(100%+14px)] left-0 z-20 w-64 rounded-3xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
@@ -102,7 +102,7 @@ export default function ChatComposer({
           <button
             type="button"
             onClick={() => setIsAttachmentMenuOpen((current) => !current)}
-            className={`interactive-button flex h-12 w-12 items-center justify-center rounded-full border text-white ${isAttachmentMenuOpen ? "border-[#d4af37]/50 bg-[#162235]" : "border-[#d4af37]/30 bg-[#101827]/80 hover:bg-[#13233f]"}`}
+            className={`interactive-button flex h-11 w-11 items-center justify-center rounded-full border text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${isAttachmentMenuOpen ? "border-[#d4af37]/42 bg-white/[0.08]" : "border-white/[0.075] bg-white/[0.035] hover:border-[#d4af37]/26 hover:bg-white/[0.07]"}`}
           >
             <Plus className={`h-6 w-6 transition-transform duration-300 ${isAttachmentMenuOpen ? "rotate-45" : ""}`} />
           </button>
@@ -118,7 +118,7 @@ export default function ChatComposer({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="interactive-button flex h-14 w-14 items-center justify-center rounded-full bg-[#d4af37] text-[#111214] shadow-[0_12px_30px_rgba(212,175,55,0.3)] hover:bg-[#e0bc49] disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button flex h-12 w-12 items-center justify-center rounded-full border border-[#f1d46a]/24 bg-[linear-gradient(180deg,#e2be4b,#c79d22)] text-[#111214] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_28px_rgba(212,175,55,0.26)] hover:bg-[linear-gradient(180deg,#edcb62,#d4af37)] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-none disabled:bg-white/[0.07] disabled:text-white/32 disabled:shadow-none"
         >
           <Send className="h-5 w-5" />
         </button>
@@ -126,7 +126,6 @@ export default function ChatComposer({
     </form>
   );
 }
-
 function SidebarAction({
   icon,
   label,

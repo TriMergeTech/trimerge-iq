@@ -2,11 +2,11 @@
 
 import type { ReactNode } from "react";
 
-import type { Conversation, Project } from "./chatPageTypes";
+import type { ChatEntityId, Conversation, Project } from "./chatPageTypes";
 
 interface ProjectHomePanelProps {
   composer: ReactNode;
-  onOpenConversation: (conversationId: number) => void;
+  onOpenConversation: (conversationId: ChatEntityId) => void;
   onProjectHomeTabChange: (tab: "chats" | "sources") => void;
   projectHomeTab: "chats" | "sources";
   projectRecentConversations: Conversation[];

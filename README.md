@@ -21,12 +21,15 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 ## Chat backend
 
 The chat UI reads its backend base URL from `NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL`.
+Project management requests read their backend base URL from
+`NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL`.
 
 Local setup:
 
 ```bash
 # already included locally in .env.local
-NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL=http://192.168.7.125:3002/v2
+NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL=https://trimerge-microserver-v3.vercel.app/v2
+NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL=https://trimerge-iq.onrender.com
 ```
 
 If the backend IP changes, update `.env.local` and restart `npm run dev`.
