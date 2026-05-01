@@ -8,13 +8,14 @@ import {
   readStoredAdminPeople,
   writeStoredAdminPeople,
 } from "./adminRegistryState";
-import { createClientOption, createShareLink, fetchConversations, fetchMessages, fetchProjectFormOptions, fetchProjects, getChatProfile } from "./chatApi";
-import { applyConversationOverrides, readStoredProjectNames, readStoredProjects, writeStoredProjects } from "./chatLocalState";
+import { createClientOption, createShareLink, fetchConversations, fetchMessages, fetchProjectFormOptions, fetchProjects, getChatProfile, renameConversation, updateProject as updateApiProject } from "./chatApi";
+import { applyConversationOverrides, persistConversationOverride, readStoredProjectNames, readStoredProjects, writeStoredProjects } from "./chatLocalState";
 import ConversationMenuItem from "./ConversationMenuItem";
 import ConversationView from "./ConversationView";
 import CreateClientDialog from "./CreateClientDialog";
 import CreateProjectModal from "./CreateProjectModal";
 import ProjectHomePanel from "./ProjectHomePanel";
+import RenameDialog from "./RenameDialog";
 import ShareDialog from "./ShareDialog";
 import { type ChatEntityId, type Conversation, type Project, type ProjectFormOption, type UploadedFile } from "./chatPageTypes";
 import { formatFileSize } from "./chatPageUtils";
@@ -60,6 +61,14 @@ export default function ChatPage() {
     description: string;
     isLoading?: boolean;
     title: string;
+    value: string;
+  } | null>(null);
+  const [renameDialog, setRenameDialog] = useState<{
+    error?: string;
+    id: ChatEntityId;
+    isSaving?: boolean;
+    kind: "conversation" | "project";
+    originalName: string;
     value: string;
   } | null>(null);
   const [isShareCopied, setIsShareCopied] = useState(false);
@@ -199,6 +208,99 @@ export default function ChatPage() {
       window.setTimeout(() => setIsShareCopied(false), 1400);
     } catch {
       setLastChatError("Unable to copy automatically. Select the text and copy it manually.");
+    }
+  };
+
+  const openConversationRenameDialog = (conversation: Conversation) => {
+    setOpenConversationMenuId(null);
+    setIsWorkspaceMenuOpen(false);
+    setRenameDialog({
+      id: conversation.id,
+      kind: "conversation",
+      originalName: conversation.title,
+      value: conversation.title,
+    });
+  };
+
+  const openProjectRenameDialog = (project: Project) => {
+    setOpenProjectActionMenuId(null);
+    setRenameDialog({
+      id: project.id,
+      kind: "project",
+      originalName: project.name,
+      value: project.name,
+    });
+  };
+
+  const submitRenameDialog = async () => {
+    if (!renameDialog || renameDialog.isSaving) return;
+
+    const nextName = renameDialog.value.trim();
+    if (!nextName) {
+      setRenameDialog((current) => (current ? { ...current, error: "Enter a name before saving." } : current));
+      return;
+    }
+
+    if (nextName === renameDialog.originalName) {
+      setRenameDialog(null);
+      return;
+    }
+
+    setRenameDialog((current) => (current ? { ...current, error: "", isSaving: true } : current));
+
+    try {
+      if (renameDialog.kind === "conversation") {
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === renameDialog.id ? { ...conversation, title: nextName, updatedAt: new Date() } : conversation,
+          ),
+        );
+        await renameConversation(renameDialog.id, nextName);
+        persistConversationOverride(renameDialog.id, { title: nextName });
+      } else {
+        const previousProject = projects.find((project) => project.id === renameDialog.id);
+        const apiProject = await updateApiProject(renameDialog.id, { name: nextName });
+        setProjects((current) =>
+          current.map((project) =>
+            project.id === renameDialog.id
+              ? { ...project, ...(apiProject ?? {}), name: apiProject?.name ?? nextName, pinned: project.pinned }
+              : project,
+          ),
+        );
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.projectId === renameDialog.id || conversation.projectName === previousProject?.name
+              ? { ...conversation, projectName: apiProject?.name ?? nextName }
+              : conversation,
+          ),
+        );
+      }
+
+      setLastChatError("");
+      setRenameDialog(null);
+    } catch (error) {
+      setRenameDialog((current) =>
+        current
+          ? {
+              ...current,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : current.kind === "conversation"
+                    ? "Unable to rename this conversation."
+                    : "Unable to rename this project.",
+              isSaving: false,
+            }
+          : current,
+      );
+
+      if (renameDialog.kind === "conversation") {
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === renameDialog.id ? { ...conversation, title: renameDialog.originalName, updatedAt: new Date() } : conversation,
+          ),
+        );
+      }
     }
   };
 
@@ -520,7 +622,6 @@ export default function ChatPage() {
     handleCreateProject,
     handleDeleteProject,
     handlePinProject,
-    handleRenameProject,
     handleSelectProject,
     openCreateProjectModal,
     toggleTeamMember,
@@ -561,7 +662,6 @@ export default function ChatPage() {
     handleClearActiveChat,
     handleDeleteConversation,
     handlePinConversation,
-    handleRenameConversation,
     sendMessage,
     startNewChat,
   } = useConversationActions({
@@ -630,6 +730,20 @@ export default function ChatPage() {
           onCopy={copyShareDialogValue}
           title={shareDialog.title}
           value={shareDialog.value}
+        />
+      )}
+      {renameDialog && (
+        <RenameDialog
+          error={renameDialog.error}
+          isSaving={renameDialog.isSaving}
+          label={renameDialog.kind === "conversation" ? "Rename chat" : "Rename project"}
+          onChange={(value) => setRenameDialog((current) => (current ? { ...current, error: "", value } : current))}
+          onClose={() => {
+            if (!renameDialog.isSaving) setRenameDialog(null);
+          }}
+          onSubmit={submitRenameDialog}
+          title={renameDialog.kind === "conversation" ? renameDialog.originalName : "Project workspace"}
+          value={renameDialog.value}
         />
       )}
 
@@ -729,7 +843,7 @@ export default function ChatPage() {
                           {openProjectActionMenuId === project.id && (
                             <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
                               <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => openProjectShareDialog(project)} />
-                              <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => handleRenameProject(project)} />
+                              <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openProjectRenameDialog(project)} />
                               <ConversationMenuItem icon={project.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={project.pinned ? "Unpin project" : "Pin project"} onClick={() => handlePinProject(project.id)} />
                               <ConversationMenuItem icon={<ArchiveIcon className="h-4 w-4" />} label="Archive" onClick={() => handleArchiveProject(project.id)} />
                               <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => handleDeleteProject(project.id)} />
@@ -811,7 +925,7 @@ export default function ChatPage() {
                       {openConversationMenuId === conversation.id && (
                         <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
                           <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => void openConversationShareDialog(conversation)} />
-                          <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => handleRenameConversation(conversation)} />
+                          <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openConversationRenameDialog(conversation)} />
                           <ConversationMenuItem icon={conversation.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={conversation.pinned ? "Unpin chat" : "Pin chat"} onClick={() => handlePinConversation(conversation.id)} />
                           <ConversationMenuItem
                             icon={<ArchiveIcon className="h-4 w-4" />}
@@ -852,7 +966,7 @@ export default function ChatPage() {
                 onClearActiveChat={handleClearActiveChat}
                 onDeleteConversation={handleDeleteConversation}
                 onPinConversation={handlePinConversation}
-                onRenameConversation={handleRenameConversation}
+                onRenameConversation={openConversationRenameDialog}
                 onShareConversation={(conversation) => void openConversationShareDialog(conversation)}
                 onStartNewChat={startNewChat}
                 onToggleWorkspaceMenu={() => setIsWorkspaceMenuOpen((current) => !current)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Link2, Loader2, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Link2, Loader2, Mail, MessageCircle, Share2, X } from "lucide-react";
 
 interface ShareDialogProps {
   copied: boolean;
@@ -21,6 +21,29 @@ export default function ShareDialog({
   title,
   value,
 }: ShareDialogProps) {
+  const encodedSubject = encodeURIComponent(title);
+  const encodedBody = encodeURIComponent(`${title}\n\n${value}`);
+  const canShare = typeof navigator !== "undefined" && Boolean(navigator.share);
+
+  const openExternalUrl = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareNative = async () => {
+    if (!value) return;
+
+    if (navigator.share) {
+      await navigator.share({
+        title,
+        text: title,
+        url: value,
+      });
+      return;
+    }
+
+    await navigator.clipboard.writeText(value);
+  };
+
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm">
       <div className="w-full max-w-[520px] overflow-hidden rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(20,27,39,0.98),rgba(10,15,23,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_90px_rgba(0,0,0,0.52)] animate-fade-rise">
@@ -62,6 +85,43 @@ export default function ShareDialog({
               />
             )}
           </div>
+
+          {!isLoading && value && (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => openExternalUrl(`https://outlook.office.com/mail/deeplink/compose?subject=${encodedSubject}&body=${encodedBody}`)}
+                className="interactive-button flex items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/70 hover:border-[#d4af37]/22 hover:bg-white/[0.07] hover:text-white"
+              >
+                <Mail className="h-4 w-4 text-[#f0d98a]/72" />
+                Outlook
+              </button>
+              <button
+                type="button"
+                onClick={() => openExternalUrl(`https://wa.me/?text=${encodeURIComponent(`${title}: ${value}`)}`)}
+                className="interactive-button flex items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/70 hover:border-[#d4af37]/22 hover:bg-white/[0.07] hover:text-white"
+              >
+                <MessageCircle className="h-4 w-4 text-[#f0d98a]/72" />
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => void shareNative()}
+                className="interactive-button flex items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/70 hover:border-[#d4af37]/22 hover:bg-white/[0.07] hover:text-white"
+              >
+                <Share2 className="h-4 w-4 text-[#f0d98a]/72" />
+                {canShare ? "Share" : "General"}
+              </button>
+              <button
+                type="button"
+                onClick={() => openExternalUrl(value)}
+                className="interactive-button flex items-center justify-center gap-2 rounded-[14px] border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/70 hover:border-[#d4af37]/22 hover:bg-white/[0.07] hover:text-white"
+              >
+                <ExternalLink className="h-4 w-4 text-[#f0d98a]/72" />
+                Open
+              </button>
+            </div>
+          )}
 
           <div className="mt-5 flex justify-end gap-3">
             <button

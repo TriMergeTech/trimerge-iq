@@ -114,6 +114,16 @@ interface ClientApiRecord {
   created_at?: string;
 }
 
+interface StaffApiRecord {
+  id?: string;
+  _id?: string;
+  name?: string;
+  email?: string;
+  position?: string | { id?: string; _id?: string; name?: string; title?: string };
+  createdAt?: string;
+  created_at?: string;
+}
+
 interface UserApiRecord {
   id?: string;
   _id?: string;
@@ -211,6 +221,25 @@ function mapClientFromApi(client: ClientApiRecord): ClientItem {
   };
 }
 
+function getPositionIdFromApi(position: StaffApiRecord["position"]) {
+  if (typeof position === "string") return position;
+  if (position && typeof position === "object") return position.id ?? position._id;
+  return undefined;
+}
+
+function mapStaffFromApi(staff: StaffApiRecord): StaffMember {
+  return {
+    id: staff.id ?? staff._id ?? staff.email ?? `${staff.name ?? "staff"}-${staff.createdAt ?? staff.created_at ?? "local"}`,
+    name: staff.name ?? staff.email ?? "Unnamed staff",
+    email: staff.email ?? "",
+    positionId: getPositionIdFromApi(staff.position),
+    createdAt:
+      staff.createdAt || staff.created_at
+        ? new Date(staff.createdAt ?? staff.created_at ?? "")
+        : new Date(),
+  };
+}
+
 function mapUserFromApi(user: UserApiRecord): StaffMember {
   const email = user.email ?? "";
   const fallbackName = email ? email.split("@")[0]?.replace(/[._-]+/g, " ") : "Unnamed user";
@@ -281,6 +310,27 @@ function extractClientRecords(payload: unknown): ClientApiRecord[] {
 
     if (data && typeof data === "object") return [data as ClientApiRecord];
     return [payload as ClientApiRecord];
+  }
+
+  return [];
+}
+
+function extractStaffRecords(payload: unknown): StaffApiRecord[] {
+  if (Array.isArray(payload)) return payload as StaffApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as { data?: unknown; staff?: unknown; staffs?: unknown; members?: unknown };
+    if (Array.isArray(typedPayload.staff)) return typedPayload.staff as StaffApiRecord[];
+    if (Array.isArray(typedPayload.staffs)) return typedPayload.staffs as StaffApiRecord[];
+    if (Array.isArray(typedPayload.members)) return typedPayload.members as StaffApiRecord[];
+    if (typedPayload.staff && typeof typedPayload.staff === "object") {
+      return [typedPayload.staff as StaffApiRecord];
+    }
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as StaffApiRecord[];
+    if (data && typeof data === "object") return [data as StaffApiRecord];
+    return [payload as StaffApiRecord];
   }
 
   return [];
@@ -362,20 +412,24 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [editingSkill, setEditingSkill] = useState<SkillItem | null>(null);
   const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
   const [isSavingPosition, setIsSavingPosition] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
   const [isSavingClient, setIsSavingClient] = useState(false);
+  const [isSavingStaff, setIsSavingStaff] = useState(false);
   const [skillError, setSkillError] = useState("");
   const [positionError, setPositionError] = useState("");
   const [serviceError, setServiceError] = useState("");
   const [clientError, setClientError] = useState("");
+  const [staffError, setStaffError] = useState("");
   const [userError, setUserError] = useState("");
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() =>
@@ -474,6 +528,50 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
     let ignore = false;
 
+    const loadStaff = async () => {
+      try {
+        setIsLoadingStaff(true);
+        setStaffError("");
+
+        const response = await adminFetch(`${API_BASE_URL}/staff`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load staff (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiStaff = extractStaffRecords(payload).map(mapStaffFromApi);
+
+        if (!ignore) {
+          setStaffMembers(apiStaff);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setStaffError(error instanceof Error ? error.message : "Unable to load staff.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingStaff(false);
+        }
+      }
+    };
+
+    void loadStaff();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
     const loadUsers = async () => {
       try {
         setIsLoadingUsers(true);
@@ -487,8 +585,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
         if (response.status === 403) {
           if (!ignore) {
+            setAdminMembers([]);
             setUserError(
-              `Your backend role is "${loggedInProfile}". Listing all users requires a real backend admin token.`,
+              `Admin Management is available only for backend admins. Your current backend role is "${loggedInProfile}".`,
             );
           }
           return;
@@ -503,17 +602,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         const apiUsers = userRecords.map(mapUserFromApi);
 
         if (!ignore) {
-          setStaffMembers((current) => uniqueById([
-            ...apiUsers.filter((user) => {
-              const original = userRecords.find((item) => {
-                const itemId = item.id ?? item._id ?? item.user_id ?? item.uuid ?? item.email;
-                return itemId === user.id;
-              });
-              const role = (original?.profile ?? original?.role ?? "").toLowerCase();
-              return role !== "admin";
-            }),
-            ...current,
-          ]));
           setAdminMembers((current) => uniqueById([
             ...apiUsers.filter((user) => {
               const original = userRecords.find((item) => {
@@ -828,6 +916,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   }[activeSection];
 
   const openCreateModal = () => {
+    if (activeSection === "staff") {
+      setEditingStaff(null);
+      setStaffError("");
+    }
     if (activeSection === "skills") {
       setEditingSkill(null);
       setSkillError("");
@@ -841,6 +933,107 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setClientError("");
     }
     setOpenModal(activeSection);
+  };
+
+  const saveStaff = async (payload: { name: string; email: string; positionId?: string }) => {
+    try {
+      setIsSavingStaff(true);
+      setStaffError("");
+      if (!accessToken) throw new Error("Sign in before saving staff.");
+      if (!payload.positionId) throw new Error("Choose a position before saving staff.");
+
+      if (editingStaff) {
+        const response = await adminFetch(`${API_BASE_URL}/staff/${editingStaff.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            email: payload.email,
+            position: payload.positionId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to update staff (${response.status})`);
+        }
+
+        const updatedPayload = await parseJsonSafely(response);
+        const updatedStaff = extractStaffRecords(updatedPayload)[0];
+        const nextStaff = updatedStaff ? mapStaffFromApi(updatedStaff) : { ...editingStaff, ...payload };
+
+        setStaffMembers((current) =>
+          current.map((member) => (member.id === editingStaff.id ? nextStaff : member)),
+        );
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/staff`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            email: payload.email,
+            position: payload.positionId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to create staff (${response.status})`);
+        }
+
+        const createdPayload = await parseJsonSafely(response);
+        const createdStaff = extractStaffRecords(createdPayload)[0];
+
+        if (createdStaff) {
+          setStaffMembers((current) => uniqueById([...current, mapStaffFromApi(createdStaff)]));
+        }
+      }
+
+      setEditingStaff(null);
+      setOpenModal(null);
+    } catch (error) {
+      setStaffError(error instanceof Error ? error.message : "Unable to save staff.");
+    } finally {
+      setIsSavingStaff(false);
+    }
+  };
+
+  const openEditStaffModal = (staffId: string) => {
+    const existingStaff = staffMembers.find((item) => item.id === staffId);
+    if (!existingStaff) {
+      setStaffError("Unable to load staff.");
+      return;
+    }
+
+    setStaffError("");
+    setEditingStaff(existingStaff);
+    setOpenModal("staff");
+  };
+
+  const removeStaff = async (staffId: string) => {
+    try {
+      setStaffError("");
+      if (!accessToken) throw new Error("Sign in before deleting staff.");
+
+      const response = await adminFetch(`${API_BASE_URL}/staff/${staffId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to delete staff (${response.status})`);
+      }
+
+      setStaffMembers((current) => current.filter((item) => item.id !== staffId));
+    } catch (error) {
+      setStaffError(error instanceof Error ? error.message : "Unable to delete staff.");
+    }
   };
 
   const saveSkill = async (payload: { name: string; description: string }) => {
@@ -1320,10 +1513,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="interactive-button inline-flex items-center gap-2 rounded-xl bg-[#2865ba] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.24)] hover:bg-[#2159a8]"
+                disabled={activeSection === "admin"}
+                className="interactive-button inline-flex items-center gap-2 rounded-xl bg-[#2865ba] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.24)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:bg-[#8ba0c8] disabled:shadow-none"
               >
                 <Plus className="h-4 w-4" />
-                <span>{activeSectionMeta.addLabel}</span>
+                <span>{activeSection === "admin" ? "View Only" : activeSectionMeta.addLabel}</span>
               </button>
             </div>
 
@@ -1365,8 +1559,14 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             </div>
           )}
 
-          {(activeSection === "staff" || activeSection === "admin") && userError && (
+          {activeSection === "staff" && staffError && (
             <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {staffError}
+            </div>
+          )}
+
+          {activeSection === "admin" && userError && (
+            <div className="mb-5 rounded-2xl border border-[#d8e2f1] bg-[#f7faff] px-5 py-4 text-sm text-[#53657d]">
               {userError}
             </div>
           )}
@@ -1374,7 +1574,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "staff" && (
             <ManagementTable
               headers={["Name", "Email", "Position", "Created", "Actions"]}
-              emptyMessage={isLoadingUsers ? "Loading staff..." : "No staff members found."}
+              emptyMessage={isLoadingStaff ? "Loading staff..." : "No staff members found."}
             >
               {filteredStaff.map((member) => (
                 <tr key={member.id} className="border-t border-[#eef2f8]">
@@ -1385,7 +1585,14 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   </td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
                   <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => setStaffMembers((current) => current.filter((item) => item.id !== member.id))} />
+                    <div className="flex justify-end gap-2">
+                      <EditButton
+                        onClick={() => {
+                          openEditStaffModal(member.id);
+                        }}
+                      />
+                      <DeleteButton onClick={() => { void removeStaff(member.id); }} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1394,7 +1601,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
           {activeSection === "admin" && (
             <ManagementTable
-              headers={["Name", "Email", "Created", "Actions"]}
+              headers={["Name", "Email", "Created"]}
               emptyMessage={isLoadingUsers ? "Loading admins..." : "No admin members found."}
             >
               {filteredAdmins.map((member) => (
@@ -1402,9 +1609,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{member.name}</td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.email}</td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
-                    <DeleteButton onClick={() => setAdminMembers((current) => current.filter((item) => item.id !== member.id))} />
-                  </td>
                 </tr>
               ))}
             </ManagementTable>
@@ -1563,15 +1767,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
       {openModal === "staff" && (
         <PersonModal
-          title="Add New Staff Member"
+          initialEmail={editingStaff?.email ?? ""}
+          initialName={editingStaff?.name ?? ""}
+          initialPositionId={editingStaff?.positionId ?? ""}
+          isSaving={isSavingStaff}
+          title={editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
           positions={positions}
-          onClose={() => setOpenModal(null)}
-          onSave={(payload) => {
-            setStaffMembers((current) => [
-              ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
-            ]);
+          onClose={() => {
+            setEditingStaff(null);
             setOpenModal(null);
+          }}
+          onSave={(payload) => {
+            void saveStaff(payload);
           }}
         />
       )}
@@ -1761,19 +1968,33 @@ function EditButton({
 }
 
 function PersonModal({
+  initialEmail = "",
+  initialName = "",
+  initialPositionId = "",
+  isSaving = false,
   title,
   positions,
   onSave,
   onClose,
 }: {
+  initialEmail?: string;
+  initialName?: string;
+  initialPositionId?: string;
+  isSaving?: boolean;
   title: string;
   positions?: PositionItem[];
   onSave: (payload: { name: string; email: string; positionId?: string }) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [positionId, setPositionId] = useState("");
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [positionId, setPositionId] = useState(initialPositionId);
+
+  useEffect(() => {
+    setName(initialName);
+    setEmail(initialEmail);
+    setPositionId(initialPositionId);
+  }, [initialEmail, initialName, initialPositionId]);
 
   return (
     <BaseModal title={title} onClose={onClose}>
@@ -1791,6 +2012,7 @@ function PersonModal({
             onChange={(event) => setName(event.target.value)}
             className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
             required
+            disabled={isSaving}
           />
         </ModalField>
 
@@ -1801,6 +2023,7 @@ function PersonModal({
             onChange={(event) => setEmail(event.target.value)}
             className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
             required
+            disabled={isSaving}
           />
         </ModalField>
 
@@ -1810,6 +2033,8 @@ function PersonModal({
               value={positionId}
               onChange={(event) => setPositionId(event.target.value)}
               className="interactive-input w-full rounded-xl border border-[#dfe5ef] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+              required
+              disabled={isSaving}
             >
               <option value="">{positions.length > 0 ? "No position assigned" : "Create a position first"}</option>
               {positions.map((position) => (
@@ -1826,7 +2051,11 @@ function PersonModal({
           </ModalField>
         )}
 
-        <ModalActions onClose={onClose} />
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : "Save"}
+        />
       </form>
     </BaseModal>
   );

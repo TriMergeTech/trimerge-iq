@@ -87,10 +87,6 @@ function getProjectsApiBaseUrl() {
   return process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() || DEFAULT_PROJECTS_API_BASE_URL;
 }
 
-function getChatApiOriginUrl() {
-  return getChatApiBaseUrl().replace(/\/+$/, "").replace(/\/v2$/, "");
-}
-
 function buildChatApiUrl(path: string) {
   return `${getChatApiBaseUrl().replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }
@@ -471,10 +467,17 @@ export async function fetchMessages(conversationId: ChatEntityId, page = 1, limi
 export async function createShareLink(conversationId: ChatEntityId) {
   const payload = await postJson<ApiShareLinkResponse>("/share_link", {
     conversation: conversationId,
-    base_url: getChatApiOriginUrl(),
+    base_url: typeof window !== "undefined" ? window.location.origin : "",
   });
 
-  return payload?.share_link ?? payload?.share_url ?? payload?.link ?? payload?.url ?? "";
+  const apiShareLink = payload?.share_link ?? payload?.share_url ?? payload?.link ?? payload?.url ?? "";
+  const shareId = apiShareLink.match(/\/share\/([^/?#]+)/)?.[1];
+
+  if (shareId && typeof window !== "undefined") {
+    return `${window.location.origin}/chat?share=${encodeURIComponent(shareId)}`;
+  }
+
+  return apiShareLink;
 }
 
 export async function fetchProjects() {
@@ -504,7 +507,7 @@ export async function fetchProjectFormOptions() {
   const [clientsResult, servicesResult, usersResult, currentUserResult] = await Promise.allSettled([
     projectsApiRequest<unknown>("/clients"),
     projectsApiRequest<unknown>("/services"),
-    projectsApiRequest<unknown>("/auth/admin/users"),
+    projectsApiRequest<unknown>("/staff"),
     projectsApiRequest<unknown>("/auth/me"),
   ]);
 
@@ -518,7 +521,7 @@ export async function fetchProjectFormOptions() {
       : [];
   const staffFromUsers =
     usersResult.status === "fulfilled"
-      ? extractLookupRecords(usersResult.value, ["users", "user"])
+      ? extractLookupRecords(usersResult.value, ["staff", "staffs", "members", "user"])
           .filter((record) => {
             const role = (record.profile ?? record.role ?? "").toLowerCase();
             return role !== "client";
