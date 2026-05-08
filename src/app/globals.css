@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,6 +31,135 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+  font-family: "Bricolage Grotesque", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.section-title {
+  position: relative;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: #2e2bff;
+}
+
+.star {
+  position: absolute;
+  top: -40px;
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.star.shape-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #cfd6ff;
+  box-shadow: 0 0 6px 1px rgb(180 200 255 / 0.8);
+}
+
+.star.shape-streak {
+  width: 2px;
+  height: 60px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgb(180 200 255 / 0) 0%,
+    rgb(180 200 255 / 0.9) 60%,
+    #fff 100%
+  );
+  filter: drop-shadow(0 0 4px rgb(120 160 255 / 0.8));
+  opacity: 0.85;
+}
+
+.star.shape-spark {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    #fff 0%,
+    rgb(255 255 255 / 0.6) 35%,
+    rgb(255 255 255 / 0) 70%
+  );
+}
+
+.star.shape-dot.tint-cyan {
+  background: #9be7ff;
+  box-shadow: 0 0 8px 1px rgb(43 197 255 / 0.9);
+}
+
+.star.shape-dot.tint-violet {
+  background: #c8b6ff;
+  box-shadow: 0 0 8px 1px rgb(124 92 255 / 0.9);
+}
+
+.star.shape-streak.tint-cyan {
+  background: linear-gradient(
+    180deg,
+    rgb(155 231 255 / 0) 0%,
+    rgb(155 231 255 / 0.9) 60%,
+    #fff 100%
+  );
+}
+
+.star.shape-streak.tint-violet {
+  background: linear-gradient(
+    180deg,
+    rgb(200 182 255 / 0) 0%,
+    rgb(200 182 255 / 0.9) 60%,
+    #fff 100%
+  );
+}
+
+.twinkle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.6;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10vh, 0) rotate(12deg);
+  }
+
+  8%,
+  92% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(40px, 110vh, 0) rotate(12deg);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.6);
+  }
 }
 
 button,
