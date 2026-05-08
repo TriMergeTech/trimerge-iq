@@ -206,7 +206,7 @@ const swaggerSpec = {
                   name: { type: 'string', example: 'Senior Accountant' },
                   description: { type: 'string', example: 'Handles financial reporting' },
                   responsibility: { type: 'array', items: { type: 'string' }, example: ['Prepare reports', 'Review audits'] },
-                  skills: { type: 'array', items: { type: 'string' }, example: ['Excel', 'GAAP'] },
+                  skills: { type: 'array', items: { type: 'string' }, example: ['skill-_id-1', 'skill-_id-2'] },
                 },
               },
             },
@@ -324,7 +324,7 @@ const swaggerSpec = {
                 properties: {
                   title: { type: 'string', example: 'Tax Consulting' },
                   descriptions: { type: 'string', example: 'End-to-end tax advisory service' },
-                  skills: { type: 'array', items: { type: 'string' }, example: ['Tax Law', 'IFRS'] },
+                  skills: { type: 'array', items: { type: 'string' }, example: ['skill-_id-1', 'skill-_id-2'] },
                 },
               },
             },

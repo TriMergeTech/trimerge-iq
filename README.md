@@ -237,7 +237,7 @@ Response `200`: `{ "access_token": "...", "refresh_token": "..." }`
   "name": "Senior Accountant",
   "description": "Handles financial reporting",
   "responsibility": ["Prepare reports", "Review audits"],
-  "skills": ["Excel", "GAAP"]
+  "skills": ["<skill _id>", "<skill _id>"]
 }
 ```
 Response `201`: returns the created document with `_id`.
@@ -249,7 +249,7 @@ Response `201`: returns the created document with `_id`.
 {
   "title": "Tax Consulting",
   "descriptions": "End-to-end tax advisory",
-  "skills": ["Tax Law", "IFRS"]
+  "skills": ["<skill _id>", "<skill _id>"]
 }
 ```
 Response `201`: returns the created document with `_id`.
