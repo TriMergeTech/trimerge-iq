@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { BarChart3, Monitor, Pin, ShieldCheck } from "lucide-react";
 
 import type { ChatEntityId, Conversation, Project } from "./chatPageTypes";
 
@@ -8,6 +9,7 @@ interface ProjectHomePanelProps {
   composer: ReactNode;
   onOpenConversation: (conversationId: ChatEntityId) => void;
   onProjectHomeTabChange: (tab: "chats" | "sources") => void;
+  onSuggestedPrompt: (prompt: string) => void;
   projectHomeTab: "chats" | "sources";
   projectRecentConversations: Conversation[];
   selectedProject: Project | null;
@@ -17,21 +19,75 @@ export default function ProjectHomePanel({
   composer,
   onOpenConversation,
   onProjectHomeTabChange,
+  onSuggestedPrompt,
   projectHomeTab,
   projectRecentConversations,
   selectedProject,
 }: ProjectHomePanelProps) {
+  const promptCards = [
+    {
+      icon: BarChart3,
+      title: "Draft a strategy memo",
+      caption: "Outline a quarterly plan from your latest goals doc.",
+      prompt: "Draft a strategy memo with a quarterly plan based on our latest goals.",
+    },
+    {
+      icon: Monitor,
+      title: "Audit a tech stack",
+      caption: "Find gaps and quick wins for digital transformation.",
+      prompt: "Audit this tech stack and identify gaps, risks, and quick wins for digital transformation.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Optimize a workflow",
+      caption: "Cut waste from your ops process in three steps.",
+      prompt: "Optimize this workflow and recommend three practical steps to reduce waste.",
+    },
+  ];
+
   return (
-    <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
-      <div className="flex w-full max-w-[1200px] flex-col items-center justify-center text-center">
-        <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">
+    <div className="chat-scrollbar relative z-10 flex min-h-0 flex-1 overflow-y-auto px-6 py-10 lg:px-12">
+      <div className="mx-auto flex w-full max-w-[980px] flex-col items-center justify-center text-center">
+        <p className="mb-5 inline-flex items-center gap-2 font-sans text-xs font-semibold uppercase tracking-[0.32em] text-[#a78bfa] before:h-1.5 before:w-1.5 before:rounded-full before:bg-[#2bc5ff] before:shadow-[0_0_8px_#2bc5ff]">
           {selectedProject?.name ?? "Workspace"}
         </p>
-        <p className="text-3xl font-light tracking-tight text-white/92 md:text-4xl">
-          {selectedProject ? `Ready to chat inside ${selectedProject.name}.` : "Ready when you are."}
+        <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-normal text-white md:text-5xl">
+          {selectedProject ? (
+            <>
+              Ready inside <span className="bg-gradient-to-r from-[#7c5cff] via-[#4f7bff] to-[#2bc5ff] bg-clip-text text-transparent">{selectedProject.name}.</span>
+            </>
+          ) : (
+            <>
+              Ready when <span className="bg-gradient-to-r from-[#7c5cff] via-[#4f7bff] to-[#2bc5ff] bg-clip-text text-transparent">you are.</span>
+            </>
+          )}
+        </h1>
+        <p className="mt-4 max-w-[560px] font-sans text-base leading-7 text-[#7a80a3]">
+          Ask anything about strategy, transformation, or operations. TriMerge AI is plugged into your workspace.
         </p>
 
-        <div className="mt-10 w-full max-w-[980px]">{composer}</div>
+        <div className="mt-9 grid w-full grid-cols-1 gap-3 md:grid-cols-3">
+          {promptCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <button
+                key={card.title}
+                type="button"
+                onClick={() => onSuggestedPrompt(card.prompt)}
+                className="interactive-button rounded-[14px] border border-white/[0.13] bg-white/[0.03] p-[18px] text-left hover:border-[#7c5cff]/35 hover:bg-[#7c5cff]/10 hover:shadow-[0_12px_32px_rgba(124,92,255,0.15)]"
+              >
+                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#7c5cff]/15 text-[#a78bfa]">
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="block font-display text-[15px] font-semibold text-white">{card.title}</span>
+                <span className="mt-1 block font-sans text-[13px] leading-5 text-[#7a80a3]">{card.caption}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-9 w-full max-w-[900px]">{composer}</div>
 
         {selectedProject && (
           <div className="mt-12 w-full max-w-[980px] text-left">
@@ -64,7 +120,7 @@ export default function ProjectHomePanel({
                     >
                       <div className="min-w-0">
                         <p className="truncate text-lg font-medium text-white/92">
-                          {conversation.pinned ? "📌 " : ""}
+                          {conversation.pinned && <Pin className="mr-2 inline h-4 w-4 text-[#a78bfa]" />}
                           {conversation.title}
                         </p>
                         <p className="mt-1 text-sm text-white/40">{conversation.messages.length} messages</p>

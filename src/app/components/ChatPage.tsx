@@ -22,6 +22,18 @@ import { formatFileSize } from "./chatPageUtils";
 import { useConversationActions } from "./useConversationActions";
 import { useProjectActions } from "./useProjectActions";
 
+const CHAT_PARTICLES = Array.from({ length: 40 }, (_, index) => {
+  const shapes = ["dot", "dot", "dot", "streak", "cyan-dot"] as const;
+  const duration = 6 + ((index * 7) % 10);
+  return {
+    delay: -((index * 1.7) % duration),
+    duration,
+    height: 30 + ((index * 11) % 40),
+    left: (index * 37) % 100,
+    shape: shapes[index % shapes.length],
+  };
+});
+
 export default function ChatPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -680,10 +692,11 @@ export default function ChatPage() {
     setIsWorkspaceMenuOpen,
     setLastChatError,
     setOpenConversationMenuId,
+    setSelectedProjectId,
   });
 
   return (
-    <section className="relative h-[calc(100vh-81px)] overflow-hidden bg-gradient-to-br from-slate-950 via-[#0d1f3a] to-slate-950 text-white">
+    <section className="relative h-[calc(100vh-105px)] overflow-hidden bg-[#070c2b] font-display text-white lg:h-[calc(100vh-89px)]">
       {isCreateProjectModalOpen && (
         <CreateProjectModal
           clientOptions={projectClientOptions}
@@ -747,20 +760,14 @@ export default function ChatPage() {
         />
       )}
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-9rem] top-12 h-80 w-80 rounded-full bg-[#d4af37]/[0.08] blur-3xl" />
-        <div className="absolute right-[-5rem] top-0 h-[28rem] w-[28rem] rounded-full bg-[#1e5ba8]/[0.14] blur-3xl" />
-        <div className="absolute bottom-[-10rem] left-1/3 h-[24rem] w-[24rem] rounded-full bg-cyan-300/[0.06] blur-3xl" />
-      </div>
-
-      <div className="relative flex h-full w-full">
-        <aside className={`chat-scrollbar relative h-full shrink-0 overflow-y-scroll border-r border-white/[0.07] bg-[linear-gradient(180deg,rgba(12,18,30,0.98)_0%,rgba(8,13,22,0.96)_48%,rgba(7,11,18,0.98)_100%)] shadow-[inset_-1px_0_0_rgba(212,175,55,0.10),12px_0_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition-[width] duration-300 before:pointer-events-none before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-[linear-gradient(180deg,transparent,rgba(212,175,55,0.32),transparent)] ${isSidebarOpen ? "w-[290px]" : "w-[76px]"}`}>
-          <div className="border-b border-white/[0.07] bg-white/[0.015] px-5 py-6 shadow-[inset_0_-1px_0_rgba(212,175,55,0.06)]">
+      <div className="relative grid h-full min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-[300px_1fr]">
+        <aside className={`relative hidden h-full min-h-0 shrink-0 overflow-hidden border-r border-white/[0.07] bg-[#0d1240] px-[18px] py-[22px] lg:flex lg:flex-col ${isSidebarOpen ? "" : "lg:w-[76px] lg:px-4"}`}>
+          <div className="shrink-0 space-y-[18px]">
             <div className="mb-4 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen((current) => !current)}
-                className="interactive-button rounded-full border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-[#f2e7bb] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(0,0,0,0.20)] hover:border-[#d4af37]/38 hover:bg-white/[0.075]"
+                className="interactive-button grid h-9 w-9 place-items-center rounded-lg border border-white/[0.13] bg-transparent text-[#7a80a3] hover:bg-white/[0.04] hover:text-white"
                 aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
                 title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
               >
@@ -772,42 +779,42 @@ export default function ChatPage() {
               </button>
             </div>
 
-            <button type="button" onClick={() => { setSidebarConversationView("active"); startNewChat(); }} className={`interactive-button flex w-full items-center rounded-[18px] border border-[#d4af37]/26 bg-[linear-gradient(180deg,rgba(23,38,63,0.92),rgba(10,16,27,0.88))] py-3.5 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_14px_34px_rgba(0,0,0,0.20)] hover:border-[#d4af37]/42 hover:bg-[linear-gradient(180deg,rgba(28,47,78,0.96),rgba(12,20,34,0.92))] ${isSidebarOpen ? "gap-3 px-4" : "justify-center px-0"}`}>
-              <MessageSquarePlus className="h-5 w-5 text-[#d4af37]" />
-              {isSidebarOpen && <span className="font-medium">New chat</span>}
+            <button type="button" onClick={() => { setSidebarConversationView("active"); startNewChat(); }} className={`interactive-button flex w-full items-center rounded-xl border border-transparent bg-[#2e2bff] py-3.5 text-left font-bold text-white shadow-[0_8px_22px_rgba(46,43,255,0.30)] hover:bg-[#2120e0] ${isSidebarOpen ? "gap-3 px-[18px]" : "justify-center px-0"}`}>
+              <MessageSquarePlus className="h-[18px] w-[18px]" />
+              {isSidebarOpen && <span className="font-display text-[15px]">New chat</span>}
             </button>
             {isSidebarOpen ? (
               <div className="relative mt-4">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#d4af37]/58" />
-                <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className="interactive-input w-full rounded-[18px] border border-white/[0.08] bg-black/[0.18] py-3.5 pl-11 pr-4 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_-1px_0_rgba(0,0,0,0.20)] outline-none placeholder:text-[#c5c9d3]/40 focus:border-[#d4af37]/42 focus:bg-[#101827]/75 focus:ring-2 focus:ring-[#d4af37]/10" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a80a3]" />
+                <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className="interactive-input w-full rounded-[10px] border border-white/[0.13] bg-white/[0.03] py-3 pl-10 pr-3.5 font-sans text-sm text-[#e6e9f5] outline-none placeholder:text-[#7a80a3] focus:border-[#7c5cff] focus:ring-2 focus:ring-[#7c5cff]/20" />
               </div>
             ) : (
-              <button type="button" aria-label="Search chats" className="interactive-button mt-4 flex w-full items-center justify-center rounded-[18px] border border-white/[0.08] bg-black/[0.18] py-3.5 text-[#d4af37]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-[#d4af37]/36 hover:bg-white/[0.06]">
+              <button type="button" aria-label="Search chats" className="interactive-button mt-4 flex w-full items-center justify-center rounded-[10px] border border-white/[0.13] bg-white/[0.03] py-3.5 text-[#7a80a3] hover:bg-white/[0.06] hover:text-white">
                 <Search className="h-5 w-5" />
               </button>
             )}
           </div>
 
-          <div className="flex-1 px-4 py-5">
+          <div className="chat-scrollbar mt-[18px] min-h-0 flex-1 overflow-y-auto pr-1">
             {isSidebarOpen && (
               <div className="relative mb-5" ref={projectMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsProjectMenuOpen((current) => !current)}
-                  className="interactive-button flex w-full items-center justify-between rounded-[16px] border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-left text-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:border-white/[0.11] hover:bg-white/[0.055]"
+                  className="interactive-button flex w-full items-center justify-between rounded-[10px] border border-white/[0.13] bg-white/[0.03] px-4 py-3.5 text-left text-[15px] font-semibold text-[#e6e9f5] hover:border-white/[0.22]"
                 >
                   <span className="text-sm font-medium">Project</span>
-                  <ChevronDown className={`h-4 w-4 text-white/55 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-3.5 w-3.5 text-[#e6e9f5]/65 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isProjectMenuOpen && (
                   <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-20 rounded-[20px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
                     <button type="button" onClick={openCreateProjectModal} className="interactive-button flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-left text-white hover:bg-white/[0.06]">
                       <span className="flex items-center gap-3">
-                        <Sparkles className="h-4 w-4 text-[#d4af37]" />
+                        <Sparkles className="h-4 w-4 text-[#a78bfa]" />
                         <span className="text-sm font-medium">Create new project</span>
                       </span>
-                      <Plus className="h-4 w-4 text-[#d4af37]" />
+                      <Plus className="h-4 w-4 text-[#a78bfa]" />
                     </button>
                     <div className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/60">Recent projects</div>
                     {recentProjects.map((project) => (
@@ -863,28 +870,28 @@ export default function ChatPage() {
                   onClick={() => setSidebarConversationView((current) => (current === "archived" ? "active" : "archived"))}
                   className={`interactive-button flex w-full items-center justify-between rounded-[16px] border px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition ${
                     sidebarConversationView === "archived"
-                      ? "border-[#d4af37]/24 bg-white/[0.075] text-white"
-                      : "border-transparent bg-transparent text-[#d8dbe3]/66 hover:bg-white/[0.045] hover:text-white/88"
+                      ? "border-[#7c5cff]/30 bg-white/[0.075] text-white"
+                      : "border-transparent bg-transparent text-[#e6e9f5]/70 hover:bg-white/[0.045] hover:text-white"
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <ArchiveIcon className="h-4 w-4 shrink-0 text-[#d4af37]/70" />
+                    <ArchiveIcon className="h-4 w-4 shrink-0 text-[#a78bfa]" />
                     <span className="truncate text-sm font-medium">Archived</span>
                   </span>
-                  <span className="rounded-full border border-white/[0.08] bg-black/[0.18] px-2 py-0.5 text-[11px] font-semibold text-[#f0d98a]/70">
+                  <span className="rounded-full bg-white/[0.06] px-2 py-0.5 font-sans text-[11px] font-semibold text-[#7a80a3]">
                     {archivedSidebarConversations.length}
                   </span>
                 </button>
 
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/60">
+                  <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a78bfa]">
                     {sidebarConversationView === "archived" ? "Archived" : "Recents"}
                   </p>
                   {sidebarConversationView === "archived" && (
                     <button
                       type="button"
                       onClick={() => setSidebarConversationView("active")}
-                      className="interactive-button rounded-full px-2 py-1 text-[11px] font-semibold text-[#d8dbe3]/54 hover:bg-white/[0.04] hover:text-white/82"
+                      className="interactive-button rounded-full px-2 py-1 text-[11px] font-semibold text-[#e6e9f5]/54 hover:bg-white/[0.04] hover:text-white"
                     >
                       Recents
                     </button>
@@ -894,31 +901,31 @@ export default function ChatPage() {
             )}
             {isSidebarOpen && <div className="space-y-2">
               {isLoadingChatData && (
-                <div className="rounded-2xl border border-dashed border-[#d4af37]/26 bg-[#0f1726]/70 px-4 py-6 text-sm text-[#d8dbe3]/48">
+                <div className="rounded-[10px] border border-dashed border-white/[0.13] bg-white/[0.03] px-4 py-6 font-sans text-sm text-[#7a80a3]">
                   Loading conversations...
                 </div>
               )}
               {visibleSidebarConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 return (
-                  <div key={conversation.id} className={`group relative rounded-[18px] ${isActive ? "border border-[#d4af37]/18 bg-[linear-gradient(180deg,rgba(212,175,55,0.095),rgba(18,23,34,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_16px_34px_rgba(0,0,0,0.18)]" : ""}`}>
+                  <div key={conversation.id} className={`group relative rounded-[14px] ${isActive ? "border border-[#7c5cff]/28 bg-[#7c5cff]/10 shadow-[0_12px_32px_rgba(124,92,255,0.15)]" : ""}`}>
                     <button type="button" onClick={() => { setSelectedProjectId(conversation.projectId); setActiveConversationId(conversation.id); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); }} className={`interactive-button flex w-full items-start gap-3 rounded-[18px] px-4 py-3.5 pr-12 text-left ${isActive ? "" : "hover:bg-white/[0.04]"}`}>
-                      {sidebarConversationView === "archived" ? <ArchiveIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#d4af37]/70" /> : <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#d4af37]/70" />}
+                      {sidebarConversationView === "archived" ? <ArchiveIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#a78bfa]" /> : <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#a78bfa]" />}
                       {isSidebarOpen && (
                         <div className="min-w-0">
                           <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-white/90">
-                            {conversation.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#d4af37]" />}
+                            {conversation.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#a78bfa]" />}
                             <span className="truncate">{conversation.title}</span>
                           </p>
-                          {sidebarConversationView === "archived" && conversation.projectName && <p className="mt-1 truncate text-xs text-[#f0d98a]/52">{conversation.projectName}</p>}
-                          <p className="mt-1 text-xs text-[#d8dbe3]/42">{conversation.updatedAt.toLocaleDateString()}</p>
+                          {sidebarConversationView === "archived" && conversation.projectName && <p className="mt-1 truncate text-xs text-[#a78bfa]/70">{conversation.projectName}</p>}
+                          <p className="mt-1 font-sans text-xs text-[#7a80a3]">{conversation.updatedAt.toLocaleDateString()}</p>
                         </div>
                       )}
                     </button>
 
                     {isSidebarOpen && (
                     <div className="absolute right-2 top-2" ref={openConversationMenuId === conversation.id ? conversationMenuRef : undefined}>
-                      <button type="button" aria-label="Conversation options" onClick={() => setOpenConversationMenuId((current) => current === conversation.id ? null : conversation.id)} className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full text-[#f2e7bb]/80 ${openConversationMenuId === conversation.id ? "border border-[#d4af37]/24 bg-white/[0.08]" : "opacity-0 group-hover:opacity-100 hover:bg-white/[0.06]"}`}>
+                      <button type="button" aria-label="Conversation options" onClick={() => setOpenConversationMenuId((current) => current === conversation.id ? null : conversation.id)} className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full text-[#e6e9f5]/80 ${openConversationMenuId === conversation.id ? "border border-[#7c5cff]/24 bg-white/[0.08]" : "opacity-0 group-hover:opacity-100 hover:bg-white/[0.06]"}`}>
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
 
@@ -941,14 +948,28 @@ export default function ChatPage() {
                 );
               })}
 
-              {isSidebarOpen && !isLoadingChatData && visibleSidebarConversations.length === 0 && <div className="rounded-[18px] border border-dashed border-white/[0.08] bg-white/[0.025] px-4 py-6 text-sm text-[#d8dbe3]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
+              {isSidebarOpen && !isLoadingChatData && visibleSidebarConversations.length === 0 && <div className="rounded-[10px] border border-dashed border-white/[0.13] bg-white/[0.03] px-4 py-4 font-sans text-[13px] leading-5 text-[#7a80a3]">{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
             </div>}
           </div>
 
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(30,91,168,0.18),transparent_28%),linear-gradient(180deg,#11161f_0%,#0c1118_100%)]">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(ellipse_60%_50%_at_50%_30%,rgba(124,92,255,0.22)_0%,transparent_70%),radial-gradient(ellipse_80%_60%_at_100%_100%,rgba(43,197,255,0.10)_0%,transparent_60%),radial-gradient(ellipse_50%_40%_at_0%_80%,rgba(46,43,255,0.14)_0%,transparent_60%),#070c2b]">
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+            {CHAT_PARTICLES.map((particle, index) => (
+              <span
+                key={index}
+                className={`chat-star ${particle.shape}`}
+                style={{
+                  animationDelay: `${particle.delay}s`,
+                  animationDuration: `${particle.duration}s`,
+                  height: particle.shape === "streak" ? `${particle.height}px` : undefined,
+                  left: `${particle.left}%`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
             {lastChatError && (
               <div className="px-8 pt-5 lg:px-16 xl:px-20">
                 <div className="mx-auto max-w-[1480px] rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -982,7 +1003,7 @@ export default function ChatPage() {
                     fileInputRef={fileInputRef}
                     imageInputRef={imageInputRef}
                     inputMessage={inputMessage}
-                    inputTextClassName="min-w-0 flex-1 bg-transparent px-2 py-3 text-[17px] font-light text-white outline-none placeholder:text-[#d8dbe3]/36"
+                    inputTextClassName="min-w-0 flex-1 bg-transparent px-1.5 py-3 font-sans text-base text-[#e6e9f5] outline-none placeholder:text-[#7a80a3]"
                     isAttachmentMenuOpen={isAttachmentMenuOpen}
                     isTyping={isTyping}
                     onFileSelect={handleFileSelect}
@@ -993,6 +1014,7 @@ export default function ChatPage() {
                 }
                 onOpenConversation={setActiveConversationId}
                 onProjectHomeTabChange={setProjectHomeTab}
+                onSuggestedPrompt={setInputMessage}
                 projectHomeTab={projectHomeTab}
                 projectRecentConversations={projectRecentConversations}
                 selectedProject={selectedProject}
@@ -1003,7 +1025,7 @@ export default function ChatPage() {
               <div className="px-6 pb-3 lg:px-12">
                 <div className="mx-auto flex max-w-[1160px] flex-wrap gap-2">
                   {attachedFiles.map((file) => (
-                    <div key={file.name} className="flex items-center gap-2 rounded-2xl border border-[#d4af37]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
+                    <div key={file.name} className="flex items-center gap-2 rounded-xl border border-[#7c5cff]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
                       {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                       <span className="max-w-[160px] truncate text-sm">{file.name}</span>
                       <button type="button" onClick={() => setAttachedFiles((current) => current.filter((item) => item.name !== file.name))} className="interactive-button rounded-full p-1 hover:bg-[#d4af37]/12"><X className="h-3 w-3" /></button>
@@ -1014,7 +1036,7 @@ export default function ChatPage() {
             )}
 
             {activeConversation && (
-              <div className="border-t border-[#d4af37]/18 bg-[#0c1118]/95 px-8 pb-8 pt-5 lg:px-16 xl:px-20 backdrop-blur-xl">
+              <div className="border-t border-white/[0.13] bg-[#070c2b]/80 px-6 pb-8 pt-5 backdrop-blur-xl lg:px-12 xl:px-16">
               <div className="mx-auto max-w-[1480px]">
                 <ChatComposer
                   attachedFiles={attachedFiles}
@@ -1022,7 +1044,7 @@ export default function ChatPage() {
                   fileInputRef={fileInputRef}
                   imageInputRef={imageInputRef}
                   inputMessage={inputMessage}
-                  inputTextClassName="min-w-0 flex-1 bg-transparent px-2 py-3 text-[21px] font-light text-white outline-none placeholder:text-[#d8dbe3]/36"
+                  inputTextClassName="min-w-0 flex-1 bg-transparent px-1.5 py-3 font-sans text-base text-[#e6e9f5] outline-none placeholder:text-[#7a80a3]"
                   isAttachmentMenuOpen={isAttachmentMenuOpen}
                   isTyping={isTyping}
                   onFileSelect={handleFileSelect}

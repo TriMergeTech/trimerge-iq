@@ -46,7 +46,7 @@ export default function ChatComposer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="group relative rounded-[30px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(18,25,38,0.90),rgba(10,15,23,0.94))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),inset_0_-1px_0_rgba(0,0,0,0.24),0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition focus-within:border-[#d4af37]/34 focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.30)]"
+      className="group relative"
     >
       <input
         ref={fileInputRef}
@@ -65,10 +65,10 @@ export default function ChatComposer({
         onChange={onFileSelect}
       />
 
-      <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.055] bg-black/[0.10] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition group-focus-within:border-white/[0.09] group-focus-within:bg-black/[0.14]">
+      <div className="mx-auto flex items-center gap-3 rounded-2xl border border-white/[0.13] bg-white/[0.04] px-3 py-2.5 shadow-none backdrop-blur-lg transition group-focus-within:border-[#7c5cff] group-focus-within:shadow-[0_0_0_4px_rgba(124,92,255,0.28)]">
         <div className="relative" ref={attachmentMenuRef}>
           {isAttachmentMenuOpen && (
-            <div className="absolute bottom-[calc(100%+14px)] left-0 z-20 w-64 rounded-3xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+            <div className="absolute bottom-[calc(100%+14px)] left-0 z-20 w-64 rounded-2xl border border-white/[0.13] bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
               <SidebarAction
                 icon={<ImageIcon className="h-5 w-5" />}
                 label="Upload photos"
@@ -102,9 +102,9 @@ export default function ChatComposer({
           <button
             type="button"
             onClick={() => setIsAttachmentMenuOpen((current) => !current)}
-            className={`interactive-button flex h-11 w-11 items-center justify-center rounded-full border text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] ${isAttachmentMenuOpen ? "border-[#d4af37]/42 bg-white/[0.08]" : "border-white/[0.075] bg-white/[0.035] hover:border-[#d4af37]/26 hover:bg-white/[0.07]"}`}
+            className={`interactive-button flex h-10 w-10 items-center justify-center rounded-full border text-[#e6e9f5] shadow-none ${isAttachmentMenuOpen ? "border-[#7c5cff]/42 bg-[#7c5cff]/15 text-[#a78bfa]" : "border-white/[0.13] bg-white/[0.05] hover:border-[#7c5cff]/35 hover:bg-[#7c5cff]/15 hover:text-[#a78bfa]"}`}
           >
-            <Plus className={`h-6 w-6 transition-transform duration-300 ${isAttachmentMenuOpen ? "rotate-45" : ""}`} />
+            <Plus className={`h-[18px] w-[18px] transition-transform duration-300 ${isAttachmentMenuOpen ? "rotate-45" : ""}`} />
           </button>
         </div>
 
@@ -118,10 +118,13 @@ export default function ChatComposer({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="interactive-button flex h-12 w-12 items-center justify-center rounded-full border border-[#f1d46a]/24 bg-[linear-gradient(180deg,#e2be4b,#c79d22)] text-[#111214] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_28px_rgba(212,175,55,0.26)] hover:bg-[linear-gradient(180deg,#edcb62,#d4af37)] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-none disabled:bg-white/[0.07] disabled:text-white/32 disabled:shadow-none"
+          className="interactive-button flex h-11 w-11 items-center justify-center rounded-xl border border-transparent bg-[#2e2bff] text-white shadow-[0_8px_20px_rgba(46,43,255,0.35)] hover:bg-[#2120e0] hover:shadow-[0_12px_28px_rgba(46,43,255,0.45)] disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/32 disabled:shadow-none"
         >
-          <Send className="h-5 w-5" />
+          <Send className="h-[18px] w-[18px]" />
         </button>
+      </div>
+      <div className="mt-3 text-center font-sans text-xs text-[#7a80a3]">
+        Press <kbd className="rounded border border-white/[0.13] bg-white/[0.06] px-1.5 py-px text-[11px] text-[#e6e9f5]">Enter</kbd> to send
       </div>
     </form>
   );
@@ -141,9 +144,9 @@ function SidebarAction({
     <button
       type="button"
       onClick={onClick}
-      className="interactive-button flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white hover:bg-[#162235]"
+      className="interactive-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-white hover:bg-[#162235]"
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d4af37]/18 bg-[#101827] text-[#f2e7bb]">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#7c5cff]/25 bg-[#101827] text-[#a78bfa]">
         {icon}
       </span>
       <span>

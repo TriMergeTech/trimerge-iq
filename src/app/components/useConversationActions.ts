@@ -31,6 +31,7 @@ interface UseConversationActionsProps {
   setIsWorkspaceMenuOpen: Dispatch<SetStateAction<boolean>>;
   setLastChatError: Dispatch<SetStateAction<string>>;
   setOpenConversationMenuId: Dispatch<SetStateAction<ChatEntityId | null>>;
+  setSelectedProjectId: Dispatch<SetStateAction<ChatEntityId | null>>;
 }
 
 export function useConversationActions({
@@ -49,6 +50,7 @@ export function useConversationActions({
   setIsWorkspaceMenuOpen,
   setLastChatError,
   setOpenConversationMenuId,
+  setSelectedProjectId,
 }: UseConversationActionsProps) {
   const updateConversation = (
     conversationId: ChatEntityId,
@@ -62,6 +64,7 @@ export function useConversationActions({
   };
 
   const startNewChat = () => {
+    setSelectedProjectId(null);
     setActiveConversationId(null);
     setInputMessage("");
     setAttachedFiles([]);

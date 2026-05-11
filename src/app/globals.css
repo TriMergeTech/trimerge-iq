@@ -364,6 +364,56 @@ textarea {
   background-clip: padding-box;
 }
 
+.chat-star {
+  position: absolute;
+  top: -40px;
+  animation-name: cfall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.chat-star.dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: #c8b6ff;
+  box-shadow: 0 0 5px 1px rgb(200 182 255 / 0.7);
+}
+
+.chat-star.streak {
+  width: 1px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(200 182 255 / 0) 0%, rgb(200 182 255 / 0.8) 60%, #fff 100%);
+  filter: drop-shadow(0 0 3px rgb(124 92 255 / 0.7));
+  opacity: 0.55;
+}
+
+.chat-star.cyan-dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: #9be7ff;
+  box-shadow: 0 0 6px 1px rgb(43 197 255 / 0.8);
+}
+
+@keyframes cfall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -5vh, 0);
+  }
+
+  8%,
+  92% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(20px, 105vh, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

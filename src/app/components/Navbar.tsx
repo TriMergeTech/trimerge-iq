@@ -14,14 +14,14 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="z-40 bg-white page-section">
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-5 py-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-14">
+    <nav className="z-40 border-b border-[#e6e8f1] bg-white page-section">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-14 lg:py-[22px]">
         <Link
           href="/"
           className="interactive-base flex items-center gap-3 text-left"
           aria-label="TriMerge Consulting Group home"
         >
-          <svg className="h-16 w-16 shrink-0" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <svg className="h-11 w-11 shrink-0" viewBox="0 0 64 64" fill="none" aria-hidden="true">
             <path
               d="M9 52 32 10 55 52H9Z"
               fill="white"
@@ -32,11 +32,11 @@ export default function Navbar() {
             <path d="M20 50 32 27 44 50H20Z" fill="#efb01a" />
           </svg>
           <div className="leading-none">
-            <div className="text-[42px] font-extrabold tracking-normal sm:text-[48px]">
+            <div className="text-[26px] font-extrabold tracking-normal">
               <span className="text-[#1f2858]">Tri</span>
               <span className="text-[#efb01a]">Merge</span>
             </div>
-            <div className="mt-2 font-sans text-[15px] font-semibold uppercase tracking-[0.38em] text-[#7a82a6] sm:text-[17px]">
+            <div className="mt-1 font-sans text-[9px] font-semibold uppercase tracking-[0.32em] text-[#7a82a6]">
               Consulting Group
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 data-active={isActive}
-                className={`interactive-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-[15px] font-semibold ${
+                className={`interactive-button inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-[15px] font-medium ${
                   isActive
                     ? "bg-[#2e2bff] text-white shadow-md shadow-indigo-500/20"
                     : "text-[#1f2858] hover:bg-[#f3f4f9]"
