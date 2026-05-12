@@ -1,169 +1,426 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Navbar from "./Navbar";
+import { useMemo } from "react";
+import styles from "./HomePage.module.css";
 
 const services = [
   {
     title: "Strategy Consulting",
     description:
       "Transform your business with data-driven strategies and actionable insights.",
-    color: "#1e5ba8",
+    variant: "violet",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 20V10" />
+        <path d="M10 20V4" />
+        <path d="M16 20v-7" />
+        <path d="M22 20H2" />
+      </svg>
+    ),
   },
   {
     title: "Digital Transformation",
     description:
       "Navigate the digital landscape with cutting-edge technology solutions.",
-    color: "#d4af37",
+    variant: "violet",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="4" width="20" height="13" rx="2" />
+        <path d="M8 21h8" />
+        <path d="M12 17v4" />
+      </svg>
+    ),
   },
   {
     title: "Operational Excellence",
     description:
       "Optimize processes and maximize efficiency across your organization.",
-    color: "#808080",
+    variant: "lilac",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3Z" />
+      </svg>
+    ),
+  },
+] as const;
+
+const stats = [
+  {
+    value: "500+",
+    label: "Clients Served",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="8" r="3.2" />
+        <circle cx="17" cy="9" r="2.6" />
+        <path d="M3 19c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" />
+        <path d="M14 19c0-2.4 1.7-4.4 4-5" />
+      </svg>
+    ),
+  },
+  {
+    value: "98%",
+    label: "Client Satisfaction",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+        <path d="m12 3 2.7 5.7 6.3.9-4.5 4.4 1 6.3L12 17.5 6.5 20.3l1-6.3-4.5-4.4 6.3-.9L12 3Z" />
+      </svg>
+    ),
+  },
+  {
+    value: "25+",
+    label: "Years Experience",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+        <path d="M3 13h18" />
+      </svg>
+    ),
+  },
+  {
+    value: "150+",
+    label: "Expert Consultants",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+      </svg>
+    ),
   },
 ];
 
-const stats = [
-  { value: "500+", label: "Clients Served" },
-  { value: "98%", label: "Client Satisfaction" },
-  { value: "25+", label: "Years Experience" },
-  { value: "150+", label: "Expert Consultants" },
-];
+type Dot = { x: number; y: number; opacity: number };
+
+function createDotWave(options: {
+  rows: number;
+  cols: number;
+  dx: number;
+  dy: number;
+  amp: number;
+  freq: number;
+  phase: number;
+  opacity: number;
+}): Dot[] {
+  const dots: Dot[] = [];
+  for (let r = 0; r < options.rows; r += 1) {
+    for (let c = 0; c < options.cols; c += 1) {
+      const x = c * options.dx;
+      const y = r * options.dy + Math.sin((c / options.cols) * Math.PI * options.freq + options.phase) * options.amp;
+      const opacity = options.opacity * (0.4 + 0.6 * (1 - r / options.rows));
+      dots.push({ x, y, opacity });
+    }
+  }
+  return dots;
+}
+
+function rng(seed: number) {
+  let state = seed % 2147483647;
+  if (state <= 0) {
+    state += 2147483646;
+  }
+
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
+}
+
+type StarShape = "shapeDot" | "shapeStreak" | "shapeSpark";
+type StarTint = "" | "tintCyan" | "tintViolet";
+
+type SkyStar = {
+  left: string;
+  duration: string;
+  delay: string;
+  shape: StarShape;
+  tint: StarTint;
+  height?: string;
+  width?: string;
+  opacity?: string;
+};
+
+type Twinkle = {
+  left: string;
+  top: string;
+  delay: string;
+  duration: string;
+};
+
+function createSky() {
+  const rand = rng(1729);
+  const twinkles: Twinkle[] = [];
+  for (let i = 0; i < 60; i += 1) {
+    twinkles.push({
+      left: `${(rand() * 100).toFixed(2)}%`,
+      top: `${(rand() * 100).toFixed(2)}%`,
+      delay: `${(rand() * 3).toFixed(2)}s`,
+      duration: `${(2 + rand() * 3).toFixed(2)}s`,
+    });
+  }
+
+  const shapes: StarShape[] = ["shapeDot", "shapeDot", "shapeDot", "shapeStreak", "shapeSpark"];
+  const tints: StarTint[] = ["", "", "tintCyan", "tintViolet"];
+  const stars: SkyStar[] = [];
+  for (let i = 0; i < 70; i += 1) {
+    const shape = shapes[Math.floor(rand() * shapes.length)];
+    const tint = tints[Math.floor(rand() * tints.length)];
+    const duration = 4 + rand() * 8;
+    const star: SkyStar = {
+      left: `${(rand() * 100).toFixed(2)}%`,
+      duration: `${duration.toFixed(2)}s`,
+      delay: `${(-rand() * duration).toFixed(2)}s`,
+      shape,
+      tint,
+    };
+
+    if (shape === "shapeStreak") {
+      star.height = `${(40 + rand() * 60).toFixed(2)}px`;
+      star.opacity = "0.85";
+    }
+
+    if (shape === "shapeSpark") {
+      const size = 6 + rand() * 10;
+      star.width = `${size.toFixed(2)}px`;
+      star.height = `${size.toFixed(2)}px`;
+    }
+
+    stars.push(star);
+  }
+
+  return { twinkles, stars };
+}
 
 export default function HomePage() {
   const router = useRouter();
 
+  const leftWave = useMemo(
+    () =>
+      createDotWave({
+        rows: 20,
+        cols: 18,
+        dx: 18,
+        dy: 16,
+        amp: 30,
+        freq: 2,
+        phase: 0,
+        opacity: 0.9,
+      }),
+    [],
+  );
+
+  const rightWave = useMemo(
+    () =>
+      createDotWave({
+        rows: 18,
+        cols: 28,
+        dx: 18,
+        dy: 16,
+        amp: 36,
+        freq: 2.4,
+        phase: 1,
+        opacity: 0.9,
+      }),
+    [],
+  );
+
+  const ctaLeftWave = useMemo(
+    () =>
+      createDotWave({
+        rows: 22,
+        cols: 14,
+        dx: 18,
+        dy: 16,
+        amp: 22,
+        freq: 2,
+        phase: 0.4,
+        opacity: 0.7,
+      }),
+    [],
+  );
+
+  const ctaRightWave = useMemo(
+    () =>
+      createDotWave({
+        rows: 22,
+        cols: 14,
+        dx: 18,
+        dy: 16,
+        amp: 22,
+        freq: 2,
+        phase: 2,
+        opacity: 0.7,
+      }),
+    [],
+  );
+
+  const sky = useMemo(() => createSky(), []);
+
   return (
-    <div className="min-h-screen bg-white page-shell">
-      <Navbar />
-
-      <section className="page-section bg-gradient-to-br from-[#1e5ba8] to-[#0f3d7a] py-24 text-white">
-        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="mb-6 text-5xl font-semibold tracking-tight">
-              Strategic Consulting for Modern Business
-            </h1>
-            <p className="mx-auto mb-8 max-w-3xl text-xl text-blue-100">
-              TriMerge Consulting Group delivers comprehensive solutions
-              that drive innovation, efficiency, and sustainable growth for
-              organizations worldwide.
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => router.push("/search")}
-                className="interactive-button rounded-md bg-[#d4af37] px-8 py-3 font-semibold text-gray-900 shadow-lg hover:bg-[#c19b28]"
-              >
-                Get Started
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/admin")}
-                className="interactive-button rounded-md border border-white/30 px-8 py-3 font-semibold text-white hover:bg-white/10"
-              >
-                Admin Access
-              </button>
-            </div>
+    <div className={styles.homeRoot}>
+      <header className={styles.nav}>
+        <div className={styles.logo}>
+          <div className={styles.logoMark}>
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M9 38 L24 10 L39 38 Z" stroke="#1f2858" strokeWidth="2.4" strokeLinejoin="round" fill="none" />
+              <path d="M16 38 L24 22 L32 38 Z" fill="#efb01a" />
+            </svg>
+          </div>
+          <div className={styles.logoText}>
+            <span className={styles.tri}>Tri</span>
+            <span className={styles.merge}>Merge</span>
+            <div className={styles.sub}>CONSULTING GROUP</div>
           </div>
         </div>
-      </section>
 
-      <section className="page-section py-20 [animation-delay:90ms]">
-        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl text-gray-900">Our Services</h2>
-            <p className="text-xl text-gray-600">
-              Tailored solutions to meet your organization&apos;s unique needs
-            </p>
-          </div>
+        <nav className={styles.navLinks}>
+          <button type="button" className={`${styles.navBtn} ${styles.primary}`} onClick={() => router.push("/")}>Home</button>
+          <button type="button" className={styles.navBtn} onClick={() => router.push("/search")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <span className={styles.labelText}>Search</span>
+            <svg className={styles.caret} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m2 4 4 4 4-4" />
+            </svg>
+          </button>
+          <button type="button" className={styles.navBtn} onClick={() => router.push("/admin")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+            </svg>
+            <span className={styles.labelText}>Admin</span>
+            <svg className={styles.caret} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m2 4 4 4 4-4" />
+            </svg>
+          </button>
+          <button type="button" className={styles.navBtn} onClick={() => router.push("/chat")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.1 4.1A8 8 0 0 1 21 12Z" />
+            </svg>
+            <span className={styles.labelText}>Chat</span>
+          </button>
+        </nav>
+      </header>
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {services.map((service) => (
-              <div
-                key={service.title}
-                className="card-lift rounded-lg border border-gray-200 bg-white p-8"
-              >
-                <div
-                  className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: `${service.color}15` }}
-                >
-                  <div
-                    className="h-8 w-8 rounded"
-                    style={{ backgroundColor: service.color }}
-                  />
-                </div>
-                <h3 className="mb-4 text-2xl text-gray-900">
-                  {service.title}
-                </h3>
-                <p className="text-gray-600">{service.description}</p>
-              </div>
+      <section className={styles.hero}>
+        <div className={styles.wave} aria-hidden="true">
+          <svg className={styles.waveLeft} viewBox="0 0 380 380" fill="none">
+            {leftWave.map((dot, index) => (
+              <circle key={`left-${index}`} cx={dot.x} cy={dot.y} r="1.6" fill="#a78bfa" opacity={dot.opacity} />
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="page-section bg-gray-50 py-16 [animation-delay:150ms]">
-        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 text-center md:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="interactive-base rounded-2xl px-4 py-3">
-                <div className="mb-2 text-4xl text-[#1e5ba8]">
-                  {stat.value}
-                </div>
-                <div className="text-gray-600">{stat.label}</div>
-              </div>
+          </svg>
+          <svg className={styles.waveRight} viewBox="0 0 520 380" fill="none">
+            {rightWave.map((dot, index) => (
+              <circle key={`right-${index}`} cx={dot.x} cy={dot.y} r="1.6" fill="#6b8eff" opacity={dot.opacity} />
             ))}
-          </div>
+          </svg>
         </div>
-      </section>
 
-      <section className="page-section py-20 [animation-delay:220ms]">
-        <div className="mx-auto max-w-[1320px] px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="mb-6 text-4xl text-gray-900">
-            Ready to Transform Your Business?
-          </h2>
-          <p className="mb-8 text-xl text-gray-600">
-            Let&apos;s discuss how TriMerge Consulting Group can help you
-            achieve your strategic goals.
+        <div className={styles.sky} aria-hidden="true">
+          {sky.twinkles.map((twinkle, index) => (
+            <span
+              key={`twinkle-${index}`}
+              className={styles.twinkle}
+              style={{
+                left: twinkle.left,
+                top: twinkle.top,
+                animationDelay: twinkle.delay,
+                animationDuration: twinkle.duration,
+              }}
+            />
+          ))}
+          {sky.stars.map((star, index) => (
+            <span
+              key={`star-${index}`}
+              className={`${styles.star} ${styles[star.shape]} ${star.tint ? styles[star.tint] : ""}`}
+              style={{
+                left: star.left,
+                animationDuration: star.duration,
+                animationDelay: star.delay,
+                height: star.height,
+                width: star.width,
+                opacity: star.opacity,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className={styles.heroInner}>
+          <h1 className={styles.heroTitle}>
+            Strategic Consulting for
+            <br />
+            Modern <span className={styles.accent}>Business</span>
+          </h1>
+          <p className={styles.lede}>
+            TriMerge Consulting Group delivers comprehensive solutions that drive innovation, efficiency, and sustainable growth for organizations worldwide.
           </p>
-          <div className="flex justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => router.push("/chat")}
-              className="interactive-button rounded-md bg-[#1e5ba8] px-8 py-3 font-semibold text-white shadow-lg hover:bg-[#0f3d7a]"
-            >
-              Schedule a Consultation
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/search")}
-              className="interactive-button rounded-md border-2 border-[#1e5ba8] px-8 py-3 font-semibold text-[#1e5ba8] hover:bg-[#1e5ba8] hover:text-white"
-            >
-              Learn More
-            </button>
+          <div className={styles.ctaRow}>
+            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/search")}>Get Started</button>
+            <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => router.push("/admin")}>Admin Access</button>
           </div>
         </div>
       </section>
 
-      <footer className="page-section bg-gray-900 py-12 text-gray-400 [animation-delay:280ms]">
-        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between md:flex-row">
-            <div className="mb-4 md:mb-0">
-              <p>&copy; 2026 TriMerge Consulting Group. All rights reserved.</p>
-            </div>
-            <div className="flex gap-8">
-              <a href="#" className="interactive-base hover:text-white">
-                Privacy Policy
-              </a>
-              <a href="#" className="interactive-base hover:text-white">
-                Terms of Service
-              </a>
-              <a href="#" className="interactive-base hover:text-white">
-                Contact
-              </a>
-            </div>
+      <section className={styles.services}>
+        <div className={styles.container}>
+          <div className={styles.sectionHead}>
+            <h2>Our Services</h2>
+            <p>Tailored solutions to meet your organization&apos;s unique needs</p>
           </div>
+          <div className={styles.servicesGrid}>
+            {services.map((service) => (
+              <article key={service.title} className={styles.serviceCard}>
+                <div className={`${styles.iconTile} ${styles[service.variant]}`}>{service.icon}</div>
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.stats}>
+        <div className={styles.statsGrid}>
+          {stats.map((stat) => (
+            <div key={stat.label} className={styles.stat}>
+              <div className={styles.statIcon}>{stat.icon}</div>
+              <div>
+                <div className={styles.statNum}>{stat.value}</div>
+                <div className={styles.statLabel}>{stat.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.ctaSection}>
+        <svg className={`${styles.waveDeco} ${styles.left}`} viewBox="0 0 280 380" aria-hidden="true">
+          {ctaLeftWave.map((dot, index) => (
+            <circle key={`cta-left-${index}`} cx={dot.x} cy={dot.y} r="1.4" fill="#7c5cff" opacity={dot.opacity} />
+          ))}
+        </svg>
+        <svg className={`${styles.waveDeco} ${styles.right}`} viewBox="0 0 280 380" aria-hidden="true">
+          {ctaRightWave.map((dot, index) => (
+            <circle key={`cta-right-${index}`} cx={dot.x} cy={dot.y} r="1.4" fill="#7c5cff" opacity={dot.opacity} />
+          ))}
+        </svg>
+
+        <h2>Ready to Transform Your Business?</h2>
+        <p>Let&apos;s discuss how TriMerge Consulting Group can help you achieve your strategic goals.</p>
+        <div className={styles.ctaRowCentered}>
+          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/chat")}>Schedule a Consultation</button>
+          <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={() => router.push("/search")}>Learn More</button>
+        </div>
+      </section>
+
+      <footer className={styles.footer}>
+        <div>&copy; 2026 TriMerge Consulting Group. All rights reserved.</div>
+        <div className={styles.links}>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Contact</a>
         </div>
       </footer>
     </div>

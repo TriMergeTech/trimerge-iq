@@ -12,6 +12,7 @@ import {
   Shield,
   User,
 } from "lucide-react";
+import styles from "./LoginPage.module.css";
 
 const API_BASE_URL = "https://trimerge-iq.onrender.com";
 
@@ -273,361 +274,310 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <section className="page-shell min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-900 via-[#0f3d7a] to-[#1e5ba8] px-4 py-12">
-      <div className="relative mx-auto w-full max-w-md">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-1/4 top-1/4 h-72 w-72 rounded-full bg-[#d4af37] opacity-20 blur-[128px]" />
-          <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-[#1e5ba8] opacity-20 blur-[128px]" />
+    <div className={styles.canvas}>
+      <section className={styles.auth}>
+        {/* Shield */}
+        <div className={styles.shieldWrap}>
+          <div className={styles.shield}>
+            <Shield className={styles.shieldIcon} />
+          </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl page-section">
-          <div className="mb-8 text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] opacity-60 blur-2xl" />
-                <div className="relative rounded-2xl bg-white/95 p-4 shadow-2xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/trimerge-logo.png"
-                    alt="TriMerge Consulting Group"
-                    className="h-auto w-[220px]"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="relative mb-4 inline-block">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] opacity-50 blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] shadow-xl">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 className="mb-2 text-3xl font-bold text-white">
-              {viewMode === "login" && "Admin Access"}
-              {viewMode === "signup" && "Create Staff Account"}
-              {viewMode === "verify" && "Verify Your Account"}
-              {viewMode === "forgotPassword" && "Reset Password"}
-              {viewMode === "resetSent" && "Check Your Email"}
-            </h1>
-            <p className="text-blue-200">
-              {viewMode === "login" && "Sign in with a real backend account to access admin tools."}
-              {viewMode === "signup" && "Create a staff account first so you can manage skills and positions."}
-              {viewMode === "verify" && "Enter the OTP sent to your email to activate your account."}
-              {viewMode === "forgotPassword" && "Enter your email to receive a password reset OTP."}
-              {viewMode === "resetSent" && "We sent password reset instructions to your email address."}
-            </p>
-          </div>
+        <h1 className={styles.title}>
+          {viewMode === "login" && "Admin Access"}
+          {viewMode === "signup" && "Create Staff Account"}
+          {viewMode === "verify" && "Verify Your Account"}
+          {viewMode === "forgotPassword" && "Reset Password"}
+          {viewMode === "resetSent" && "Check Your Email"}
+        </h1>
+        <p className={styles.subtitle}>
+          {viewMode === "login" && "Sign in with a real backend account to access admin tools."}
+          {viewMode === "signup" && "Create a staff account first so you can manage skills and positions."}
+          {viewMode === "verify" && "Enter the OTP sent to your email to activate your account."}
+          {viewMode === "forgotPassword" && "Enter your email to receive a password reset OTP."}
+          {viewMode === "resetSent" && "We sent password reset instructions to your email address."}
+        </p>
 
-          {successMessage && <InlineMessage tone="success" message={successMessage} />}
-          {error && <InlineMessage tone="error" message={error} />}
+        {successMessage && <InlineMessage tone="success" message={successMessage} />}
+        {error && <InlineMessage tone="error" message={error} />}
 
-          {viewMode === "login" && (
-            <form onSubmit={handleLoginSubmit} className="space-y-5">
-              <Field label="Email Address" icon={User}>
+        {viewMode === "login" && (
+          <form onSubmit={handleLoginSubmit}>
+            <div className={styles.field}>
+              <div className={styles.fieldHead}>
+                <label className={styles.label} htmlFor="email">Email Address</label>
+              </div>
+              <div className={styles.inputWrap}>
+                <User className={styles.lead} />
                 <input
+                  id="email"
+                  className={styles.input}
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                   placeholder="staff@trimerge.com"
+                  autoComplete="email"
                 />
-              </Field>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-blue-100">Password</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewMode("forgotPassword");
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    className="interactive-base text-sm text-[#d4af37] hover:text-white"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-blue-300" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((current) => !current)}
-                    className="interactive-base absolute right-4 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-              >
-                {isLoading ? "Signing in..." : "Sign In"}
-              </button>
+            <div className={styles.field}>
+              <div className={styles.fieldHead}>
+                <label className={styles.label} htmlFor="password">Password</label>
+                <button
+                  type="button"
+                  className={styles.forgot}
+                  onClick={() => { setViewMode("forgotPassword"); setError(""); setSuccessMessage(""); }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div className={styles.inputWrap}>
+                <Lock className={styles.lead} />
+                <input
+                  id="password"
+                  className={styles.input}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className={styles.trail}
+                  aria-label="Show password"
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("signup");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-button w-full rounded-xl border border-white/20 bg-white/8 py-3 font-medium text-white hover:bg-white/12"
-              >
-                Create New Staff Account
-              </button>
-            </form>
-          )}
+            <button type="submit" className={styles.signin} disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </button>
+            <button
+              type="button"
+              className={styles.signup}
+              onClick={() => { setViewMode("signup"); setError(""); setSuccessMessage(""); }}
+            >
+              Create New Staff Account
+            </button>
+            <div className={styles.protected}>Protected by TriMerge Security</div>
+          </form>
+        )}
 
-          {viewMode === "signup" && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Login
-              </button>
+        {viewMode === "signup" && (
+          <>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => { setViewMode("login"); setError(""); setSuccessMessage(""); }}
+            >
+              <ArrowLeft size={14} />
+              Back to Login
+            </button>
 
-              <form onSubmit={handleSignupSubmit} className="space-y-5">
-                <Field label="Full Name" icon={User}>
+            <form onSubmit={handleSignupSubmit}>
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Full Name</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <User className={styles.lead} />
                   <input
+                    className={styles.input}
                     type="text"
                     value={signupFullName}
                     onChange={(event) => setSignupFullName(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="Jane Doe"
                   />
-                </Field>
+                </div>
+              </div>
 
-                <Field label="Email Address" icon={Mail}>
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Email Address</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <Mail className={styles.lead} />
                   <input
+                    className={styles.input}
                     type="email"
                     value={signupEmail}
                     onChange={(event) => setSignupEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="staff@trimerge.com"
                   />
-                </Field>
-
-                <div>
-                  <label className="mb-2 block text-sm text-blue-100">Profile</label>
-                  <select
-                    value={signupProfile}
-                    onChange={(event) => setSignupProfile(event.target.value as SignupProfile)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  >
-                    <option value="staff" className="bg-slate-900">Staff</option>
-                    <option value="client" className="bg-slate-900">Client</option>
-                  </select>
-                  <p className="mt-2 text-xs text-blue-200/80">
-                    Use `staff` if you want access to protected admin skills actions.
-                  </p>
                 </div>
+              </div>
 
-                <div className="relative">
-                  <label className="mb-2 block text-sm text-blue-100">Password</label>
-                  <Lock className="pointer-events-none absolute left-4 top-[46px] h-5 w-5 text-blue-300" />
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Profile</label>
+                </div>
+                <select
+                  className={styles.select}
+                  value={signupProfile}
+                  onChange={(event) => setSignupProfile(event.target.value as SignupProfile)}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="client">Client</option>
+                </select>
+                <p className={styles.profileHint}>
+                  Use &ldquo;staff&rdquo; if you want access to protected admin skills actions.
+                </p>
+              </div>
+
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Password</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <Lock className={styles.lead} />
                   <input
+                    className={styles.input}
                     type={showSignupPassword ? "text" : "password"}
                     value={signupPassword}
                     onChange={(event) => setSignupPassword(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="Create a password"
                   />
                   <button
                     type="button"
+                    className={styles.trail}
                     onClick={() => setShowSignupPassword((current) => !current)}
-                    className="interactive-base absolute right-4 top-[46px] text-blue-300 hover:text-white"
                   >
-                    {showSignupPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
-                  {isLoading ? "Creating account..." : "Create Account"}
-                </button>
-              </form>
-            </>
-          )}
-
-          {viewMode === "verify" && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("signup");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Signup
+              <button type="submit" className={styles.signin} disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create Account"}
               </button>
+            </form>
+          </>
+        )}
 
-              <form onSubmit={handleVerifySubmit} className="space-y-5">
-                <Field label="Email Address" icon={Mail}>
+        {viewMode === "verify" && (
+          <>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => { setViewMode("signup"); setError(""); setSuccessMessage(""); }}
+            >
+              <ArrowLeft size={14} />
+              Back to Signup
+            </button>
+
+            <form onSubmit={handleVerifySubmit}>
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Email Address</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <Mail className={styles.lead} />
                   <input
+                    className={styles.input}
                     type="email"
                     value={verifyEmail}
                     onChange={(event) => setVerifyEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="staff@trimerge.com"
                   />
-                </Field>
+                </div>
+              </div>
 
-                <Field label="OTP Code" icon={Shield}>
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>OTP Code</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <Shield className={styles.lead} />
                   <input
+                    className={styles.input}
                     type="text"
                     value={verifyOtp}
                     onChange={(event) => setVerifyOtp(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="123456"
                   />
-                </Field>
+                </div>
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
-                  {isLoading ? "Verifying..." : "Verify and Sign In"}
-                </button>
-              </form>
-            </>
-          )}
-
-          {viewMode === "forgotPassword" && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Login
+              <button type="submit" className={styles.signin} disabled={isLoading}>
+                {isLoading ? "Verifying..." : "Verify and Sign In"}
               </button>
+            </form>
+          </>
+        )}
 
-              <form onSubmit={handleForgotPassword} className="space-y-5">
-                <Field label="Email Address" icon={Mail}>
+        {viewMode === "forgotPassword" && (
+          <>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => { setViewMode("login"); setError(""); setSuccessMessage(""); }}
+            >
+              <ArrowLeft size={14} />
+              Back to Login
+            </button>
+
+            <form onSubmit={handleForgotPassword}>
+              <div className={styles.field}>
+                <div className={styles.fieldHead}>
+                  <label className={styles.label}>Email Address</label>
+                </div>
+                <div className={styles.inputWrap}>
+                  <Mail className={styles.lead} />
                   <input
+                    className={styles.input}
                     type="email"
                     value={resetEmail}
                     onChange={(event) => setResetEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
                     placeholder="staff@trimerge.com"
                   />
-                </Field>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
-                  {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
-                </button>
-              </form>
-            </>
-          )}
-
-          {viewMode === "resetSent" && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="relative mb-4 inline-block">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-500 to-[#d4af37] opacity-50 blur-xl" />
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-[#d4af37] shadow-xl">
-                    <CheckCircle className="h-8 w-8 text-white" />
-                  </div>
                 </div>
-                <p className="text-sm text-[#d4af37]">{resetEmail}</p>
               </div>
 
-              <div className="rounded-xl border border-green-500/50 bg-green-500/20 p-4">
-                <p className="mb-2 text-sm text-green-200">
-                  <strong>Next Steps:</strong>
-                </p>
-                <ul className="list-inside list-disc space-y-1 text-sm text-green-200">
-                  <li>Check your email inbox</li>
-                  <li>Use the OTP or instructions from the backend email</li>
-                  <li>Reset your password from the backend flow</li>
-                  <li>Then sign in again here</li>
-                </ul>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setResetEmail("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-button flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                Back to Login
+              <button type="submit" className={styles.signin} disabled={isLoading}>
+                {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
               </button>
+            </form>
+          </>
+        )}
+
+        {viewMode === "resetSent" && (
+          <div>
+            <div className={styles.successIcon}>
+              <div className={styles.successCircle}>
+                <CheckCircle size={28} color="#fff" />
+              </div>
             </div>
-          )}
+            <p className={styles.resetEmailHint}>{resetEmail}</p>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-blue-300">Protected by TriMerge Security</p>
-          </div>
-        </div>
+            <div className={styles.nextSteps}>
+              <strong>Next Steps:</strong>
+              <ul>
+                <li>Check your email inbox</li>
+                <li>Use the OTP or instructions from the backend email</li>
+                <li>Reset your password from the backend flow</li>
+                <li>Then sign in again here</li>
+              </ul>
+            </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-blue-200">
-            Need help? Contact{" "}
-            <a
-              href="mailto:support@trimerge.com"
-              className="interactive-base text-[#d4af37] hover:text-white"
+            <button
+              type="button"
+              className={styles.signin}
+              onClick={() => { setViewMode("login"); setResetEmail(""); setSuccessMessage(""); }}
             >
-              support@trimerge.com
-            </a>
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
+              Back to Login
+            </button>
+          </div>
+        )}
+      </section>
 
-function Field({
-  label,
-  icon: Icon,
-  children,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm text-blue-100">{label}</label>
-      <div className="relative">
-        <Icon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-blue-300" />
-        {children}
+      <div className={styles.help}>
+        Need help? Contact{" "}
+        <a href="mailto:support@trimerge.com">support@trimerge.com</a>
       </div>
     </div>
   );
@@ -640,15 +590,12 @@ function InlineMessage({
   tone: "error" | "success";
   message: string;
 }) {
-  const toneClasses =
-    tone === "error"
-      ? "border-red-500/50 bg-red-500/20 text-red-200"
-      : "border-green-500/50 bg-green-500/20 text-green-200";
-
   return (
-    <div className={`animate-fade-rise mb-5 flex items-start gap-2 rounded-xl border p-4 ${toneClasses}`}>
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-      <p className="text-sm">{message}</p>
+    <div className={tone === "error" ? styles.msgError : styles.msgSuccess}>
+      <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+      <p style={{ margin: 0 }}>{message}</p>
     </div>
   );
 }
+
+

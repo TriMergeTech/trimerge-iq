@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import type { ChatEntityId, Conversation, Project } from "./chatPageTypes";
+import styles from "./ProjectHomePanel.module.css";
 
 interface ProjectHomePanelProps {
   composer: ReactNode;
@@ -22,72 +23,113 @@ export default function ProjectHomePanel({
   selectedProject,
 }: ProjectHomePanelProps) {
   return (
-    <div className="flex flex-1 items-center justify-center px-8 py-12 lg:px-16 xl:px-20">
-      <div className="flex w-full max-w-[1200px] flex-col items-center justify-center text-center">
-        <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/68">
-          {selectedProject?.name ?? "Workspace"}
-        </p>
-        <p className="text-3xl font-light tracking-tight text-white/92 md:text-4xl">
-          {selectedProject ? `Ready to chat inside ${selectedProject.name}.` : "Ready when you are."}
-        </p>
+    <div className={styles.greeting}>
+      <div className={styles.workspaceTag}>{selectedProject?.name ?? "Workspace"}</div>
+      <h1 className={styles.h1}>
+        {selectedProject ? (
+          <>
+            Ready to chat inside <span className={styles.accent}>{selectedProject.name}.</span>
+          </>
+        ) : (
+          <>
+            Ready when <span className={styles.accent}>you are.</span>
+          </>
+        )}
+      </h1>
+      <p className={styles.desc}>
+        Ask anything about strategy, transformation, or operations — TriMerge AI is plugged into your workspace.
+      </p>
 
-        <div className="mt-10 w-full max-w-[980px]">{composer}</div>
+      <div className={styles.suggested}>
+        <button type="button" className={styles.promptCard}>
+          <div className={styles.promptIcon}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21h18" />
+              <path d="M7 21V13" />
+              <path d="M12 21V9" />
+              <path d="M17 21V5" />
+            </svg>
+          </div>
+          <h4 className={styles.promptTitle}>Draft a strategy memo</h4>
+          <p className={styles.promptDesc}>Outline a quarterly plan from your latest goals doc.</p>
+        </button>
+        <button type="button" className={styles.promptCard}>
+          <div className={styles.promptIcon}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+            </svg>
+          </div>
+          <h4 className={styles.promptTitle}>Audit a tech stack</h4>
+          <p className={styles.promptDesc}>Find gaps and quick wins for digital transformation.</p>
+        </button>
+        <button type="button" className={styles.promptCard}>
+          <div className={styles.promptIcon}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" />
+            </svg>
+          </div>
+          <h4 className={styles.promptTitle}>Optimize a workflow</h4>
+          <p className={styles.promptDesc}>Cut waste from your ops process in three steps.</p>
+        </button>
+      </div>
 
-        {selectedProject && (
-          <div className="mt-12 w-full max-w-[980px] text-left">
-            <div className="flex items-center gap-3">
+      <div className={styles.composerWrap}>{composer}</div>
+      <div className={styles.composerHint}>
+        Press <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line
+      </div>
+
+      {selectedProject && (
+        <div className={styles.projectSection}>
+          <div className={styles.tabRow}>
               <button
                 type="button"
                 onClick={() => onProjectHomeTabChange("chats")}
-                className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "chats" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
+                className={`${styles.tabBtn} ${projectHomeTab === "chats" ? styles.tabBtnActive : ""}`}
               >
                 Chats
               </button>
               <button
                 type="button"
                 onClick={() => onProjectHomeTabChange("sources")}
-                className={`interactive-button rounded-full px-7 py-3 text-base font-medium transition ${projectHomeTab === "sources" ? "bg-white/10 text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : "text-white/60 hover:bg-white/[0.04] hover:text-white/85"}`}
+                className={`${styles.tabBtn} ${projectHomeTab === "sources" ? styles.tabBtnActive : ""}`}
               >
                 Sources
               </button>
-            </div>
+          </div>
 
-            {projectHomeTab === "chats" ? (
-              <div className="mt-8 space-y-3">
+          {projectHomeTab === "chats" ? (
+            <div className={styles.convList}>
                 {projectRecentConversations.length > 0 ? (
                   projectRecentConversations.map((conversation) => (
                     <button
                       key={conversation.id}
                       type="button"
                       onClick={() => onOpenConversation(conversation.id)}
-                      className="interactive-button flex w-full items-center justify-between rounded-[24px] border border-white/8 bg-white/[0.03] px-5 py-4 text-left text-white/88 hover:border-[#d4af37]/28 hover:bg-white/[0.05]"
+                      className={styles.convItem}
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-lg font-medium text-white/92">
+                      <div style={{ minWidth: 0 }}>
+                        <p className={styles.convTitle}>
                           {conversation.pinned ? "📌 " : ""}
                           {conversation.title}
                         </p>
-                        <p className="mt-1 text-sm text-white/40">{conversation.messages.length} messages</p>
+                        <p className={styles.convMeta}>{conversation.messages.length} messages</p>
                       </div>
-                      <span className="shrink-0 pl-6 text-sm text-white/42">
-                        {conversation.updatedAt.toLocaleDateString()}
-                      </span>
+                      <span className={styles.convDate}>{conversation.updatedAt.toLocaleDateString()}</span>
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
+                  <div className={styles.emptyConv}>
                     This project does not have recent chats yet.
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="mt-8 rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center text-white/46">
-                Sources for this project will appear here.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : (
+            <div className={`${styles.convList} ${styles.emptyConv}`}>Sources for this project will appear here.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

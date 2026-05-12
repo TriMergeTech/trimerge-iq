@@ -23,6 +23,7 @@ import {
   type StoredAdminPerson,
 } from "./adminRegistryState";
 import { ADMIN_API_BASE_URL, authenticatedAdminFetch } from "./adminAuth";
+import styles from "./AdminPage.module.css";
 
 type AdminSection = "staff" | "admin" | "position" | "skills" | "services" | "clients";
 type CreateModal = AdminSection | null;
@@ -1448,21 +1449,20 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   return (
-    <div className="page-shell min-h-[calc(100vh-80px)] bg-[#f6f8fc] xl:flex">
-      <aside className="relative bg-[linear-gradient(180deg,#1f5fb5_0%,#255da7_56%,#25569a_100%)] text-white shadow-[8px_0_24px_rgba(10,31,68,0.12)] page-section xl:sticky xl:top-[81px] xl:h-[calc(100vh-81px)] xl:w-[270px]">
-        <div className="border-b border-white/12 p-5">
-          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0ca44] text-[#1e2838] shadow-[0_8px_20px_rgba(0,0,0,0.15)]">
-              <Shield className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-white">{loggedInName}</h2>
-              <p className="text-xs text-white/64">Backend role: {loggedInProfile}</p>
-            </div>
+    <div className={styles.shell}>
+      {/* ---- SIDEBAR ---- */}
+      <aside className={styles.sidebar}>
+        <div className={styles.userCard}>
+          <div className={styles.userAvatar}>
+            <Shield />
+          </div>
+          <div>
+            <div className={styles.userName}>{loggedInName}</div>
+            <div className={styles.userRole}>Backend role: {loggedInProfile}</div>
           </div>
         </div>
 
-        <nav className="space-y-2 p-4">
+        <nav className={styles.navList}>
           {(Object.keys(SECTION_META) as AdminSection[]).map((section) => {
             const item = SECTION_META[section];
             return (
@@ -1480,95 +1480,68 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           })}
         </nav>
 
-        <div className="border-t border-white/12 p-4 xl:absolute xl:bottom-0 xl:w-[270px]">
-          <div className="rounded-2xl bg-white/[0.05] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/48">Logged in as:</p>
-            <p className="mt-2 break-all text-sm font-semibold text-white/94">{loggedInEmail}</p>
-            <p className="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-[#f0ca44]">
-              {loggedInProfile}
-            </p>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="interactive-button mt-4 flex w-full items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/16"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </button>
+        <div className={styles.sideBottom}>
+          <div className={styles.session}>
+            <div className={styles.sessionLabel}>Logged in as</div>
+            <div className={styles.sessionEmail}>{loggedInEmail}</div>
+            <div className={styles.sessionRole}>{loggedInProfile}</div>
           </div>
+          <button type="button" className={styles.logoutBtn} onClick={onLogout}>
+            <LogOut />
+            Logout
+          </button>
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <div className="border-b border-[#e3e8f2] bg-white shadow-[0_8px_18px_rgba(36,55,89,0.04)]">
-          <div className="px-8 py-8">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="text-[42px] font-semibold tracking-tight text-[#1e2431]">
-                  {activeSectionMeta.label}
-                </h1>
-                <p className="mt-2 text-sm text-[#697587]">Manage {activeCount} registry</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={openCreateModal}
-                disabled={activeSection === "admin"}
-                className="interactive-button inline-flex items-center gap-2 rounded-xl bg-[#2865ba] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.24)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:bg-[#8ba0c8] disabled:shadow-none"
-              >
-                <Plus className="h-4 w-4" />
-                <span>{activeSection === "admin" ? "View Only" : activeSectionMeta.addLabel}</span>
-              </button>
+      {/* ---- MAIN ---- */}
+      <div className={styles.main}>
+        <div className={styles.pageHead}>
+          <div className={styles.headRow}>
+            <div>
+              <h1 className={styles.pageTitle}>{activeSectionMeta.label}</h1>
+              <p className={styles.pageSub}>Manage {activeCount} registry entries</p>
             </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              disabled={activeSection === "admin"}
+              className={styles.addBtn}
+            >
+              <Plus />
+              <span>{activeSection === "admin" ? "View Only" : activeSectionMeta.addLabel}</span>
+            </button>
+          </div>
 
-            <div className="mt-6 relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a1abbb]" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="interactive-input w-full rounded-xl border border-[#e5e9f1] bg-white py-3.5 pl-11 pr-4 text-sm text-[#24324a] shadow-[0_4px_14px_rgba(34,54,88,0.05)] outline-none focus:ring-2 focus:ring-[#2865ba]"
-              />
-            </div>
+          <div className={styles.searchRow}>
+            <Search />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
           </div>
         </div>
 
-        <div className="flex-1 px-8 py-8">
+        <div className={styles.content}>
           {activeSection === "skills" && skillError && (
-            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
-              {skillError}
-            </div>
+            <div className={styles.errorBanner}>{skillError}</div>
           )}
-
           {activeSection === "position" && positionError && (
-            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
-              {positionError}
-            </div>
+            <div className={styles.errorBanner}>{positionError}</div>
           )}
-
           {activeSection === "services" && serviceError && (
-            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
-              {serviceError}
-            </div>
+            <div className={styles.errorBanner}>{serviceError}</div>
           )}
-
           {activeSection === "clients" && clientError && (
-            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
-              {clientError}
-            </div>
+            <div className={styles.errorBanner}>{clientError}</div>
           )}
-
           {activeSection === "staff" && staffError && (
-            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
-              {staffError}
-            </div>
+            <div className={styles.errorBanner}>{staffError}</div>
           )}
-
           {activeSection === "admin" && userError && (
-            <div className="mb-5 rounded-2xl border border-[#d8e2f1] bg-[#f7faff] px-5 py-4 text-sm text-[#53657d]">
-              {userError}
-            </div>
+            <div className={styles.infoBanner}>{userError}</div>
           )}
 
           {activeSection === "staff" && (
@@ -1577,20 +1550,16 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingStaff ? "Loading staff..." : "No staff members found."}
             >
               {filteredStaff.map((member) => (
-                <tr key={member.id} className="border-t border-[#eef2f8]">
-                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{member.name}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.email}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    {positions.find((position) => position.id === member.positionId)?.title ?? "Unassigned"}
+                <tr key={member.id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>{member.name}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{member.email}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    {positions.find((p) => p.id === member.positionId)?.title ?? "Unassigned"}
                   </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <EditButton
-                        onClick={() => {
-                          openEditStaffModal(member.id);
-                        }}
-                      />
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{member.createdAt.toLocaleDateString()}</td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
+                      <EditButton onClick={() => openEditStaffModal(member.id)} />
                       <DeleteButton onClick={() => { void removeStaff(member.id); }} />
                     </div>
                   </td>
@@ -1605,10 +1574,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingUsers ? "Loading admins..." : "No admin members found."}
             >
               {filteredAdmins.map((member) => (
-                <tr key={member.id} className="border-t border-[#eef2f8]">
-                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{member.name}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.email}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{member.createdAt.toLocaleDateString()}</td>
+                <tr key={member.id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>{member.name}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{member.email}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{member.createdAt.toLocaleDateString()}</td>
                 </tr>
               ))}
             </ManagementTable>
@@ -1620,23 +1589,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingSkills ? "Loading skills..." : "No skills found."}
             >
               {filteredSkills.map((skill) => (
-                <tr key={skill.id} className="border-t border-[#eef2f8]">
-                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{skill.name}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.description}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{skill.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-2">
+                <tr key={skill.id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>{skill.name}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{skill.description}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{skill.createdAt.toLocaleDateString()}</td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
                       <EditButton
                         disabled={isLoadingSkillDetails}
-                        onClick={() => {
-                          void openEditSkillModal(skill.id);
-                        }}
+                        onClick={() => { void openEditSkillModal(skill.id); }}
                       />
-                      <DeleteButton
-                        onClick={() => {
-                          void removeSkill(skill.id);
-                        }}
-                      />
+                      <DeleteButton onClick={() => { void removeSkill(skill.id); }} />
                     </div>
                   </td>
                 </tr>
@@ -1650,37 +1613,33 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingServices ? "Loading services..." : "No services found."}
             >
               {filteredServices.map((service) => (
-                <tr key={service.id} className="border-t border-[#eef2f8] align-top">
-                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{service.name}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{service.description}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <div className="flex flex-wrap gap-2">
-                      {service.skillIds.length > 0 ? service.skillIds.map((skillId) => {
-                        const skill = skills.find((item) => item.id === skillId);
-                        if (!skill) return null;
-                        return (
-                          <span key={skillId} className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]">
-                            {skill.name}
-                          </span>
-                        );
-                      }) : <span className="text-[#8b97a7]">None</span>}
+                <tr key={service.id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>{service.name}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{service.description}</td>
+                  <td className={styles.td}>
+                    <div className={styles.pillsWrap}>
+                      {service.skillIds.length > 0
+                        ? service.skillIds.map((skillId) => {
+                            const skill = skills.find((s) => s.id === skillId);
+                            if (!skill) return null;
+                            return <span key={skillId} className={styles.pill}>{skill.name}</span>;
+                          })
+                        : <span className={styles.tdMuted}>None</span>}
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <div className="flex flex-wrap gap-2">
-                      {service.positionIds.length > 0 ? service.positionIds.map((positionId) => {
-                        const position = positions.find((item) => item.id === positionId);
-                        if (!position) return null;
-                        return (
-                          <span key={positionId} className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]">
-                            {position.title}
-                          </span>
-                        );
-                      }) : <span className="text-[#8b97a7]">None</span>}
+                  <td className={styles.td}>
+                    <div className={styles.pillsWrap}>
+                      {service.positionIds.length > 0
+                        ? service.positionIds.map((positionId) => {
+                            const position = positions.find((p) => p.id === positionId);
+                            if (!position) return null;
+                            return <span key={positionId} className={styles.pill}>{position.title}</span>;
+                          })
+                        : <span className={styles.tdMuted}>None</span>}
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{service.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{service.createdAt.toLocaleDateString()}</td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
                     <DeleteButton onClick={() => { void removeService(service.id); }} />
                   </td>
                 </tr>
@@ -1694,17 +1653,13 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingClients ? "Loading clients..." : "No clients found."}
             >
               {filteredClients.map((client) => (
-                <tr key={client.id} className="border-t border-[#eef2f8] align-top">
-                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{client.name}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{client.about || "None"}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{client.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <EditButton
-                        onClick={() => {
-                          openEditClientModal(client.id);
-                        }}
-                      />
+                <tr key={client.id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>{client.name}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{client.about || "None"}</td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{client.createdAt.toLocaleDateString()}</td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
+                      <EditButton onClick={() => openEditClientModal(client.id)} />
                       <DeleteButton onClick={() => { void removeClient(client.id); }} />
                     </div>
                   </td>
@@ -1719,42 +1674,31 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               emptyMessage={isLoadingPositions ? "Loading positions..." : "No positions found."}
             >
               {filteredPositions.map((position) => (
-                <tr key={position.id} className="border-t border-[#eef2f8] align-top">
-                  <td className="px-6 py-5">
-                    <p className="text-sm font-semibold text-[#263247]">{position.title}</p>
-                    <div className="mt-4 space-y-1.5 text-sm text-[#5f6b7c]">
-                      {position.responsibilities.map((responsibility) => (
-                        <div key={`${position.id}-${responsibility}`} className="flex items-start gap-2">
-                          <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#6d7a8c]" />
-                          <span>{responsibility}</span>
+                <tr key={position.id}>
+                  <td className={styles.td}>
+                    <span className={styles.tdName}>{position.title}</span>
+                    <div className={styles.respList}>
+                      {position.responsibilities.map((r) => (
+                        <div key={`${position.id}-${r}`} className={styles.respListItem}>
+                          <span className={styles.respDot} />
+                          <span>{r}</span>
                         </div>
                       ))}
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <div className="flex flex-wrap gap-2">
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{position.description}</td>
+                  <td className={styles.td}>
+                    <div className={styles.pillsWrap}>
                       {position.skillIds.map((skillId) => {
-                        const skill = skills.find((item) => item.id === skillId);
+                        const skill = skills.find((s) => s.id === skillId);
                         if (!skill) return null;
-                        return (
-                          <span
-                            key={skillId}
-                            className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
-                          >
-                            {skill.name}
-                          </span>
-                        );
+                        return <span key={skillId} className={styles.pill}>{skill.name}</span>;
                       })}
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <EditButton
-                        onClick={() => {
-                          openEditPositionModal(position.id);
-                        }}
-                      />
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
+                      <EditButton onClick={() => openEditPositionModal(position.id)} />
                       <DeleteButton onClick={() => { void removePosition(position.id); }} />
                     </div>
                   </td>
@@ -1765,6 +1709,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         </div>
       </div>
 
+      {/* ---- MODALS ---- */}
       {openModal === "staff" && (
         <PersonModal
           initialEmail={editingStaff?.email ?? ""}
@@ -1773,13 +1718,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           isSaving={isSavingStaff}
           title={editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
           positions={positions}
-          onClose={() => {
-            setEditingStaff(null);
-            setOpenModal(null);
-          }}
-          onSave={(payload) => {
-            void saveStaff(payload);
-          }}
+          onClose={() => { setEditingStaff(null); setOpenModal(null); }}
+          onSave={(payload) => { void saveStaff(payload); }}
         />
       )}
 
@@ -1804,13 +1744,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           initialDescription={editingSkill?.description ?? ""}
           initialName={editingSkill?.name ?? ""}
           isSaving={isSavingSkill}
-          onClose={() => {
-            setEditingSkill(null);
-            setOpenModal(null);
-          }}
-          onSave={(payload) => {
-            void saveSkill(payload);
-          }}
+          onClose={() => { setEditingSkill(null); setOpenModal(null); }}
+          onSave={(payload) => { void saveSkill(payload); }}
           submitLabel={editingSkill ? "Save changes" : "Create skill"}
         />
       )}
@@ -1821,9 +1756,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           skills={skills}
           positions={positions}
           onClose={() => setOpenModal(null)}
-          onSave={(payload) => {
-            void saveService(payload);
-          }}
+          onSave={(payload) => { void saveService(payload); }}
           isSaving={isSavingService}
         />
       )}
@@ -1834,13 +1767,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           initialName={editingClient?.name ?? ""}
           isSaving={isSavingClient}
           title={editingClient ? "Edit Client" : "Add New Client"}
-          onClose={() => {
-            setEditingClient(null);
-            setOpenModal(null);
-          }}
-          onSave={(payload) => {
-            void saveClient(payload);
-          }}
+          onClose={() => { setEditingClient(null); setOpenModal(null); }}
+          onSave={(payload) => { void saveClient(payload); }}
         />
       )}
 
@@ -1853,13 +1781,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           initialTitle={editingPosition?.title ?? ""}
           isSaving={isSavingPosition}
           title={editingPosition ? "Edit Position" : "Add New Position"}
-          onClose={() => {
-            setEditingPosition(null);
-            setOpenModal(null);
-          }}
-          onSave={(payload) => {
-            void savePosition(payload);
-          }}
+          onClose={() => { setEditingPosition(null); setOpenModal(null); }}
+          onSave={(payload) => { void savePosition(payload); }}
         />
       )}
     </div>
@@ -1880,13 +1803,9 @@ function SidebarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`interactive-button flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-medium transition ${
-        active
-          ? "bg-[#f0ca44] text-[#243145] shadow-[0_10px_20px_rgba(0,0,0,0.15)]"
-          : "text-white/88 hover:bg-white/[0.08]"
-      }`}
+      className={active ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem}
     >
-      <Icon className="h-4 w-4" />
+      <Icon />
       <span>{label}</span>
     </button>
   );
@@ -1904,27 +1823,22 @@ function ManagementTable({
   const childCount = Array.isArray(children) ? children.length : children ? 1 : 0;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#edf1f7] bg-white shadow-[0_8px_24px_rgba(29,48,81,0.06)]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px]">
-          <thead className="bg-[#fbfcff]">
+    <div className={styles.tableCard}>
+      <div className={styles.tableScroll}>
+        <table className={styles.table}>
+          <thead className={styles.thead}>
             <tr>
               {headers.map((header) => (
-                <th
-                  key={header}
-                  className="px-6 py-5 text-left text-xs font-semibold uppercase tracking-[0.12em] text-[#4f5d72]"
-                >
-                  {header}
-                </th>
+                <th key={header} className={styles.th}>{header}</th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className={styles.tbody}>
             {childCount > 0 ? (
               children
             ) : (
               <tr>
-                <td colSpan={headers.length} className="px-6 py-14 text-center text-sm text-[#7b8798]">
+                <td colSpan={headers.length} className={styles.emptyColspan}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -1941,9 +1855,9 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="interactive-button rounded-full p-2 text-[#f26a8a] hover:bg-[#fff1f5]"
+      className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
     >
-      <Trash2 className="h-4 w-4" />
+      <Trash2 />
     </button>
   );
 }
@@ -1960,9 +1874,9 @@ function EditButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="interactive-button rounded-full p-2 text-[#2865ba] hover:bg-[#eef4ff] disabled:cursor-not-allowed disabled:opacity-50"
+      className={styles.iconBtn}
     >
-      <Pencil className="h-4 w-4" />
+      <Pencil />
     </button>
   );
 }
@@ -2003,14 +1917,13 @@ function PersonModal({
           event.preventDefault();
           onSave({ name: name.trim(), email: email.trim(), positionId: positionId || undefined });
         }}
-        className="space-y-5"
       >
         <ModalField label="Name">
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
             disabled={isSaving}
           />
@@ -2021,7 +1934,7 @@ function PersonModal({
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
             disabled={isSaving}
           />
@@ -2032,7 +1945,7 @@ function PersonModal({
             <select
               value={positionId}
               onChange={(event) => setPositionId(event.target.value)}
-              className="interactive-input w-full rounded-xl border border-[#dfe5ef] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+              className={styles.formSelect}
               required
               disabled={isSaving}
             >
@@ -2044,7 +1957,7 @@ function PersonModal({
               ))}
             </select>
             {positions.length === 0 && (
-              <p className="mt-2 text-xs text-[#7b8798]">
+              <p className={styles.hintText}>
                 Positions created in `Position Management` will appear here automatically.
               </p>
             )}
@@ -2095,14 +2008,13 @@ function RegistryModal({
           event.preventDefault();
           onSave({ name: name.trim(), description: description.trim() });
         }}
-        className="space-y-5"
       >
         <ModalField label={nameLabel}>
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
           />
         </ModalField>
@@ -2112,7 +2024,7 @@ function RegistryModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formTextarea}
             required
           />
         </ModalField>
@@ -2157,14 +2069,13 @@ function ClientModal({
           event.preventDefault();
           onSave({ name: name.trim(), about: about.trim() });
         }}
-        className="space-y-5"
       >
         <ModalField label="Name">
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
           />
         </ModalField>
@@ -2174,7 +2085,7 @@ function ClientModal({
             value={about}
             onChange={(event) => setAbout(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formTextarea}
             required
           />
         </ModalField>
@@ -2233,14 +2144,13 @@ function ServiceModal({
             positionIds: selectedPositionIds,
           });
         }}
-        className="space-y-5"
       >
         <ModalField label="Title">
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
           />
         </ModalField>
@@ -2250,28 +2160,27 @@ function ServiceModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formTextarea}
             required
           />
         </ModalField>
 
         <ModalField label="Skills">
           {skills.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={styles.checkboxGrid}>
               {skills.map((skill) => (
-                <label key={skill.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                <label key={skill.id} className={styles.checkPill}>
                   <input
                     type="checkbox"
                     checked={selectedSkillIds.includes(skill.id)}
                     onChange={() => toggleSkill(skill.id)}
-                    className="h-4 w-4 rounded border-[#d6dce8]"
                   />
                   <span>{skill.name}</span>
                 </label>
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className={styles.emptyHint}>
               No skills yet. Create skills first and they will appear here automatically.
             </p>
           )}
@@ -2279,21 +2188,20 @@ function ServiceModal({
 
         <ModalField label="Positions">
           {positions.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={styles.checkboxGrid}>
               {positions.map((position) => (
-                <label key={position.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                <label key={position.id} className={styles.checkPill}>
                   <input
                     type="checkbox"
                     checked={selectedPositionIds.includes(position.id)}
                     onChange={() => togglePosition(position.id)}
-                    className="h-4 w-4 rounded border-[#d6dce8]"
                   />
                   <span>{position.title}</span>
                 </label>
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className={styles.emptyHint}>
               No positions yet. Create positions first and they will appear here automatically.
             </p>
           )}
@@ -2365,14 +2273,13 @@ function PositionModal({
             skillIds: selectedSkillIds,
           });
         }}
-        className="space-y-5"
       >
         <ModalField label="Title">
           <input
             type="text"
             value={positionTitle}
             onChange={(event) => setPositionTitle(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formInput}
             required
           />
         </ModalField>
@@ -2382,26 +2289,26 @@ function PositionModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className={styles.formTextarea}
             required
           />
         </ModalField>
 
         <ModalField label="Responsibilities">
-          <div className="space-y-3">
+          <div>
             {responsibilities.map((responsibility, index) => (
-              <div key={`responsibility-${index}`} className="flex items-center gap-3">
+              <div key={`responsibility-${index}`} className={styles.respRow}>
                 <input
                   type="text"
                   value={responsibility}
                   onChange={(event) => updateResponsibility(index, event.target.value)}
                   placeholder={`Responsibility ${index + 1}`}
-                  className="interactive-input flex-1 rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+                  className={styles.formInput}
                 />
                 <button
                   type="button"
                   onClick={() => removeResponsibility(index)}
-                  className="interactive-button rounded-xl px-3 py-3 text-sm font-medium text-[#df5f7c] hover:bg-[#fff0f4]"
+                  className={styles.respRemove}
                 >
                   Remove
                 </button>
@@ -2411,7 +2318,7 @@ function PositionModal({
             <button
               type="button"
               onClick={() => setResponsibilities((current) => [...current, ""])}
-              className="interactive-button rounded-xl bg-[#2865ba] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2159a8]"
+              className={styles.addRespBtn}
             >
               + Add responsibility
             </button>
@@ -2420,24 +2327,20 @@ function PositionModal({
 
         <ModalField label="Skills">
           {skills.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={styles.checkboxGrid}>
               {skills.map((skill) => (
-                <label
-                  key={skill.id}
-                  className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]"
-                >
+                <label key={skill.id} className={styles.checkPill}>
                   <input
                     type="checkbox"
                     checked={selectedSkillIds.includes(skill.id)}
                     onChange={() => toggleSkill(skill.id)}
-                    className="h-4 w-4 rounded border-[#d6dce8]"
                   />
                   <span>{skill.name}</span>
                 </label>
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className={styles.emptyHint}>
               No skills yet. Create skills first and then link them to this position.
             </p>
           )}
@@ -2467,23 +2370,15 @@ function BaseModal({
   maxWidthClass?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/35 p-3 backdrop-blur-[2px] sm:p-4">
-      <div className="flex min-h-full items-center justify-center">
-        <div
-          className={`my-4 w-full ${maxWidthClass ?? (wide ? "max-w-[960px]" : "max-w-[640px]")} overflow-hidden rounded-[22px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.18)]`}
-        >
-          <div className="flex items-center justify-between bg-[linear-gradient(90deg,#1f5fb5_0%,#2865ba_100%)] px-6 py-5">
-            <h3 className="text-[28px] font-semibold tracking-tight text-white">{title}</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="interactive-button rounded-full p-1.5 text-white/90 hover:bg-white/12"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-          <div className="max-h-[calc(100vh-11rem)] overflow-y-auto px-6 py-6">{children}</div>
+    <div className={styles.modalOverlay}>
+      <div className={wide || maxWidthClass ? `${styles.modal} ${styles.modalWide}` : styles.modal}>
+        <div className={styles.modalHead}>
+          <h3>{title}</h3>
+          <button type="button" onClick={onClose} className={styles.modalClose}>
+            <X />
+          </button>
         </div>
+        <div className={styles.modalBody}>{children}</div>
       </div>
     </div>
   );
@@ -2497,10 +2392,10 @@ function ModalField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-[#4f5d72]">{label}</span>
+    <div className={styles.formGroup}>
+      <label className={styles.formLabel}>{label}</label>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -2514,18 +2409,18 @@ function ModalActions({
   submitLabel?: string;
 }) {
   return (
-    <div className="flex gap-4 pt-3">
+    <div className={styles.formActions}>
       <button
         type="button"
         onClick={onClose}
-        className="interactive-button flex-1 rounded-xl border border-[#d9e1ec] bg-white px-4 py-3.5 text-base font-semibold text-[#5a6576] hover:bg-[#f8fafc]"
+        className={styles.btnCancel}
       >
         Cancel
       </button>
       <button
         type="submit"
         disabled={submitDisabled}
-        className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:opacity-60"
+        className={styles.btnSave}
       >
         {submitLabel}
       </button>

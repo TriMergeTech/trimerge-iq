@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive as ArchiveIcon, ChevronDown, Clock3, FileText, Image as ImageIcon, Link2, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 
 import ChatComposer from "./ChatComposer";
+import styles from "./ChatPage.module.css";
 import {
   readStoredAdminPeople,
   writeStoredAdminPeople,
@@ -81,6 +82,7 @@ export default function ChatPage() {
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const projectActionMenuRef = useRef<HTMLDivElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
+  const chatSkyRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = useMemo(() => conversations.find((c) => c.id === activeConversationId) ?? null, [activeConversationId, conversations]);
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
@@ -682,8 +684,45 @@ export default function ChatPage() {
     setOpenConversationMenuId,
   });
 
+  useEffect(() => {
+    const root = chatSkyRef.current;
+    if (!root) return;
+
+    root.innerHTML = "";
+
+    const fragment = document.createDocumentFragment();
+    const createParticle = (className: string, durationRange: [number, number], topOffset = -40) => {
+      const particle = document.createElement("span");
+      particle.className = `chat-star ${className}`;
+      particle.style.left = `${Math.random() * 100}%`;
+      particle.style.top = `${topOffset}px`;
+      particle.style.animationDuration = `${durationRange[0] + Math.random() * (durationRange[1] - durationRange[0])}s`;
+      particle.style.animationDelay = `${Math.random() * 8}s`;
+      particle.style.opacity = `${0.35 + Math.random() * 0.55}`;
+      return particle;
+    };
+
+    for (let index = 0; index < 18; index += 1) {
+      fragment.appendChild(createParticle("dot", [16, 28]));
+    }
+
+    for (let index = 0; index < 7; index += 1) {
+      fragment.appendChild(createParticle("streak", [11, 19], -70));
+    }
+
+    for (let index = 0; index < 8; index += 1) {
+      fragment.appendChild(createParticle("cyan-dot", [18, 32]));
+    }
+
+    root.appendChild(fragment);
+
+    return () => {
+      root.innerHTML = "";
+    };
+  }, []);
+
   return (
-    <section className="relative h-[calc(100vh-81px)] overflow-hidden bg-gradient-to-br from-slate-950 via-[#0d1f3a] to-slate-950 text-white">
+    <section style={{ position: "relative", overflow: "hidden" }}>
       {isCreateProjectModalOpen && (
         <CreateProjectModal
           clientOptions={projectClientOptions}
@@ -747,211 +786,172 @@ export default function ChatPage() {
         />
       )}
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-9rem] top-12 h-80 w-80 rounded-full bg-[#d4af37]/[0.08] blur-3xl" />
-        <div className="absolute right-[-5rem] top-0 h-[28rem] w-[28rem] rounded-full bg-[#1e5ba8]/[0.14] blur-3xl" />
-        <div className="absolute bottom-[-10rem] left-1/3 h-[24rem] w-[24rem] rounded-full bg-cyan-300/[0.06] blur-3xl" />
-      </div>
+      <div className={styles.chatShell}>
+        <aside className={`${styles.sidebar} ${!isSidebarOpen ? styles.sidebarCollapsed : ""}`}>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen((current) => !current)}
+            className={styles.sideCollapse}
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            {isSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+          </button>
 
-      <div className="relative flex h-full w-full">
-        <aside className={`chat-scrollbar relative h-full shrink-0 overflow-y-scroll border-r border-white/[0.07] bg-[linear-gradient(180deg,rgba(12,18,30,0.98)_0%,rgba(8,13,22,0.96)_48%,rgba(7,11,18,0.98)_100%)] shadow-[inset_-1px_0_0_rgba(212,175,55,0.10),12px_0_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl transition-[width] duration-300 before:pointer-events-none before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-[linear-gradient(180deg,transparent,rgba(212,175,55,0.32),transparent)] ${isSidebarOpen ? "w-[290px]" : "w-[76px]"}`}>
-          <div className="border-b border-white/[0.07] bg-white/[0.015] px-5 py-6 shadow-[inset_0_-1px_0_rgba(212,175,55,0.06)]">
-            <div className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => { setSidebarConversationView("active"); startNewChat(); }}
+            className={`${styles.newChat} ${!isSidebarOpen ? styles.newChatCollapsed : ""}`}
+          >
+            <MessageSquarePlus className="h-5 w-5" />
+            {isSidebarOpen && <span>New chat</span>}
+          </button>
+
+          {isSidebarOpen ? (
+            <div className={styles.searchWrap}>
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7c5cff]/58" />
+              <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className={styles.searchInput} />
+            </div>
+          ) : (
+            <button type="button" aria-label="Search chats" className={styles.sideCollapse}>
+              <Search className="h-4 w-4" />
+            </button>
+          )}
+
+          {isSidebarOpen && (
+            <div className="relative" ref={projectMenuRef}>
               <button
                 type="button"
-                onClick={() => setIsSidebarOpen((current) => !current)}
-                className="interactive-button rounded-full border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-[#f2e7bb] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(0,0,0,0.20)] hover:border-[#d4af37]/38 hover:bg-white/[0.075]"
-                aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-                title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+                onClick={() => setIsProjectMenuOpen((current) => !current)}
+                className={styles.projectSelect}
               >
-                {isSidebarOpen ? (
-                  <PanelLeftClose className="h-4 w-4" />
-                ) : (
-                  <PanelLeftOpen className="h-4 w-4" />
-                )}
+                <span>Project</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
               </button>
-            </div>
 
-            <button type="button" onClick={() => { setSidebarConversationView("active"); startNewChat(); }} className={`interactive-button flex w-full items-center rounded-[18px] border border-[#d4af37]/26 bg-[linear-gradient(180deg,rgba(23,38,63,0.92),rgba(10,16,27,0.88))] py-3.5 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_14px_34px_rgba(0,0,0,0.20)] hover:border-[#d4af37]/42 hover:bg-[linear-gradient(180deg,rgba(28,47,78,0.96),rgba(12,20,34,0.92))] ${isSidebarOpen ? "gap-3 px-4" : "justify-center px-0"}`}>
-              <MessageSquarePlus className="h-5 w-5 text-[#d4af37]" />
-              {isSidebarOpen && <span className="font-medium">New chat</span>}
-            </button>
-            {isSidebarOpen ? (
-              <div className="relative mt-4">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#d4af37]/58" />
-                <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className="interactive-input w-full rounded-[18px] border border-white/[0.08] bg-black/[0.18] py-3.5 pl-11 pr-4 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_-1px_0_rgba(0,0,0,0.20)] outline-none placeholder:text-[#c5c9d3]/40 focus:border-[#d4af37]/42 focus:bg-[#101827]/75 focus:ring-2 focus:ring-[#d4af37]/10" />
-              </div>
-            ) : (
-              <button type="button" aria-label="Search chats" className="interactive-button mt-4 flex w-full items-center justify-center rounded-[18px] border border-white/[0.08] bg-black/[0.18] py-3.5 text-[#d4af37]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-[#d4af37]/36 hover:bg-white/[0.06]">
-                <Search className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex-1 px-4 py-5">
-            {isSidebarOpen && (
-              <div className="relative mb-5" ref={projectMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsProjectMenuOpen((current) => !current)}
-                  className="interactive-button flex w-full items-center justify-between rounded-[16px] border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-left text-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:border-white/[0.11] hover:bg-white/[0.055]"
-                >
-                  <span className="text-sm font-medium">Project</span>
-                  <ChevronDown className={`h-4 w-4 text-white/55 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
-                </button>
-
-                {isProjectMenuOpen && (
-                  <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-20 rounded-[20px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                    <button type="button" onClick={openCreateProjectModal} className="interactive-button flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-left text-white hover:bg-white/[0.06]">
-                      <span className="flex items-center gap-3">
-                        <Sparkles className="h-4 w-4 text-[#d4af37]" />
-                        <span className="text-sm font-medium">Create new project</span>
-                      </span>
-                      <Plus className="h-4 w-4 text-[#d4af37]" />
-                    </button>
-                    <div className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/60">Recent projects</div>
-                    {recentProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className={`group relative rounded-[14px] ${selectedProjectId === project.id ? "border border-[#d4af37]/18 bg-white/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]" : "hover:bg-white/[0.045]"}`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleSelectProject(project.id)}
-                          className={`interactive-button flex w-full items-center justify-between rounded-[14px] px-3 py-3 pr-12 text-left ${selectedProjectId === project.id ? "text-white" : "text-white/88"}`}
-                        >
-                          <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                            {project.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#d4af37]" />}
-                            <span className="truncate">{project.name}</span>
-                          </span>
-                        </button>
-
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2" ref={openProjectActionMenuId === project.id ? projectActionMenuRef : undefined}>
-                          <button
-                            type="button"
-                            aria-label={`Project actions for ${project.name}`}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              setOpenProjectActionMenuId((current) => current === project.id ? null : project.id);
-                            }}
-                            className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-black/[0.24] text-[#f6edd0] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-[#d4af37]/28 hover:bg-white/[0.08] ${openProjectActionMenuId === project.id ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none"}`}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-
-                          {openProjectActionMenuId === project.id && (
-                            <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                              <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => openProjectShareDialog(project)} />
-                              <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openProjectRenameDialog(project)} />
-                              <ConversationMenuItem icon={project.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={project.pinned ? "Unpin project" : "Pin project"} onClick={() => handlePinProject(project.id)} />
-                              <ConversationMenuItem icon={<ArchiveIcon className="h-4 w-4" />} label="Archive" onClick={() => handleArchiveProject(project.id)} />
-                              <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => handleDeleteProject(project.id)} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {isSidebarOpen && (
-              <div className="mb-4 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setSidebarConversationView((current) => (current === "archived" ? "active" : "archived"))}
-                  className={`interactive-button flex w-full items-center justify-between rounded-[16px] border px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition ${
-                    sidebarConversationView === "archived"
-                      ? "border-[#d4af37]/24 bg-white/[0.075] text-white"
-                      : "border-transparent bg-transparent text-[#d8dbe3]/66 hover:bg-white/[0.045] hover:text-white/88"
-                  }`}
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <ArchiveIcon className="h-4 w-4 shrink-0 text-[#d4af37]/70" />
-                    <span className="truncate text-sm font-medium">Archived</span>
-                  </span>
-                  <span className="rounded-full border border-white/[0.08] bg-black/[0.18] px-2 py-0.5 text-[11px] font-semibold text-[#f0d98a]/70">
-                    {archivedSidebarConversations.length}
-                  </span>
-                </button>
-
-                <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f0d98a]/60">
-                    {sidebarConversationView === "archived" ? "Archived" : "Recents"}
-                  </p>
-                  {sidebarConversationView === "archived" && (
-                    <button
-                      type="button"
-                      onClick={() => setSidebarConversationView("active")}
-                      className="interactive-button rounded-full px-2 py-1 text-[11px] font-semibold text-[#d8dbe3]/54 hover:bg-white/[0.04] hover:text-white/82"
+              {isProjectMenuOpen && (
+                <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-20 rounded-[20px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+                  <button type="button" onClick={openCreateProjectModal} className="interactive-button flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-left text-white hover:bg-white/[0.06]">
+                    <span className="flex items-center gap-3">
+                      <Sparkles className="h-4 w-4 text-[#7c5cff]" />
+                      <span className="text-sm font-medium">Create new project</span>
+                    </span>
+                    <Plus className="h-4 w-4 text-[#7c5cff]" />
+                  </button>
+                  <div className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#b7a6ff]/60">Recent projects</div>
+                  {recentProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className={`group relative rounded-[14px] ${selectedProjectId === project.id ? "border border-[#7c5cff]/18 bg-white/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]" : "hover:bg-white/[0.045]"}`}
                     >
-                      Recents
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {isSidebarOpen && <div className="space-y-2">
-              {isLoadingChatData && (
-                <div className="rounded-2xl border border-dashed border-[#d4af37]/26 bg-[#0f1726]/70 px-4 py-6 text-sm text-[#d8dbe3]/48">
-                  Loading conversations...
-                </div>
-              )}
-              {visibleSidebarConversations.map((conversation) => {
-                const isActive = conversation.id === activeConversationId;
-                return (
-                  <div key={conversation.id} className={`group relative rounded-[18px] ${isActive ? "border border-[#d4af37]/18 bg-[linear-gradient(180deg,rgba(212,175,55,0.095),rgba(18,23,34,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_16px_34px_rgba(0,0,0,0.18)]" : ""}`}>
-                    <button type="button" onClick={() => { setSelectedProjectId(conversation.projectId); setActiveConversationId(conversation.id); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); }} className={`interactive-button flex w-full items-start gap-3 rounded-[18px] px-4 py-3.5 pr-12 text-left ${isActive ? "" : "hover:bg-white/[0.04]"}`}>
-                      {sidebarConversationView === "archived" ? <ArchiveIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#d4af37]/70" /> : <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#d4af37]/70" />}
-                      {isSidebarOpen && (
-                        <div className="min-w-0">
-                          <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-white/90">
-                            {conversation.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#d4af37]" />}
-                            <span className="truncate">{conversation.title}</span>
-                          </p>
-                          {sidebarConversationView === "archived" && conversation.projectName && <p className="mt-1 truncate text-xs text-[#f0d98a]/52">{conversation.projectName}</p>}
-                          <p className="mt-1 text-xs text-[#d8dbe3]/42">{conversation.updatedAt.toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </button>
-
-                    {isSidebarOpen && (
-                    <div className="absolute right-2 top-2" ref={openConversationMenuId === conversation.id ? conversationMenuRef : undefined}>
-                      <button type="button" aria-label="Conversation options" onClick={() => setOpenConversationMenuId((current) => current === conversation.id ? null : conversation.id)} className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full text-[#f2e7bb]/80 ${openConversationMenuId === conversation.id ? "border border-[#d4af37]/24 bg-white/[0.08]" : "opacity-0 group-hover:opacity-100 hover:bg-white/[0.06]"}`}>
-                        <MoreHorizontal className="h-4 w-4" />
+                      <button
+                        type="button"
+                        onClick={() => handleSelectProject(project.id)}
+                        className={`interactive-button flex w-full items-center justify-between rounded-[14px] px-3 py-3 pr-12 text-left ${selectedProjectId === project.id ? "text-white" : "text-white/88"}`}
+                      >
+                        <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                          {project.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#7c5cff]" />}
+                          <span className="truncate">{project.name}</span>
+                        </span>
                       </button>
 
-                      {openConversationMenuId === conversation.id && (
-                        <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                          <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => void openConversationShareDialog(conversation)} />
-                          <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openConversationRenameDialog(conversation)} />
-                          <ConversationMenuItem icon={conversation.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={conversation.pinned ? "Unpin chat" : "Pin chat"} onClick={() => handlePinConversation(conversation.id)} />
-                          <ConversationMenuItem
-                            icon={<ArchiveIcon className="h-4 w-4" />}
-                            label={conversation.archived ? "Unarchive" : "Archive"}
-                            onClick={() => handleArchiveConversation(conversation.id, !conversation.archived)}
-                          />
-                          <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => handleDeleteConversation(conversation.id)} />
-                        </div>
-                      )}
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2" ref={openProjectActionMenuId === project.id ? projectActionMenuRef : undefined}>
+                        <button
+                          type="button"
+                          aria-label={`Project actions for ${project.name}`}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setOpenProjectActionMenuId((current) => current === project.id ? null : project.id);
+                          }}
+                          className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-black/[0.24] text-[#f6edd0] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-[#7c5cff]/28 hover:bg-white/[0.08] ${openProjectActionMenuId === project.id ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none"}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+
+                        {openProjectActionMenuId === project.id && (
+                          <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+                            <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => openProjectShareDialog(project)} />
+                            <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openProjectRenameDialog(project)} />
+                            <ConversationMenuItem icon={project.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={project.pinned ? "Unpin project" : "Pin project"} onClick={() => handlePinProject(project.id)} />
+                            <ConversationMenuItem icon={<ArchiveIcon className="h-4 w-4" />} label="Archive" onClick={() => handleArchiveProject(project.id)} />
+                            <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => handleDeleteProject(project.id)} />
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSidebarOpen && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSidebarConversationView((current) => (current === "archived" ? "active" : "archived"))}
+                className={`${styles.sideRow} ${sidebarConversationView === "archived" ? styles.sideRowActive : ""}`}
+              >
+                <span className={styles.sideRowLeft}>
+                  <ArchiveIcon className="h-4 w-4 shrink-0" />
+                  <span>Archived</span>
+                </span>
+                <span className={styles.sideCount}>{archivedSidebarConversations.length}</span>
+              </button>
+
+              <div className={styles.sideLabel}>{sidebarConversationView === "archived" ? "Archived" : "Recents"}</div>
+            </>
+          )}
+
+          {isSidebarOpen && <div className="space-y-2">
+            {isLoadingChatData && <div className={styles.emptyCard}>Loading conversations...</div>}
+            {visibleSidebarConversations.map((conversation) => {
+              const isActive = conversation.id === activeConversationId;
+              return (
+                <div key={conversation.id} className={`group ${styles.convItem} ${isActive ? styles.convItemActive : ""}`}>
+                  <button type="button" onClick={() => { setSelectedProjectId(conversation.projectId); setActiveConversationId(conversation.id); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); }} className={styles.convBtn}>
+                    {sidebarConversationView === "archived" ? <ArchiveIcon className={styles.convIcon} /> : <Clock3 className={styles.convIcon} />}
+                    <div className="min-w-0">
+                      <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-white/90">
+                        {conversation.pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-[#7c5cff]" />}
+                        <span className="truncate">{conversation.title}</span>
+                      </p>
+                      {sidebarConversationView === "archived" && conversation.projectName && <p className="mt-1 truncate text-xs text-[#b7a6ff]/52">{conversation.projectName}</p>}
+                      <p className="mt-1 text-xs text-[#d8dbe3]/42">{conversation.updatedAt.toLocaleDateString()}</p>
+                    </div>
+                  </button>
+
+                  <div className="absolute right-2 top-2" ref={openConversationMenuId === conversation.id ? conversationMenuRef : undefined}>
+                    <button type="button" aria-label="Conversation options" onClick={() => setOpenConversationMenuId((current) => current === conversation.id ? null : conversation.id)} className={`interactive-button flex h-8 w-8 items-center justify-center rounded-full text-[#d8d0ff]/80 ${openConversationMenuId === conversation.id ? "border border-[#7c5cff]/24 bg-white/[0.08]" : "opacity-0 group-hover:opacity-100 hover:bg-white/[0.06]"}`}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+
+                    {openConversationMenuId === conversation.id && (
+                      <div className="absolute right-0 top-10 z-20 w-48 rounded-[18px] border border-white/[0.08] bg-[#0b111a]/96 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
+                        <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => void openConversationShareDialog(conversation)} />
+                        <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => openConversationRenameDialog(conversation)} />
+                        <ConversationMenuItem icon={conversation.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />} label={conversation.pinned ? "Unpin chat" : "Pin chat"} onClick={() => handlePinConversation(conversation.id)} />
+                        <ConversationMenuItem icon={<ArchiveIcon className="h-4 w-4" />} label={conversation.archived ? "Unarchive" : "Archive"} onClick={() => handleArchiveConversation(conversation.id, !conversation.archived)} />
+                        <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => handleDeleteConversation(conversation.id)} />
+                      </div>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
 
-              {isSidebarOpen && !isLoadingChatData && visibleSidebarConversations.length === 0 && <div className="rounded-[18px] border border-dashed border-white/[0.08] bg-white/[0.025] px-4 py-6 text-sm text-[#d8dbe3]/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
-            </div>}
-          </div>
+            {!isLoadingChatData && visibleSidebarConversations.length === 0 && <div className={styles.emptyCard}>{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
+          </div>}
 
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(30,91,168,0.18),transparent_28%),linear-gradient(180deg,#11161f_0%,#0c1118_100%)]">
+        <div className={styles.main}>
+          <div className={styles.chatSky} ref={chatSkyRef} aria-hidden="true" />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {lastChatError && (
-              <div className="px-8 pt-5 lg:px-16 xl:px-20">
-                <div className="mx-auto max-w-[1480px] rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              <div className={styles.alertWrap}>
+                <div className={styles.alertBanner}>
                   {lastChatError}
                 </div>
               </div>
@@ -982,7 +982,6 @@ export default function ChatPage() {
                     fileInputRef={fileInputRef}
                     imageInputRef={imageInputRef}
                     inputMessage={inputMessage}
-                    inputTextClassName="min-w-0 flex-1 bg-transparent px-2 py-3 text-[17px] font-light text-white outline-none placeholder:text-[#d8dbe3]/36"
                     isAttachmentMenuOpen={isAttachmentMenuOpen}
                     isTyping={isTyping}
                     onFileSelect={handleFileSelect}
@@ -1003,10 +1002,10 @@ export default function ChatPage() {
               <div className="px-6 pb-3 lg:px-12">
                 <div className="mx-auto flex max-w-[1160px] flex-wrap gap-2">
                   {attachedFiles.map((file) => (
-                    <div key={file.name} className="flex items-center gap-2 rounded-2xl border border-[#d4af37]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
+                    <div key={file.name} className="flex items-center gap-2 rounded-2xl border border-[#7c5cff]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
                       {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                       <span className="max-w-[160px] truncate text-sm">{file.name}</span>
-                      <button type="button" onClick={() => setAttachedFiles((current) => current.filter((item) => item.name !== file.name))} className="interactive-button rounded-full p-1 hover:bg-[#d4af37]/12"><X className="h-3 w-3" /></button>
+                      <button type="button" onClick={() => setAttachedFiles((current) => current.filter((item) => item.name !== file.name))} className="interactive-button rounded-full p-1 hover:bg-[#7c5cff]/12"><X className="h-3 w-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -1014,7 +1013,7 @@ export default function ChatPage() {
             )}
 
             {activeConversation && (
-              <div className="border-t border-[#d4af37]/18 bg-[#0c1118]/95 px-8 pb-8 pt-5 lg:px-16 xl:px-20 backdrop-blur-xl">
+              <div className={styles.activeComposerFooter}>
               <div className="mx-auto max-w-[1480px]">
                 <ChatComposer
                   attachedFiles={attachedFiles}
@@ -1022,7 +1021,6 @@ export default function ChatPage() {
                   fileInputRef={fileInputRef}
                   imageInputRef={imageInputRef}
                   inputMessage={inputMessage}
-                  inputTextClassName="min-w-0 flex-1 bg-transparent px-2 py-3 text-[21px] font-light text-white outline-none placeholder:text-[#d8dbe3]/36"
                   isAttachmentMenuOpen={isAttachmentMenuOpen}
                   isTyping={isTyping}
                   onFileSelect={handleFileSelect}
@@ -1039,4 +1037,5 @@ export default function ChatPage() {
     </section>
   );
 }
+
 

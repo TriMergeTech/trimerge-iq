@@ -3,7 +3,7 @@ import { readStoredAdminPeople } from "./adminRegistryState";
 import { authenticatedAdminFetch } from "./adminAuth";
 
 const DEFAULT_CHAT_API_BASE_URL = "https://trimerge-microserver-v3.vercel.app/v2";
-const DEFAULT_PROJECTS_API_BASE_URL = "/api/trimerge";
+const DEFAULT_PROJECTS_API_BASE_URL = "https://trimerge-iq.onrender.com";
 const CHAT_PROFILE_STORAGE_KEY = "trimerge_chat_profile";
 const CHAT_MESSAGE_SENDER_STORAGE_KEY = "trimerge_chat_message_senders";
 
