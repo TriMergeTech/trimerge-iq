@@ -21,52 +21,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 56px;
+  padding: 22px 56px 22px 28px;
   background: #fff;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   font-weight: 700;
 }
 
-.logoMark {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-}
-
-.logoMark svg {
-  width: 100%;
-  height: 100%;
-}
-
-.logoText {
-  line-height: 1;
-}
-
-.tri {
-  color: #1f2858;
-  font-size: 26px;
-  letter-spacing: -0.5px;
-}
-
-.merge {
-  color: #efb01a;
-  font-size: 26px;
-  letter-spacing: -0.5px;
-}
-
-.sub {
-  font-family: "Inter", sans-serif;
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: #7a82a6;
-  margin-top: 4px;
-  font-weight: 500;
+.logoImage {
+  display: block;
+  width: auto;
+  height: 42px;
+  max-width: min(34vw, 300px);
+  object-fit: contain;
 }
 
 .navLinks {
@@ -566,7 +537,12 @@
 
 @media (max-width: 980px) {
   .nav {
-    padding: 18px 24px;
+    padding: 18px 24px 18px 14px;
+  }
+
+  .logoImage {
+    height: 32px;
+    max-width: min(52vw, 220px);
   }
 
   .labelText {

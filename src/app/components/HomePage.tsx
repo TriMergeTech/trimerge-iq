@@ -150,22 +150,22 @@ type Twinkle = {
 function createSky() {
   const rand = rng(1729);
   const twinkles: Twinkle[] = [];
-  for (let i = 0; i < 60; i += 1) {
+  for (let i = 0; i < 36; i += 1) {
     twinkles.push({
       left: `${(rand() * 100).toFixed(2)}%`,
       top: `${(rand() * 100).toFixed(2)}%`,
-      delay: `${(rand() * 3).toFixed(2)}s`,
-      duration: `${(2 + rand() * 3).toFixed(2)}s`,
+      delay: `${(rand() * 4).toFixed(2)}s`,
+      duration: `${(6 + rand() * 6).toFixed(2)}s`,
     });
   }
 
   const shapes: StarShape[] = ["shapeDot", "shapeDot", "shapeDot", "shapeStreak", "shapeSpark"];
   const tints: StarTint[] = ["", "", "tintCyan", "tintViolet"];
   const stars: SkyStar[] = [];
-  for (let i = 0; i < 70; i += 1) {
+  for (let i = 0; i < 42; i += 1) {
     const shape = shapes[Math.floor(rand() * shapes.length)];
     const tint = tints[Math.floor(rand() * tints.length)];
-    const duration = 4 + rand() * 8;
+    const duration = 10 + rand() * 10;
     const star: SkyStar = {
       left: `${(rand() * 100).toFixed(2)}%`,
       duration: `${duration.toFixed(2)}s`,
@@ -260,17 +260,8 @@ export default function HomePage() {
     <div className={styles.homeRoot}>
       <header className={styles.nav}>
         <div className={styles.logo}>
-          <div className={styles.logoMark}>
-            <svg viewBox="0 0 48 48" fill="none">
-              <path d="M9 38 L24 10 L39 38 Z" stroke="#1f2858" strokeWidth="2.4" strokeLinejoin="round" fill="none" />
-              <path d="M16 38 L24 22 L32 38 Z" fill="#efb01a" />
-            </svg>
-          </div>
-          <div className={styles.logoText}>
-            <span className={styles.tri}>Tri</span>
-            <span className={styles.merge}>Merge</span>
-            <div className={styles.sub}>CONSULTING GROUP</div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/trimerge-iq-logo.png" alt="TriMerge IQ" className={styles.logoImage} />
         </div>
 
         <nav className={styles.navLinks}>

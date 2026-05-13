@@ -23,6 +23,7 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 The chat UI reads its backend base URL from `NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL`.
 Project management requests read their backend base URL from
 `NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL`.
+The admin login screen uses the same project API base URL.
 
 Local setup:
 

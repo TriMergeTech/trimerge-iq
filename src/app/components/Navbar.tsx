@@ -13,17 +13,8 @@ export default function Navbar() {
   return (
     <header className={styles.nav}>
       <div className={styles.logo}>
-        <div className={styles.logoMark}>
-          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 38 L24 10 L39 38 Z" stroke="#1f2858" strokeWidth="2.4" strokeLinejoin="round" fill="none" />
-            <path d="M16 38 L24 22 L32 38 Z" fill="#efb01a" />
-          </svg>
-        </div>
-        <div className={styles.logoText}>
-          <span className={styles.tri}>Tri</span>
-          <span className={styles.merge}>Merge</span>
-          <div className={styles.sub}>CONSULTING GROUP</div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/trimerge-iq-logo.png" alt="TriMerge IQ" className={styles.logoImage} />
       </div>
 
       <nav className={styles.navLinks}>

@@ -12,9 +12,8 @@ import {
   Shield,
   User,
 } from "lucide-react";
+import { ADMIN_API_BASE_URL } from "./adminAuth";
 import styles from "./LoginPage.module.css";
-
-const API_BASE_URL = "https://trimerge-iq.onrender.com";
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -78,7 +77,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const loginWithCredentials = async (nextEmail: string, nextPassword: string) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${ADMIN_API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,7 +87,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         password: nextPassword,
       }),
     });
-
+console.log("Login response status:", response.status);
     const payload = await parseJsonSafely(response);
     const accessToken = payload?.access_token ?? payload?.data?.access_token;
     const refreshToken = payload?.refresh_token ?? payload?.data?.refresh_token;
@@ -157,7 +156,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       setIsLoading(true);
 
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -210,7 +209,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       setIsLoading(true);
 
-      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/auth/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -249,7 +248,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       setIsLoading(true);
 
-      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/auth/forgot-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
