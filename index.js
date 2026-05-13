@@ -15,6 +15,7 @@ const allowedOrigins = [
   'https://trimerge-backend--trimerge-nextjs-app.us-central1.hosted.app',
   'https://trimerge-iq.onrender.com',
   'https://trimergenextjs.web.app',
+  'https://trimerge-nextjs-app.web.app',
 ];
 
 const app = express();
