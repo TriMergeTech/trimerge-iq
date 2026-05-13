@@ -723,6 +723,135 @@ const swaggerSpec = {
         },
       },
     },
+    '/tools': {
+      post: {
+        tags: ['Tools'],
+        summary: 'Create a new tool',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'description', 'arguments'],
+                properties: {
+                  name: { type: 'string', example: 'create_api_endpoint' },
+                  description: { type: 'string', example: 'Creates a new backend API endpoint.' },
+                  arguments: {
+                    type: 'object',
+                    example: {
+                      route: { type: 'string', description: 'API route path' },
+                      method: { type: 'string', description: 'HTTP method such as GET or POST' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Tool created' },
+          400: { description: 'Missing or invalid fields' },
+        },
+      },
+      get: {
+        tags: ['Tools'],
+        summary: 'Retrieve all tools',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Returns array of all tools' } },
+      },
+    },
+    '/tools/{id}': {
+      get: {
+        tags: ['Tools'],
+        summary: 'Retrieve a single tool by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns the tool' },
+          400: { description: 'Invalid ID' },
+          404: { description: 'Tool not found' },
+        },
+      },
+      put: {
+        tags: ['Tools'],
+        summary: 'Update a tool by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  arguments: { type: 'object' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Tool updated' },
+          400: { description: 'Invalid ID or no valid fields' },
+          404: { description: 'Tool not found' },
+        },
+      },
+      delete: {
+        tags: ['Tools'],
+        summary: 'Delete a tool by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Tool deleted' },
+          400: { description: 'Invalid ID' },
+          404: { description: 'Tool not found' },
+        },
+      },
+    },
+    '/assign_tools_to_staff': {
+      post: {
+        tags: ['Tools'],
+        summary: 'Assign tools to a staff member (replaces existing)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['staff', 'tools'],
+                properties: {
+                  staff: { type: 'string', example: '<staff _id>' },
+                  tools: { type: 'array', items: { type: 'string' }, example: ['<tool _id>', '<tool _id>'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Tools assigned' },
+          400: { description: 'Missing or invalid fields' },
+          404: { description: 'Staff member not found' },
+        },
+      },
+    },
+    '/get_staff_tools/{staff_id}': {
+      get: {
+        tags: ['Tools'],
+        summary: 'Get full tool objects assigned to a staff member',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'staff_id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Returns array of tool objects' },
+          400: { description: 'Invalid staff ID' },
+          404: { description: 'Staff member not found' },
+        },
+      },
+    },
     '/clients/{id}': {
       get: {
         tags: ['Clients'],
@@ -812,6 +941,7 @@ let skills;
 let clients;
 let projects;
 let staff;
+let toolsCollection;
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
@@ -883,6 +1013,7 @@ async function connectDb() {
   clients = db.collection('clients');
   projects = db.collection('projects');
   staff = db.collection('staff_members');
+  toolsCollection = db.collection('tools');
   await users.createIndex({ email: 1 }, { unique: true });
   await otpVerifications.createIndex({ email: 1 });
   await otpVerifications.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
@@ -897,6 +1028,7 @@ const createSkillsRouter = require('./routes/skills');
 const createClientsRouter = require('./routes/clients');
 const createProjectsRouter = require('./routes/projects');
 const createStaffRouter = require('./routes/staff');
+const createToolsRouter = require('./routes/tools');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -1171,6 +1303,7 @@ connectDb()
     app.use('/clients', createClientsRouter(clients, authMiddleware, requireRole));
     app.use('/projects', createProjectsRouter(projects, authMiddleware, requireRole));
     app.use('/staff', createStaffRouter(staff, authMiddleware, requireRole));
+    app.use('/', createToolsRouter(toolsCollection, staff, authMiddleware, requireRole));
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
