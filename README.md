@@ -1,12 +1,11 @@
 # Authentication & Resource Management API — TriMerge IQ
 
 ## Overview
-A production-ready backend for the TriMerge IQ consulting platform. Built with Node.js, Express, and MongoDB (native driver). Handles authentication, RBAC, and full CRUD management for Positions, Services, Skills, and Clients.
+A production-ready backend for the TriMerge IQ consulting platform. Built with Node.js, Express, and MongoDB (native driver). Handles authentication, RBAC, and full CRUD management for Positions, Services, Skills, Clients, Projects, Staff, and Tools.
 
 **Production URL:** https://trimerge-iq.onrender.com
 **API Docs (Swagger):** https://trimerge-iq.onrender.com/api-docs
-
-
+**GitHub:** https://github.com/TriMergeTech/trimerge-iq (branch: `task-001-auth`)
 
 ---
 
@@ -18,8 +17,10 @@ A production-ready backend for the TriMerge IQ consulting platform. Built with N
 - **Email:** Mailgun (signup OTP, password reset)
 - **Rate Limiting:** express-rate-limit
 - **Docs:** Swagger UI (OpenAPI 3.0)
-- **Testing:** Jest + Supertest (141 tests, real MongoDB)
+- **Testing:** Jest + Supertest (191 tests, real MongoDB)
 - **Deployment:** Render
+
+> **Auth currently disabled:** `authMiddleware` and `requireRole` are commented out on all endpoints — all routes are fully public. Re-enable by uncommenting `/* authMiddleware, ... */` in each route file and `index.js`.
 
 ---
 
@@ -30,7 +31,7 @@ A production-ready backend for the TriMerge IQ consulting platform. Built with N
 npm install
 ```
 
-2. Create a `.env` file in the project root (see `.env.shared` for the template):
+2. Create a `.env` file in the project root:
 ```dotenv
 PORT=3000
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/auth_task
@@ -41,11 +42,9 @@ MAILGUN_DOMAIN=your_mailgun_sandbox_or_sending_domain
 MAILGUN_SENDER=Your Name <you@yourdomain.com>
 ```
 
-> **Note:** Mailgun sandbox accounts can only send to pre-authorized recipient emails. Add test emails to your authorized recipients list in the Mailgun dashboard.
-
 3. Start the server:
 ```bash
-npm start
+node index.js
 ```
 
 4. Run tests:
@@ -65,7 +64,7 @@ API docs available at: `http://localhost:3000/api-docs`
 | `staff` | Signup | Full CRUD on all resource endpoints |
 | `admin` | Manual Atlas edit only | Full CRUD + user list |
 
-> There is no API endpoint to promote a user to admin. Admin role must be set manually in MongoDB Atlas.
+> Admin role must be set manually in MongoDB Atlas — no API endpoint exists for this.
 
 ---
 
@@ -76,11 +75,9 @@ API docs available at: `http://localhost:3000/api-docs`
 | `POST /auth/login` | 10 requests per IP per 15 minutes |
 | `POST /auth/refresh` | 30 requests per IP per 15 minutes |
 
-Exceeding the limit returns `429 Too Many Requests`.
-
 ---
 
-## All Endpoints (35 total)
+## All Endpoints (47 total)
 
 ### Auth
 
@@ -147,28 +144,37 @@ Exceeding the limit returns `429 Too Many Requests`.
 | PUT | `/projects/:id` | staff / admin | Update a project |
 | DELETE | `/projects/:id` | staff / admin | Delete a project |
 
+### Staff
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/staff` | any role | Get all staff members |
+| GET | `/staff/:id` | any role | Get one staff member |
+| POST | `/staff` | staff / admin | Create a staff member |
+| PUT | `/staff/:id` | staff / admin | Update a staff member |
+| DELETE | `/staff/:id` | staff / admin | Delete a staff member |
+
+### Tools
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/tools` | any role | Get all tools |
+| GET | `/tools/:id` | any role | Get one tool |
+| POST | `/tools` | staff / admin | Create a tool |
+| PUT | `/tools/:id` | staff / admin | Update a tool |
+| DELETE | `/tools/:id` | staff / admin | Delete a tool |
+| POST | `/assign_tools_to_staff` | staff / admin | Assign tools to a staff member |
+| GET | `/get_staff_tools/:staff_id` | any role | Get full tool objects for a staff member |
+
 ---
 
 ## Request / Response Reference
 
 ### POST /auth/signup
 ```json
-{
-  "fullName": "Jane Doe",
-  "email": "user@example.com",
-  "profile": "staff",
-  "password": "SecurePassword123"
-}
+{ "fullName": "Jane Doe", "email": "user@example.com", "profile": "staff", "password": "SecurePassword123" }
 ```
 Response `201`: `{ "message": "Signup successful. OTP sent to email." }`
-
----
-
-### POST /auth/verify
-```json
-{ "email": "user@example.com", "otp": "123456" }
-```
-Response `200`: `{ "message": "Account verified", "refresh_token": "..." }`
 
 ---
 
@@ -176,57 +182,6 @@ Response `200`: `{ "message": "Account verified", "refresh_token": "..." }`
 ```json
 { "email": "user@example.com", "password": "SecurePassword123" }
 ```
-Response `200`: `{ "access_token": "...", "refresh_token": "..." }`
-
----
-
-### POST /auth/refresh
-```json
-{ "refresh_token": "..." }
-```
-Response `200`: `{ "access_token": "..." }`
-
----
-
-### GET /auth/me
-Header: `Authorization: Bearer <access_token>`
-
-Response `200`:
-```json
-{
-  "fullName": "Jane Doe",
-  "email": "user@example.com",
-  "profile": "staff",
-  "role": "staff",
-  "is_verified": true,
-  "created_at": "..."
-}
-```
-
----
-
-### POST /auth/forgot-password
-```json
-{ "email": "user@example.com" }
-```
-Response `200`: `{ "message": "If that email is registered, a reset OTP has been sent." }`
-
----
-
-### POST /auth/reset-password
-```json
-{ "email": "user@example.com", "otp": "123456", "new_password": "NewPass123" }
-```
-Response `200`: `{ "message": "Password reset successful" }`
-
----
-
-### POST /auth/google
-```json
-{ "id_token": "google_id_token", "profile": "staff" }
-```
-> `profile` required only for new users.
-
 Response `200`: `{ "access_token": "...", "refresh_token": "..." }`
 
 ---
@@ -240,6 +195,8 @@ Response `200`: `{ "access_token": "...", "refresh_token": "..." }`
   "skills": ["<skill _id>", "<skill _id>"]
 }
 ```
+> `skills` stores MongoDB `_id` strings of skill documents — not plain names.
+
 Response `201`: returns the created document with `_id`.
 
 ---
@@ -252,6 +209,8 @@ Response `201`: returns the created document with `_id`.
   "skills": ["<skill _id>", "<skill _id>"]
 }
 ```
+> `skills` stores MongoDB `_id` strings of skill documents — not plain names.
+
 Response `201`: returns the created document with `_id`.
 
 ---
@@ -283,9 +242,59 @@ Response `201`: returns the created document with `_id`.
   "service": "<uuid>"
 }
 ```
-> All ID fields (`project_manager`, `team` items, `client`, `service`) are UUID strings generated with `crypto.randomUUID()` — they are **not** MongoDB ObjectIds.
+> All ID fields are UUID strings (`crypto.randomUUID()`) — not MongoDB ObjectIds.
 
 Response `201`: returns the created document with `_id`.
+
+---
+
+### POST /staff
+```json
+{ "name": "Alice Ramirez", "email": "alice@trimergecpa.com", "position": "<position _id>" }
+```
+> `position` is a UUID string referencing a position document. Email is normalized to lowercase.
+
+Response `201`: returns the created document with `_id`.
+
+---
+
+### POST /tools
+```json
+{
+  "name": "create_api_endpoint",
+  "description": "Creates a new backend API endpoint.",
+  "arguments": {
+    "route": { "type": "string", "description": "API route path" },
+    "method": { "type": "string", "description": "HTTP method such as GET or POST" }
+  }
+}
+```
+Response `201`: returns the created document with `_id`.
+
+---
+
+### POST /assign_tools_to_staff
+```json
+{ "staff": "<staff _id>", "tools": ["<tool _id>", "<tool _id>"] }
+```
+> Replaces the existing tools array on the staff member.
+
+Response `200`: `{ "message": "Tools assigned" }`
+
+---
+
+### GET /get_staff_tools/:staff_id
+Returns the full tool objects assigned to a staff member:
+```json
+[
+  {
+    "_id": "...",
+    "name": "create_api_endpoint",
+    "description": "Creates a new backend API endpoint.",
+    "arguments": { ... }
+  }
+]
+```
 
 ---
 
@@ -309,7 +318,7 @@ Response `201`: returns the created document with `_id`.
 | `name` | String | Required |
 | `description` | String | Required |
 | `responsibility` | Array of Strings | Defaults to `[]` |
-| `skills` | Array of Strings | Defaults to `[]` |
+| `skills` | Array of Strings | MongoDB `_id` refs to skills collection |
 | `created_at` | Date | |
 
 ### `services`
@@ -317,7 +326,7 @@ Response `201`: returns the created document with `_id`.
 |---|---|---|
 | `title` | String | Required |
 | `descriptions` | String | Required |
-| `skills` | Array of Strings | Defaults to `[]` |
+| `skills` | Array of Strings | MongoDB `_id` refs to skills collection |
 | `created_at` | Date | |
 
 ### `skills`
@@ -339,10 +348,27 @@ Response `201`: returns the created document with `_id`.
 |---|---|---|
 | `name` | String | Required |
 | `description` | String | Required |
-| `project_manager` | String (UUID) | Required — crypto.randomUUID() |
-| `team` | Array of Strings (UUID) | Required — array of crypto.randomUUID() |
-| `client` | String (UUID) | Required — crypto.randomUUID() |
-| `service` | String (UUID) | Required — crypto.randomUUID() |
+| `project_manager` | String (UUID) | Required |
+| `team` | Array of Strings (UUID) | Required |
+| `client` | String (UUID) | Required |
+| `service` | String (UUID) | Required |
+| `created_at` | Date | |
+
+### `staff_members`
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `email` | String | Required — normalized lowercase |
+| `position` | String (UUID) | Required — ref to positions collection |
+| `tools` | Array of Strings | Tool `_id` refs — set via `/assign_tools_to_staff` |
+| `created_at` | Date | |
+
+### `tools`
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `description` | String | Required |
+| `arguments` | Object | Required — flexible nested object |
 | `created_at` | Date | |
 
 ### `otp_verifications`
@@ -366,7 +392,9 @@ Same structure as `otp_verifications`.
 ---
 
 ## Testing
-141 tests across 6 test files, all hitting real MongoDB (no mocks).
+191 tests across 8 test files, all hitting real MongoDB (no mocks).
+
+> Note: 401/403 auth tests will fail while auth middleware is disabled — this is expected.
 
 ```bash
 npm test
@@ -380,10 +408,20 @@ npm test
 | `tests/skills.test.js` | 22 |
 | `tests/clients.test.js` | 21 |
 | `tests/projects.test.js` | 26 |
+| `tests/staff.test.js` | 24 |
+| `tests/tools.test.js` | 26 |
+
+---
+
+## CORS Allowed Origins
+- `http://localhost:3000`
+- `https://trimergenextjs.web.app`
+- `https://trimerge-nextjs-app.web.app`
+- `https://trimerge-backend--trimerge-nextjs-app.us-central1.hosted.app`
+- `https://trimerge-iq.onrender.com`
 
 ---
 
 ## Deployment
-- **Production:** Render — https://trimerge-iq.onrender.com (auto-deploys on push to main)
-- **Local:** `node index.js` — uses Mailgun for real email sending
-- **CORS allowed origins:** `localhost:3000`, Firebase hosted UI, Render
+- **Production:** Render — https://trimerge-iq.onrender.com (auto-deploys on push to `task-001-auth`)
+- **Local:** `node index.js`
