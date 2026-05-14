@@ -1,3 +1,29 @@
+export const ENDPOINT_CREATION_TOOL_NAME = "create_api_endpoint";
+export const ENDPOINT_CREATION_TOOL_DISPLAY_NAME = "Endpoint creation tool";
+
+export function isEndpointCreationRequest(userMessage: string): boolean {
+  const normalizedMessage = userMessage
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const mentionsEndpoint =
+    /\b(endpoints?|api\s+routes?|routes?|rutas?)\b/.test(normalizedMessage);
+  const asksToCreate =
+    /\b(create|creation|creating|add|new|build|make|generate|crear|crea|crear|creacion|nuevo|nueva|anadir|agregar|generar)\b/.test(
+      normalizedMessage,
+    );
+  const mentionsApiWork = /\b(api|route|ruta|path|endpoint)\b/.test(normalizedMessage);
+  const mentionsHttpDetails =
+    /\b(post|get|put|patch|delete|method|metodo|body|fields?|campos?|path|ruta)\b/.test(
+      normalizedMessage,
+    );
+
+  return (
+    (mentionsEndpoint && asksToCreate) ||
+    (asksToCreate && mentionsApiWork && mentionsHttpDetails)
+  );
+}
+
 export function getAIResponse(userMessage: string, fileCount: number): string {
   if (fileCount > 0) {
     return `I've received your message and ${fileCount} file(s). I can help you analyze these materials and turn them into a usable summary, plan, or recommendation.`;

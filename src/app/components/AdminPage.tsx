@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
   Briefcase,
+  Hammer,
   LogOut,
   Pencil,
   Plus,
@@ -24,8 +25,14 @@ import {
 } from "./adminRegistryState";
 import { ADMIN_API_BASE_URL, authenticatedAdminFetch } from "./adminAuth";
 
-type AdminSection = "staff" | "admin" | "position" | "skills" | "services" | "clients";
+type AdminSection = "staff" | "admin" | "position" | "skills" | "tools" | "services" | "clients";
 type CreateModal = AdminSection | null;
+
+interface ToolArgumentDraft {
+  description: string;
+  name: string;
+  type: string;
+}
 
 interface StaffMember {
   id: string;
@@ -39,6 +46,14 @@ interface SkillItem {
   id: string;
   name: string;
   description: string;
+  createdAt: Date;
+}
+
+interface ToolItem {
+  id: string;
+  name: string;
+  description: string;
+  argumentSchema: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -91,6 +106,21 @@ interface SkillApiRecord {
   description?: string;
   createdAt?: string;
   created_at?: string;
+}
+
+interface ToolApiRecord {
+  id?: string;
+  _id?: string;
+  uuid?: string;
+  name?: string;
+  description?: string;
+  arguments?: unknown;
+  args?: unknown;
+  parameters?: unknown;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 interface ServiceApiRecord {
@@ -160,6 +190,47 @@ function mapSkillFromApi(skill: SkillApiRecord): SkillItem {
     description: skill.description ?? "",
     createdAt: skill.createdAt || skill.created_at ? new Date(skill.createdAt ?? skill.created_at ?? "") : new Date(),
   };
+}
+
+function normalizeToolArguments(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return { value };
+    }
+  }
+
+  return {};
+}
+
+function mapToolFromApi(tool: ToolApiRecord): ToolItem {
+  return {
+    id:
+      tool.id ??
+      tool._id ??
+      tool.uuid ??
+      `${tool.name ?? "tool"}-${tool.createdAt ?? tool.created_at ?? tool.updatedAt ?? tool.updated_at ?? "local"}`,
+    name: tool.name ?? "Untitled Tool",
+    description: tool.description ?? "",
+    argumentSchema: normalizeToolArguments(tool.arguments ?? tool.args ?? tool.parameters),
+    createdAt:
+      tool.createdAt || tool.created_at || tool.updatedAt || tool.updated_at
+        ? new Date(tool.createdAt ?? tool.created_at ?? tool.updatedAt ?? tool.updated_at ?? "")
+        : new Date(),
+  };
+}
+
+function formatToolArguments(argumentSchema: Record<string, unknown>) {
+  if (Object.keys(argumentSchema).length === 0) return "{}";
+  return JSON.stringify(argumentSchema, null, 2);
 }
 
 function mapPositionFromApi(position: PositionApiRecord, skills: SkillItem[]): PositionItem {
@@ -375,6 +446,36 @@ function extractSkillRecords(payload: unknown): SkillApiRecord[] {
   return [];
 }
 
+function extractToolRecords(payload: unknown): ToolApiRecord[] {
+  if (Array.isArray(payload)) return payload as ToolApiRecord[];
+
+  if (payload && typeof payload === "object") {
+    const typedPayload = payload as {
+      data?: unknown;
+      item?: unknown;
+      items?: unknown;
+      result?: unknown;
+      results?: unknown;
+      tool?: unknown;
+      tools?: unknown;
+    };
+
+    if (Array.isArray(typedPayload.tools)) return typedPayload.tools as ToolApiRecord[];
+    if (Array.isArray(typedPayload.items)) return typedPayload.items as ToolApiRecord[];
+    if (Array.isArray(typedPayload.results)) return typedPayload.results as ToolApiRecord[];
+    if (typedPayload.tool && typeof typedPayload.tool === "object") return [typedPayload.tool as ToolApiRecord];
+    if (typedPayload.item && typeof typedPayload.item === "object") return [typedPayload.item as ToolApiRecord];
+    if (typedPayload.result && typeof typedPayload.result === "object") return [typedPayload.result as ToolApiRecord];
+
+    const data = typedPayload.data;
+    if (Array.isArray(data)) return data as ToolApiRecord[];
+    if (data && typeof data === "object") return [data as ToolApiRecord];
+    return [payload as ToolApiRecord];
+  }
+
+  return [];
+}
+
 async function parseJsonSafely(response: Response): Promise<unknown> {
   const responseText = await response.text();
   if (!responseText) return null;
@@ -396,6 +497,7 @@ const SECTION_META: Record<
 > = {
   skills: { label: "Skills Management", icon: Wrench, addLabel: "Add New" },
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
+  tools: { label: "Tools Management", icon: Hammer, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
   services: { label: "Services Management", icon: Briefcase, addLabel: "Add New" },
   clients: { label: "Clients Management", icon: Building2, addLabel: "Add New" },
@@ -403,7 +505,7 @@ const SECTION_META: Record<
 };
 
 export default function AdminPage({ onLogout }: AdminPageProps) {
-  const [activeSection, setActiveSection] = useState<AdminSection>("services");
+  const [activeSection, setActiveSection] = useState<AdminSection>("skills");
   const [searchQuery, setSearchQuery] = useState("");
   const [loggedInEmail, setLoggedInEmail] = useState("admin@trimerge.com");
   const [loggedInProfile, setLoggedInProfile] = useState("checking");
@@ -413,19 +515,26 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [assigningToolStaff, setAssigningToolStaff] = useState<StaffMember | null>(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingTools, setIsLoadingTools] = useState(false);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
+  const [isLoadingStaffTools, setIsLoadingStaffTools] = useState(false);
+  const [isSavingToolAssignments, setIsSavingToolAssignments] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
   const [isSavingPosition, setIsSavingPosition] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
   const [isSavingClient, setIsSavingClient] = useState(false);
   const [isSavingStaff, setIsSavingStaff] = useState(false);
+  const [isSavingTool, setIsSavingTool] = useState(false);
   const [skillError, setSkillError] = useState("");
+  const [toolError, setToolError] = useState("");
+  const [toolAssignmentError, setToolAssignmentError] = useState("");
   const [positionError, setPositionError] = useState("");
   const [serviceError, setServiceError] = useState("");
   const [clientError, setClientError] = useState("");
@@ -439,6 +548,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     readStoredAdminPeople().filter((person) => person.role === "admin"),
   );
   const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
+  const [tools, setTools] = useState<ToolItem[]>([]);
+  const [toolAssignmentStaffId, setToolAssignmentStaffId] = useState("");
+  const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
@@ -561,6 +673,50 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     };
 
     void loadStaff();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const loadTools = async () => {
+      try {
+        setIsLoadingTools(true);
+        setToolError("");
+
+        const response = await adminFetch(`${API_BASE_URL}/tools`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load tools (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const apiTools = extractToolRecords(payload).map(mapToolFromApi);
+
+        if (!ignore) {
+          setTools(apiTools);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setToolError(error instanceof Error ? error.message : "Unable to load tools.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingTools(false);
+        }
+      }
+    };
+
+    void loadTools();
 
     return () => {
       ignore = true;
@@ -862,6 +1018,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     );
   }, [searchQuery, skills]);
 
+  const filteredTools = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return tools;
+    return tools.filter(
+      (tool) =>
+        tool.name.toLowerCase().includes(query) ||
+        tool.description.toLowerCase().includes(query) ||
+        JSON.stringify(tool.argumentSchema).toLowerCase().includes(query),
+    );
+  }, [searchQuery, tools]);
+
   const filteredServices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return services;
@@ -911,6 +1078,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     admin: adminMembers.length,
     position: positions.length,
     skills: skills.length,
+    tools: tools.length,
     services: services.length,
     clients: clients.length,
   }[activeSection];
@@ -923,6 +1091,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (activeSection === "skills") {
       setEditingSkill(null);
       setSkillError("");
+    }
+    if (activeSection === "tools") {
+      setToolError("");
     }
     if (activeSection === "position") {
       setEditingPosition(null);
@@ -1168,6 +1339,158 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setSkillError(error instanceof Error ? error.message : "Unable to delete skill.");
     }
   };
+
+  const saveTool = async (payload: {
+    argumentSchema: Record<string, unknown>;
+    description: string;
+    name: string;
+  }) => {
+    try {
+      setIsSavingTool(true);
+      setToolError("");
+      if (!accessToken) throw new Error("Sign in before saving tools.");
+
+      const response = await adminFetch(`${API_BASE_URL}/tools`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name: payload.name,
+          description: payload.description,
+          arguments: payload.argumentSchema,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to create tool (${response.status})`);
+      }
+
+      const createdPayload = await parseJsonSafely(response);
+      const createdTool = extractToolRecords(createdPayload)[0];
+      const nextTool = createdTool
+        ? mapToolFromApi(createdTool)
+        : {
+            id: crypto.randomUUID(),
+            name: payload.name,
+            description: payload.description,
+            argumentSchema: payload.argumentSchema,
+            createdAt: new Date(),
+          };
+
+      setTools((current) => uniqueById([...current, nextTool]));
+      setOpenModal(null);
+    } catch (error) {
+      setToolError(error instanceof Error ? error.message : "Unable to save tool.");
+    } finally {
+      setIsSavingTool(false);
+    }
+  };
+
+  const removeTool = async (toolId: string) => {
+    try {
+      setToolError("");
+      if (!accessToken) throw new Error("Sign in before deleting tools.");
+
+      const response = await adminFetch(`${API_BASE_URL}/tools/${toolId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to delete tool (${response.status})`);
+      }
+
+      setTools((current) => current.filter((item) => item.id !== toolId));
+      setSelectedToolIds((current) => current.filter((item) => item !== toolId));
+    } catch (error) {
+      setToolError(error instanceof Error ? error.message : "Unable to delete tool.");
+    }
+  };
+
+  const loadStaffTools = useCallback(
+    async (staffId: string) => {
+      if (!staffId) {
+        setSelectedToolIds([]);
+        return;
+      }
+
+      try {
+        setIsLoadingStaffTools(true);
+        setToolAssignmentError("");
+        if (!accessToken) throw new Error("Sign in before loading staff tools.");
+
+        const response = await adminFetch(`${API_BASE_URL}/get_staff_tools/${staffId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load staff tools (${response.status})`);
+        }
+
+        const payload = await parseJsonSafely(response);
+        const assignedIds = extractToolRecords(payload).map(mapToolFromApi).map((tool) => tool.id);
+
+        setSelectedToolIds(assignedIds);
+      } catch (error) {
+        setSelectedToolIds([]);
+        setToolAssignmentError(error instanceof Error ? error.message : "Unable to load staff tools.");
+      } finally {
+        setIsLoadingStaffTools(false);
+      }
+    },
+    [accessToken, adminFetch],
+  );
+
+  const toggleStaffTool = (toolId: string) => {
+    setSelectedToolIds((current) =>
+      current.includes(toolId) ? current.filter((item) => item !== toolId) : [...current, toolId],
+    );
+  };
+
+  const openStaffToolAssignment = (member: StaffMember) => {
+    setAssigningToolStaff(member);
+    setToolAssignmentStaffId(member.id);
+    setToolAssignmentError("");
+    void loadStaffTools(member.id);
+  };
+
+  const saveStaffToolAssignments = async () => {
+    try {
+      setIsSavingToolAssignments(true);
+      setToolAssignmentError("");
+      if (!accessToken) throw new Error("Sign in before assigning tools.");
+      if (!toolAssignmentStaffId) throw new Error("Choose a staff member before assigning tools.");
+
+      const response = await adminFetch(`${API_BASE_URL}/assign_tools_to_staff`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          staff: toolAssignmentStaffId,
+          tools: selectedToolIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to assign tools (${response.status})`);
+      }
+
+      setAssigningToolStaff(null);
+    } catch (error) {
+      setToolAssignmentError(error instanceof Error ? error.message : "Unable to assign tools.");
+    } finally {
+      setIsSavingToolAssignments(false);
+    }
+  };
+
   const removePosition = async (positionId: string) => {
     try {
       setPositionError("");
@@ -1448,21 +1771,19 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   return (
-    <div className="page-shell min-h-[calc(100vh-80px)] bg-[#f6f8fc] xl:flex">
-      <aside className="relative bg-[linear-gradient(180deg,#1f5fb5_0%,#255da7_56%,#25569a_100%)] text-white shadow-[8px_0_24px_rgba(10,31,68,0.12)] page-section xl:sticky xl:top-[81px] xl:h-[calc(100vh-81px)] xl:w-[270px]">
-        <div className="border-b border-white/12 p-5">
-          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0ca44] text-[#1e2838] shadow-[0_8px_20px_rgba(0,0,0,0.15)]">
-              <Shield className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-white">{loggedInName}</h2>
-              <p className="text-xs text-white/64">Backend role: {loggedInProfile}</p>
-            </div>
+    <div className="min-h-[calc(100vh-105px)] bg-[#f5f6fb] font-display text-[#0f1430] lg:min-h-[calc(100vh-89px)] xl:grid xl:grid-cols-[280px_minmax(0,1fr)]">
+      <aside className="hidden min-h-0 overflow-y-auto border-r border-black/[0.04] bg-[#060b22] px-[18px] py-5 text-[#e6e9f5] xl:sticky xl:top-0 xl:flex xl:h-screen xl:flex-col xl:gap-4">
+        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3.5">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] bg-[linear-gradient(135deg,#2e2bff_0%,#7c5cff_100%)] text-white shadow-[0_6px_14px_rgba(46,43,255,0.30)]">
+            <Shield className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-[15px] font-bold leading-tight text-white">{loggedInName}</h2>
+            <p className="mt-0.5 font-sans text-xs text-[#8b91ad]">Backend role: {loggedInProfile}</p>
           </div>
         </div>
 
-        <nav className="space-y-2 p-4">
+        <nav className="flex flex-col gap-1">
           {(Object.keys(SECTION_META) as AdminSection[]).map((section) => {
             const item = SECTION_META[section];
             return (
@@ -1480,61 +1801,63 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           })}
         </nav>
 
-        <div className="border-t border-white/12 p-4 xl:absolute xl:bottom-0 xl:w-[270px]">
-          <div className="rounded-2xl bg-white/[0.05] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/48">Logged in as:</p>
-            <p className="mt-2 break-all text-sm font-semibold text-white/94">{loggedInEmail}</p>
-            <p className="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-[#f0ca44]">
+        <div className="mt-auto flex flex-col gap-2.5">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b91ad]">Logged in as</p>
+            <p className="mt-2 break-all font-sans text-[13.5px] font-medium text-white">{loggedInEmail}</p>
+            <p className="mt-1.5 font-sans text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#9bb4ff]">
               {loggedInProfile}
             </p>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="interactive-button mt-4 flex w-full items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/16"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="interactive-button flex w-full items-center justify-center gap-2 rounded-[10px] border border-white/20 bg-white/[0.04] px-3.5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/[0.08]"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <div className="border-b border-[#e3e8f2] bg-white shadow-[0_8px_18px_rgba(36,55,89,0.04)]">
-          <div className="px-8 py-8">
+      <div className="min-w-0 overflow-y-auto">
+        <div className="border-b border-[#e6e8f1] bg-white">
+          <div className="px-5 py-7 sm:px-8 xl:px-10">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h1 className="text-[42px] font-semibold tracking-tight text-[#1e2431]">
+                <h1 className="text-[32px] font-bold tracking-normal text-[#0f1430]">
                   {activeSectionMeta.label}
                 </h1>
-                <p className="mt-2 text-sm text-[#697587]">Manage {activeCount} registry</p>
+                <p className="mt-1.5 font-sans text-sm text-[#5b6079]">
+                  Manage {activeCount} registry {activeCount === 1 ? "entry" : "entries"}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={openCreateModal}
                 disabled={activeSection === "admin"}
-                className="interactive-button inline-flex items-center gap-2 rounded-xl bg-[#2865ba] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.24)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:bg-[#8ba0c8] disabled:shadow-none"
+                className="interactive-button inline-flex items-center gap-2 rounded-[10px] bg-[#2e2bff] px-5 py-3 text-[15px] font-semibold text-white shadow-[0_8px_22px_rgba(46,43,255,0.30)] transition hover:-translate-y-0.5 hover:bg-[#2120e0] disabled:cursor-default disabled:bg-[#2e2bff]/45 disabled:shadow-none disabled:hover:translate-y-0"
               >
                 <Plus className="h-4 w-4" />
                 <span>{activeSection === "admin" ? "View Only" : activeSectionMeta.addLabel}</span>
               </button>
             </div>
 
-            <div className="mt-6 relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a1abbb]" />
+            <div className="relative mt-5">
+              <Search className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#8a90a8]" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={`Search ${activeSectionMeta.label.replace(" Management", "").toLowerCase()}...`}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="interactive-input w-full rounded-xl border border-[#e5e9f1] bg-white py-3.5 pl-11 pr-4 text-sm text-[#24324a] shadow-[0_4px_14px_rgba(34,54,88,0.05)] outline-none focus:ring-2 focus:ring-[#2865ba]"
+                className="interactive-input w-full rounded-xl border border-[#e6e8f1] bg-white py-3.5 pl-12 pr-4 font-sans text-[15px] text-[#0f1430] outline-none transition placeholder:text-[#8a90a8] focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex-1 px-8 py-8">
+        <div className="px-5 py-6 sm:px-8 xl:px-10">
           {activeSection === "skills" && skillError && (
             <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
               {skillError}
@@ -1565,6 +1888,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             </div>
           )}
 
+          {activeSection === "tools" && toolError && (
+            <div className="mb-5 rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+              {toolError}
+            </div>
+          )}
+
+          {activeSection === "staff" && toolError && (
+            <div className="mb-5 rounded-2xl border border-[#f7dfb7] bg-[#fffaf0] px-5 py-4 text-sm text-[#8a5a1f]">
+              Tools could not be loaded: {toolError}
+            </div>
+          )}
+
           {activeSection === "admin" && userError && (
             <div className="mb-5 rounded-2xl border border-[#d8e2f1] bg-[#f7faff] px-5 py-4 text-sm text-[#53657d]">
               {userError}
@@ -1589,6 +1924,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                       <EditButton
                         onClick={() => {
                           openEditStaffModal(member.id);
+                        }}
+                      />
+                      <AssignToolsButton
+                        onClick={() => {
+                          openStaffToolAssignment(member);
                         }}
                       />
                       <DeleteButton onClick={() => { void removeStaff(member.id); }} />
@@ -1638,6 +1978,33 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                         }}
                       />
                     </div>
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "tools" && (
+            <ManagementTable
+              headers={["Name", "Description", "Arguments", "Created", "Actions"]}
+              emptyMessage={isLoadingTools ? "Loading tools..." : "No tools found."}
+            >
+              {filteredTools.map((tool) => (
+                <tr key={tool.id} className="border-t border-[#eef2f8] align-top">
+                  <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{tool.name}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{tool.description || "None"}</td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                    <code className="block max-w-[360px] whitespace-pre-wrap rounded-[10px] border border-[#e6e8f1] bg-[#f7f8fc] px-3 py-2 font-mono text-xs leading-5 text-[#263247]">
+                      {formatToolArguments(tool.argumentSchema)}
+                    </code>
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{tool.createdAt.toLocaleDateString()}</td>
+                  <td className="px-6 py-5 text-right">
+                    <DeleteButton
+                      onClick={() => {
+                        void removeTool(tool.id);
+                      }}
+                    />
                   </td>
                 </tr>
               ))}
@@ -1828,6 +2195,16 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         />
       )}
 
+      {openModal === "tools" && (
+        <ToolModal
+          isSaving={isSavingTool}
+          onClose={() => setOpenModal(null)}
+          onSave={(payload) => {
+            void saveTool(payload);
+          }}
+        />
+      )}
+
       {openModal === "clients" && (
         <ClientModal
           initialAbout={editingClient?.about ?? ""}
@@ -1862,6 +2239,25 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           }}
         />
       )}
+
+      {assigningToolStaff && (
+        <StaffToolAssignmentModal
+          staffMember={assigningToolStaff}
+          tools={tools}
+          selectedToolIds={selectedToolIds}
+          error={toolAssignmentError}
+          isLoading={isLoadingStaffTools || isLoadingTools}
+          isSaving={isSavingToolAssignments}
+          onClose={() => {
+            setAssigningToolStaff(null);
+            setToolAssignmentError("");
+          }}
+          onToolToggle={toggleStaffTool}
+          onSave={() => {
+            void saveStaffToolAssignments();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1880,13 +2276,13 @@ function SidebarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`interactive-button flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-sm font-medium transition ${
+      className={`interactive-button flex w-full items-center gap-3 rounded-[10px] px-3.5 py-[11px] text-left text-[14.5px] font-medium transition ${
         active
-          ? "bg-[#f0ca44] text-[#243145] shadow-[0_10px_20px_rgba(0,0,0,0.15)]"
-          : "text-white/88 hover:bg-white/[0.08]"
+          ? "bg-[#2e2bff] text-white shadow-[0_8px_22px_rgba(46,43,255,0.30)]"
+          : "text-[#e6e9f5] hover:bg-white/[0.06] hover:text-white"
       }`}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className={`h-[17px] w-[17px] ${active ? "text-white" : "text-[#8b91ad]"}`} />
       <span>{label}</span>
     </button>
   );
@@ -1904,15 +2300,15 @@ function ManagementTable({
   const childCount = Array.isArray(children) ? children.length : children ? 1 : 0;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#edf1f7] bg-white shadow-[0_8px_24px_rgba(29,48,81,0.06)]">
+    <div className="overflow-hidden rounded-[14px] border border-[#e6e8f1] bg-white shadow-[0_1px_0_rgba(20,24,90,0.02)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px]">
-          <thead className="bg-[#fbfcff]">
+          <thead className="bg-[#f5f6fb]">
             <tr>
               {headers.map((header) => (
                 <th
                   key={header}
-                  className="px-6 py-5 text-left text-xs font-semibold uppercase tracking-[0.12em] text-[#4f5d72]"
+                  className="px-6 py-4 text-left font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a90a8]"
                 >
                   {header}
                 </th>
@@ -1924,7 +2320,7 @@ function ManagementTable({
               children
             ) : (
               <tr>
-                <td colSpan={headers.length} className="px-6 py-14 text-center text-sm text-[#7b8798]">
+                <td colSpan={headers.length} className="px-6 py-14 text-center font-sans text-sm text-[#5b6079]">
                   {emptyMessage}
                 </td>
               </tr>
@@ -1941,9 +2337,9 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="interactive-button rounded-full p-2 text-[#f26a8a] hover:bg-[#fff1f5]"
+      className="interactive-button grid h-[34px] w-[34px] place-items-center rounded-lg border border-[#e6e8f1] bg-white text-[#e0394a] transition hover:border-[#fac6cb] hover:bg-[#fff1f2]"
     >
-      <Trash2 className="h-4 w-4" />
+      <Trash2 className="h-[15px] w-[15px]" />
     </button>
   );
 }
@@ -1960,9 +2356,22 @@ function EditButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="interactive-button rounded-full p-2 text-[#2865ba] hover:bg-[#eef4ff] disabled:cursor-not-allowed disabled:opacity-50"
+      className="interactive-button grid h-[34px] w-[34px] place-items-center rounded-lg border border-[#e6e8f1] bg-white text-[#2e2bff] transition hover:border-[#2e2bff] hover:bg-[#eef0fe] disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <Pencil className="h-4 w-4" />
+      <Pencil className="h-[15px] w-[15px]" />
+    </button>
+  );
+}
+
+function AssignToolsButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="interactive-button grid h-[34px] w-[34px] place-items-center rounded-lg border border-[#e6e8f1] bg-white text-[#5b4dff] transition hover:border-[#5b4dff] hover:bg-[#f1f0ff]"
+      title="Assign tools"
+    >
+      <Wrench className="h-[15px] w-[15px]" />
     </button>
   );
 }
@@ -2010,7 +2419,7 @@ function PersonModal({
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
             disabled={isSaving}
           />
@@ -2021,7 +2430,7 @@ function PersonModal({
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
             disabled={isSaving}
           />
@@ -2032,7 +2441,7 @@ function PersonModal({
             <select
               value={positionId}
               onChange={(event) => setPositionId(event.target.value)}
-              className="interactive-input w-full rounded-xl border border-[#dfe5ef] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+              className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] bg-white px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
               required
               disabled={isSaving}
             >
@@ -2044,7 +2453,7 @@ function PersonModal({
               ))}
             </select>
             {positions.length === 0 && (
-              <p className="mt-2 text-xs text-[#7b8798]">
+              <p className="mt-2 font-sans text-xs text-[#8a90a8]">
                 Positions created in `Position Management` will appear here automatically.
               </p>
             )}
@@ -2102,7 +2511,7 @@ function RegistryModal({
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2112,7 +2521,7 @@ function RegistryModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full resize-y rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2121,6 +2530,89 @@ function RegistryModal({
           onClose={onClose}
           submitDisabled={isSaving}
           submitLabel={isSaving ? "Saving..." : submitLabel}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
+function StaffToolAssignmentModal({
+  staffMember,
+  tools,
+  selectedToolIds,
+  error,
+  isLoading,
+  isSaving,
+  onClose,
+  onToolToggle,
+  onSave,
+}: {
+  staffMember: StaffMember;
+  tools: ToolItem[];
+  selectedToolIds: string[];
+  error: string;
+  isLoading: boolean;
+  isSaving: boolean;
+  onClose: () => void;
+  onToolToggle: (toolId: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <BaseModal title={`Assign Tools: ${staffMember.name}`} onClose={onClose} maxWidthClass="max-w-[820px]">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave();
+        }}
+        className="space-y-5"
+      >
+        <div className="rounded-[12px] border border-[#e6e8f1] bg-[#f7f8fc] px-4 py-3">
+          <p className="font-sans text-sm font-semibold text-[#0f1430]">{staffMember.name}</p>
+          <p className="mt-1 break-all font-sans text-xs text-[#5b6079]">{staffMember.email}</p>
+        </div>
+
+        {error && (
+          <div className="rounded-2xl border border-[#f6c5cf] bg-[#fff5f7] px-5 py-4 text-sm text-[#a8485f]">
+            {error}
+          </div>
+        )}
+
+        <div>
+          {tools.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {tools.map((tool) => (
+                <label
+                  key={tool.id}
+                  className="flex items-start gap-2.5 rounded-[10px] border border-[#e6e8f1] bg-white px-3.5 py-3 font-sans text-sm text-[#0f1430] transition hover:border-[#2e2bff]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedToolIds.includes(tool.id)}
+                    onChange={() => onToolToggle(tool.id)}
+                    className="mt-0.5 h-4 w-4 rounded border-[#d6dce8]"
+                    disabled={isLoading || isSaving}
+                  />
+                  <span>
+                    <span className="block font-semibold">{tool.name}</span>
+                    {tool.description && (
+                      <span className="mt-1 block text-xs leading-relaxed text-[#5b6079]">{tool.description}</span>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-[10px] border border-dashed border-[#e6e8f1] bg-[#f5f6fb] px-4 py-4 font-sans text-sm text-[#5b6079]">
+              No tools are available to assign yet.
+            </p>
+          )}
+          {isLoading && <p className="mt-3 font-sans text-xs text-[#8a90a8]">Loading assigned tools...</p>}
+        </div>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isLoading || isSaving}
+          submitLabel={isSaving ? "Saving..." : "Save Assignments"}
         />
       </form>
     </BaseModal>
@@ -2164,7 +2656,7 @@ function ClientModal({
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2174,7 +2666,7 @@ function ClientModal({
             value={about}
             onChange={(event) => setAbout(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full resize-y rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2183,6 +2675,167 @@ function ClientModal({
           onClose={onClose}
           submitDisabled={isSaving}
           submitLabel={isSaving ? "Saving..." : "Save"}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
+function ToolModal({
+  isSaving = false,
+  onSave,
+  onClose,
+}: {
+  isSaving?: boolean;
+  onSave: (payload: { argumentSchema: Record<string, unknown>; description: string; name: string }) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [argumentsList, setArgumentsList] = useState<ToolArgumentDraft[]>([]);
+  const [argumentError, setArgumentError] = useState("");
+
+  const addArgument = () => {
+    setArgumentsList((current) => [...current, { name: "", type: "string", description: "" }]);
+    setArgumentError("");
+  };
+
+  const updateArgument = (index: number, field: keyof ToolArgumentDraft, value: string) => {
+    setArgumentsList((current) =>
+      current.map((argument, argumentIndex) =>
+        argumentIndex === index ? { ...argument, [field]: value } : argument,
+      ),
+    );
+    setArgumentError("");
+  };
+
+  const removeArgument = (index: number) => {
+    setArgumentsList((current) => current.filter((_, argumentIndex) => argumentIndex !== index));
+    setArgumentError("");
+  };
+
+  return (
+    <BaseModal title="Add New Tool" onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+
+          const argumentSchema = argumentsList.reduce<Record<string, unknown>>((schema, argument) => {
+            const argumentName = argument.name.trim();
+            const argumentType = argument.type.trim() || "string";
+            const argumentDescription = argument.description.trim();
+
+            if (!argumentName && !argumentDescription) return schema;
+            if (!argumentName) return schema;
+
+            schema[argumentName] = {
+              type: argumentType,
+              ...(argumentDescription ? { description: argumentDescription } : {}),
+            };
+            return schema;
+          }, {});
+
+          const hasIncompleteArgument = argumentsList.some(
+            (argument) =>
+              !argument.name.trim() &&
+              (argument.type.trim() !== "string" || argument.description.trim()),
+          );
+
+          if (hasIncompleteArgument) {
+            setArgumentError("Each argument needs a name before saving.");
+            return;
+          }
+
+          setArgumentError("");
+          onSave({
+            name: name.trim(),
+            description: description.trim(),
+            argumentSchema,
+          });
+        }}
+        className="space-y-5"
+      >
+        <ModalField label="Name">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
+            required
+            disabled={isSaving}
+          />
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={3}
+            className="interactive-input w-full resize-y rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
+            required
+            disabled={isSaving}
+          />
+        </ModalField>
+
+        <ModalField label="Arguments">
+          <div className="space-y-3">
+            {argumentsList.map((argument, index) => (
+              <div key={`tool-argument-${index}`} className="grid gap-3 rounded-[12px] border border-[#e6e8f1] bg-[#f9faff] p-3 md:grid-cols-[minmax(0,1fr)_150px]">
+                <input
+                  type="text"
+                  value={argument.name}
+                  onChange={(event) => updateArgument(index, "name", event.target.value)}
+                  placeholder={`Argument ${index + 1}`}
+                  className="interactive-input rounded-[10px] border border-[#e0e4ee] bg-white px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
+                  disabled={isSaving}
+                />
+                <select
+                  value={argument.type}
+                  onChange={(event) => updateArgument(index, "type", event.target.value)}
+                  className="interactive-input rounded-[10px] border border-[#e0e4ee] bg-white px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
+                  disabled={isSaving}
+                >
+                  <option value="string">string</option>
+                  <option value="number">number</option>
+                  <option value="boolean">boolean</option>
+                  <option value="object">object</option>
+                  <option value="array">array</option>
+                </select>
+                <input
+                  type="text"
+                  value={argument.description}
+                  onChange={(event) => updateArgument(index, "description", event.target.value)}
+                  placeholder="Description"
+                  className="interactive-input rounded-[10px] border border-[#e0e4ee] bg-white px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10 md:col-span-2"
+                  disabled={isSaving}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeArgument(index)}
+                  className="interactive-button justify-self-start rounded-[10px] px-3 py-2 font-sans text-sm font-semibold text-[#e0394a] hover:bg-[#fff1f2]"
+                  disabled={isSaving}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addArgument}
+              className="interactive-button inline-flex items-center rounded-[8px] bg-[#2e2bff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#2120e0]"
+              disabled={isSaving}
+            >
+              + Add argument
+            </button>
+            {argumentError && <p className="font-sans text-xs font-medium text-[#a8485f]">{argumentError}</p>}
+          </div>
+        </ModalField>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : "Create tool"}
         />
       </form>
     </BaseModal>
@@ -2240,7 +2893,7 @@ function ServiceModal({
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2250,7 +2903,7 @@ function ServiceModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full resize-y rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2259,7 +2912,7 @@ function ServiceModal({
           {skills.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               {skills.map((skill) => (
-                <label key={skill.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                <label key={skill.id} className="flex items-center gap-2.5 rounded-[10px] border border-[#e6e8f1] bg-white px-3.5 py-2.5 font-sans text-sm text-[#0f1430] transition hover:border-[#2e2bff]">
                   <input
                     type="checkbox"
                     checked={selectedSkillIds.includes(skill.id)}
@@ -2271,7 +2924,7 @@ function ServiceModal({
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className="rounded-[10px] border border-dashed border-[#e6e8f1] bg-[#f5f6fb] px-4 py-4 font-sans text-sm text-[#5b6079]">
               No skills yet. Create skills first and they will appear here automatically.
             </p>
           )}
@@ -2281,7 +2934,7 @@ function ServiceModal({
           {positions.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               {positions.map((position) => (
-                <label key={position.id} className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]">
+                <label key={position.id} className="flex items-center gap-2.5 rounded-[10px] border border-[#e6e8f1] bg-white px-3.5 py-2.5 font-sans text-sm text-[#0f1430] transition hover:border-[#2e2bff]">
                   <input
                     type="checkbox"
                     checked={selectedPositionIds.includes(position.id)}
@@ -2293,7 +2946,7 @@ function ServiceModal({
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className="rounded-[10px] border border-dashed border-[#e6e8f1] bg-[#f5f6fb] px-4 py-4 font-sans text-sm text-[#5b6079]">
               No positions yet. Create positions first and they will appear here automatically.
             </p>
           )}
@@ -2372,7 +3025,7 @@ function PositionModal({
             type="text"
             value={positionTitle}
             onChange={(event) => setPositionTitle(event.target.value)}
-            className="interactive-input w-full rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2382,7 +3035,7 @@ function PositionModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="interactive-input w-full resize-none rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+            className="interactive-input w-full resize-y rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
             required
           />
         </ModalField>
@@ -2396,12 +3049,12 @@ function PositionModal({
                   value={responsibility}
                   onChange={(event) => updateResponsibility(index, event.target.value)}
                   placeholder={`Responsibility ${index + 1}`}
-                  className="interactive-input flex-1 rounded-xl border border-[#dfe5ef] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#2865ba]"
+                  className="interactive-input flex-1 rounded-[10px] border border-[#e6e8f1] px-3.5 py-3 font-sans text-[14.5px] text-[#0f1430] outline-none transition focus:border-[#2e2bff] focus:ring-4 focus:ring-[#2e2bff]/10"
                 />
                 <button
                   type="button"
                   onClick={() => removeResponsibility(index)}
-                  className="interactive-button rounded-xl px-3 py-3 text-sm font-medium text-[#df5f7c] hover:bg-[#fff0f4]"
+                  className="interactive-button rounded-[10px] px-3 py-3 font-sans text-sm font-semibold text-[#e0394a] hover:bg-[#fff1f2]"
                 >
                   Remove
                 </button>
@@ -2411,7 +3064,7 @@ function PositionModal({
             <button
               type="button"
               onClick={() => setResponsibilities((current) => [...current, ""])}
-              className="interactive-button rounded-xl bg-[#2865ba] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2159a8]"
+              className="interactive-button inline-flex items-center rounded-[8px] bg-[#2e2bff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#2120e0]"
             >
               + Add responsibility
             </button>
@@ -2424,7 +3077,7 @@ function PositionModal({
               {skills.map((skill) => (
                 <label
                   key={skill.id}
-                  className="flex items-center gap-3 rounded-xl border border-[#edf1f7] bg-white px-4 py-3 text-sm text-[#3e4b5f]"
+                  className="flex items-center gap-2.5 rounded-[10px] border border-[#e6e8f1] bg-white px-3.5 py-2.5 font-sans text-sm text-[#0f1430] transition hover:border-[#2e2bff]"
                 >
                   <input
                     type="checkbox"
@@ -2437,7 +3090,7 @@ function PositionModal({
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-[#d9e1ec] bg-[#fbfcff] px-4 py-4 text-sm text-[#7b8798]">
+            <p className="rounded-[10px] border border-dashed border-[#e6e8f1] bg-[#f5f6fb] px-4 py-4 font-sans text-sm text-[#5b6079]">
               No skills yet. Create skills first and then link them to this position.
             </p>
           )}
@@ -2467,22 +3120,22 @@ function BaseModal({
   maxWidthClass?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/35 p-3 backdrop-blur-[2px] sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f1430]/55 p-4 backdrop-blur-sm">
       <div className="flex min-h-full items-center justify-center">
         <div
-          className={`my-4 w-full ${maxWidthClass ?? (wide ? "max-w-[960px]" : "max-w-[640px]")} overflow-hidden rounded-[22px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.18)]`}
+          className={`my-4 flex max-h-[calc(100vh-48px)] w-full ${maxWidthClass ?? (wide ? "max-w-[960px]" : "max-w-[560px]")} flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_30px_70px_rgba(15,20,48,0.30)]`}
         >
-          <div className="flex items-center justify-between bg-[linear-gradient(90deg,#1f5fb5_0%,#2865ba_100%)] px-6 py-5">
-            <h3 className="text-[28px] font-semibold tracking-tight text-white">{title}</h3>
+          <div className="flex shrink-0 items-center justify-between bg-[linear-gradient(135deg,#2e2bff_0%,#7c5cff_100%)] px-6 py-5">
+            <h3 className="text-[22px] font-bold tracking-normal text-white">{title}</h3>
             <button
               type="button"
               onClick={onClose}
-              className="interactive-button rounded-full p-1.5 text-white/90 hover:bg-white/12"
+              className="interactive-button grid h-8 w-8 place-items-center rounded-lg bg-white/15 text-white transition hover:bg-white/25"
             >
-              <X className="h-6 w-6" />
+              <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="max-h-[calc(100vh-11rem)] overflow-y-auto px-6 py-6">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">{children}</div>
         </div>
       </div>
     </div>
@@ -2498,7 +3151,7 @@ function ModalField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-[#4f5d72]">{label}</span>
+      <span className="mb-2 block font-sans text-[13.5px] font-semibold text-[#0f1430]">{label}</span>
       {children}
     </label>
   );
@@ -2514,18 +3167,18 @@ function ModalActions({
   submitLabel?: string;
 }) {
   return (
-    <div className="flex gap-4 pt-3">
+    <div className="flex gap-2.5 border-t border-[#e6e8f1] bg-[#f5f6fb] px-0 pt-5">
       <button
         type="button"
         onClick={onClose}
-        className="interactive-button flex-1 rounded-xl border border-[#d9e1ec] bg-white px-4 py-3.5 text-base font-semibold text-[#5a6576] hover:bg-[#f8fafc]"
+        className="interactive-button flex-1 rounded-[10px] border border-[#e6e8f1] bg-white px-5 py-3 text-[15px] font-semibold text-[#0f1430] transition hover:border-[#2e2bff] hover:bg-[#eef0fb] hover:text-[#2e2bff]"
       >
         Cancel
       </button>
       <button
         type="submit"
         disabled={submitDisabled}
-        className="interactive-button flex-1 rounded-xl bg-[#2865ba] px-4 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(40,101,186,0.22)] hover:bg-[#2159a8] disabled:cursor-not-allowed disabled:opacity-60"
+        className="interactive-button flex-1 rounded-[10px] bg-[#2e2bff] px-5 py-3 text-[15px] font-semibold text-white shadow-[0_8px_18px_rgba(46,43,255,0.28)] transition hover:-translate-y-0.5 hover:bg-[#2120e0] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
       >
         {submitLabel}
       </button>

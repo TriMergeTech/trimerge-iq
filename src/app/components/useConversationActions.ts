@@ -13,7 +13,8 @@ import {
   renameConversation,
 } from "./chatApi";
 import { persistConversationOverride, rememberStoredProjectName } from "./chatLocalState";
-import type { ChatEntityId, Conversation, UploadedFile } from "./chatPageTypes";
+import { ENDPOINT_CREATION_TOOL_NAME, getAIResponse, isEndpointCreationRequest } from "./chatPageUtils";
+import type { ChatEntityId, Conversation, Message, UploadedFile } from "./chatPageTypes";
 
 interface UseConversationActionsProps {
   activeConversation: Conversation | null;
@@ -52,6 +53,12 @@ export function useConversationActions({
   setOpenConversationMenuId,
   setSelectedProjectId,
 }: UseConversationActionsProps) {
+  const appendMessageIfMissing = (messages: Message[], nextMessage: Message | null) => {
+    if (!nextMessage) return messages;
+    if (messages.some((message) => String(message.id) === String(nextMessage.id))) return messages;
+    return [...messages, nextMessage];
+  };
+
   const updateConversation = (
     conversationId: ChatEntityId,
     updater: (conversation: Conversation) => Conversation | null,
@@ -309,14 +316,78 @@ export function useConversationActions({
       });
       setActiveConversationId(conversationId);
 
+      const isEndpointRequest = isEndpointCreationRequest(userMessage.content);
       const createdMessage = await createMessage({
         conversation: conversationId,
         text: userMessage.content,
+        tool: isEndpointRequest ? ENDPOINT_CREATION_TOOL_NAME : undefined,
         attachment: userMessage.files ?? [],
       });
 
-      if (createdMessage?.id) {
-        rememberMessageSender(conversationId, createdMessage.id, "user");
+      if (createdMessage.payload?.id) {
+        rememberMessageSender(conversationId, createdMessage.payload.id, "user");
+      }
+
+      if (createdMessage.errorMessage) {
+        const fallbackAiMessage = {
+          id: `${conversationId}-fallback-${Date.now()}`,
+          content: getAIResponse(userMessage.content, userMessage.files?.length ?? 0),
+          sender: "ai" as const,
+          timestamp: new Date(),
+          toolResponse: isEndpointRequest
+            ? {
+                id: "endpoint-creation-tool",
+                name: ENDPOINT_CREATION_TOOL_NAME,
+              }
+            : undefined,
+        };
+
+        setConversations((current) =>
+          current
+            .map((conversation) =>
+              conversation.id === conversationId
+                ? {
+                    ...conversation,
+                    updatedAt: fallbackAiMessage.timestamp,
+                    recentMessage: fallbackAiMessage.content,
+                    messages: appendMessageIfMissing(conversation.messages, fallbackAiMessage),
+                  }
+                : conversation,
+            )
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+        );
+        setLastChatError(`Chat backend is unavailable: ${createdMessage.errorMessage}`);
+        return;
+      }
+
+      if (createdMessage.aiMessage) {
+        const aiMessage =
+          isEndpointRequest && !createdMessage.aiMessage.toolResponse
+            ? {
+                ...createdMessage.aiMessage,
+                toolResponse: {
+                  id: "endpoint-creation-tool",
+                  name: ENDPOINT_CREATION_TOOL_NAME,
+                },
+              }
+            : createdMessage.aiMessage;
+
+        setConversations((current) =>
+          current
+            .map((conversation) =>
+              conversation.id === conversationId
+                ? {
+                    ...conversation,
+                    updatedAt: aiMessage.timestamp,
+                    recentMessage: aiMessage.content,
+                    messages: appendMessageIfMissing(conversation.messages, aiMessage),
+                  }
+                : conversation,
+            )
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+        );
+
+        return;
       }
 
       const remoteMessages = await fetchMessages(conversationId);

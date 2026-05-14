@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Archive as ArchiveIcon, ChevronDown, Clock3, FileText, Image as ImageIcon, Link2, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 
 import ChatComposer from "./ChatComposer";
@@ -95,6 +96,14 @@ export default function ChatPage() {
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = useMemo(() => conversations.find((c) => c.id === activeConversationId) ?? null, [activeConversationId, conversations]);
+  const activePendingToolName = useMemo(() => {
+    const toolMessage = activeConversation?.messages
+      .slice()
+      .reverse()
+      .find((message) => message.sender === "ai" && message.toolResponse);
+
+    return toolMessage ? toolMessage.toolResponse?.name ?? "Tool" : undefined;
+  }, [activeConversation]);
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
   const activeSidebarConversations = useMemo(() => {
     const base = conversations.filter((c) => !c.archived && c.projectId === null);
@@ -760,14 +769,17 @@ export default function ChatPage() {
         />
       )}
 
-      <div className="relative grid h-full min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-[300px_1fr]">
-        <aside className={`relative hidden h-full min-h-0 shrink-0 overflow-hidden border-r border-white/[0.07] bg-[#0d1240] px-[18px] py-[22px] lg:flex lg:flex-col ${isSidebarOpen ? "" : "lg:w-[76px] lg:px-4"}`}>
-          <div className="shrink-0 space-y-[18px]">
-            <div className="mb-4 flex items-center justify-between">
+      <div
+        className="relative grid h-full min-h-0 w-full grid-cols-1 overflow-hidden transition-[grid-template-columns] duration-300 ease-out lg:grid-cols-[var(--chat-sidebar-width)_minmax(0,1fr)]"
+        style={{ "--chat-sidebar-width": isSidebarOpen ? "244px" : "64px" } as CSSProperties}
+      >
+        <aside className={`relative hidden h-full min-h-0 shrink-0 overflow-hidden border-r border-white/[0.07] bg-[#0d1240]/96 py-3.5 transition-[padding] duration-300 ease-out lg:flex lg:flex-col ${isSidebarOpen ? "px-3" : "px-2"}`}>
+          <div className="shrink-0 space-y-1.5">
+            <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen((current) => !current)}
-                className="interactive-button grid h-9 w-9 place-items-center rounded-lg border border-white/[0.13] bg-transparent text-[#7a80a3] hover:bg-white/[0.04] hover:text-white"
+                className={`interactive-button grid h-9 w-9 place-items-center rounded-lg border border-white/[0.11] bg-white/[0.025] text-[#8a91b2] transition hover:bg-white/[0.06] hover:text-white ${isSidebarOpen ? "" : "mx-auto"}`}
                 aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
                 title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
               >
@@ -779,29 +791,29 @@ export default function ChatPage() {
               </button>
             </div>
 
-            <button type="button" onClick={() => { setSidebarConversationView("active"); startNewChat(); }} className={`interactive-button flex w-full items-center rounded-xl border border-transparent bg-[#2e2bff] py-3.5 text-left font-bold text-white shadow-[0_8px_22px_rgba(46,43,255,0.30)] hover:bg-[#2120e0] ${isSidebarOpen ? "gap-3 px-[18px]" : "justify-center px-0"}`}>
-              <MessageSquarePlus className="h-[18px] w-[18px]" />
-              {isSidebarOpen && <span className="font-display text-[15px]">New chat</span>}
+            <button type="button" onClick={() => { setSidebarConversationView("active"); startNewChat(); }} className={`interactive-button flex h-9 w-full items-center rounded-lg border border-transparent text-left font-semibold text-white transition hover:bg-white/[0.06] ${isSidebarOpen ? "gap-3 px-2.5" : "justify-center px-0"}`}>
+              <MessageSquarePlus className="h-5 w-5" />
+              {isSidebarOpen && <span className="font-display text-sm">New chat</span>}
             </button>
             {isSidebarOpen ? (
-              <div className="relative mt-4">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a80a3]" />
-                <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className="interactive-input w-full rounded-[10px] border border-white/[0.13] bg-white/[0.03] py-3 pl-10 pr-3.5 font-sans text-sm text-[#e6e9f5] outline-none placeholder:text-[#7a80a3] focus:border-[#7c5cff] focus:ring-2 focus:ring-[#7c5cff]/20" />
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8a91b2]" />
+                <input type="text" value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder={sidebarConversationView === "archived" ? "Search archived" : "Search chats"} className="interactive-input h-9 w-full rounded-lg border border-transparent bg-transparent pl-10 pr-2.5 font-sans text-sm text-[#e6e9f5] outline-none placeholder:text-[#d6daf0]/80 transition hover:bg-white/[0.045] focus:border-white/[0.10] focus:bg-white/[0.055] focus:ring-2 focus:ring-[#7c5cff]/18" />
               </div>
             ) : (
-              <button type="button" aria-label="Search chats" className="interactive-button mt-4 flex w-full items-center justify-center rounded-[10px] border border-white/[0.13] bg-white/[0.03] py-3.5 text-[#7a80a3] hover:bg-white/[0.06] hover:text-white">
+              <button type="button" aria-label="Search chats" className="interactive-button mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.10] bg-white/[0.028] text-[#7a80a3] transition hover:bg-white/[0.06] hover:text-white">
                 <Search className="h-5 w-5" />
               </button>
             )}
           </div>
 
-          <div className="chat-scrollbar mt-[18px] min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="chat-scrollbar mt-1.5 min-h-0 flex-1 overflow-y-auto pr-0">
             {isSidebarOpen && (
-              <div className="relative mb-5" ref={projectMenuRef}>
+              <div className="relative mb-1.5 w-full" ref={projectMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsProjectMenuOpen((current) => !current)}
-                  className="interactive-button flex w-full items-center justify-between rounded-[10px] border border-white/[0.13] bg-white/[0.03] px-4 py-3.5 text-left text-[15px] font-semibold text-[#e6e9f5] hover:border-white/[0.22]"
+                  className="interactive-button flex h-9 w-full items-center justify-between rounded-lg border border-transparent bg-transparent px-2.5 text-left text-[15px] font-semibold text-[#e6e9f5] transition hover:bg-white/[0.045]"
                 >
                   <span className="text-sm font-medium">Project</span>
                   <ChevronDown className={`h-3.5 w-3.5 text-[#e6e9f5]/65 transition-transform ${isProjectMenuOpen ? "rotate-180" : ""}`} />
@@ -864,13 +876,13 @@ export default function ChatPage() {
               </div>
             )}
             {isSidebarOpen && (
-              <div className="mb-4 space-y-3">
+              <div className="mb-2 w-full space-y-2">
                 <button
                   type="button"
                   onClick={() => setSidebarConversationView((current) => (current === "archived" ? "active" : "archived"))}
-                  className={`interactive-button flex w-full items-center justify-between rounded-[16px] border px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition ${
+                  className={`interactive-button flex h-9 w-full items-center justify-between rounded-lg border px-2.5 text-left transition ${
                     sidebarConversationView === "archived"
-                      ? "border-[#7c5cff]/30 bg-white/[0.075] text-white"
+                      ? "border-[#7c5cff]/24 bg-white/[0.06] text-white"
                       : "border-transparent bg-transparent text-[#e6e9f5]/70 hover:bg-white/[0.045] hover:text-white"
                   }`}
                 >
@@ -899,17 +911,17 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-            {isSidebarOpen && <div className="space-y-2">
+            {isSidebarOpen && <div className="w-full space-y-1">
               {isLoadingChatData && (
-                <div className="rounded-[10px] border border-dashed border-white/[0.13] bg-white/[0.03] px-4 py-6 font-sans text-sm text-[#7a80a3]">
+                <div className="rounded-lg border border-dashed border-white/[0.11] bg-white/[0.03] px-3 py-3 font-sans text-sm text-[#7a80a3]">
                   Loading conversations...
                 </div>
               )}
               {visibleSidebarConversations.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 return (
-                  <div key={conversation.id} className={`group relative rounded-[14px] ${isActive ? "border border-[#7c5cff]/28 bg-[#7c5cff]/10 shadow-[0_12px_32px_rgba(124,92,255,0.15)]" : ""}`}>
-                    <button type="button" onClick={() => { setSelectedProjectId(conversation.projectId); setActiveConversationId(conversation.id); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); }} className={`interactive-button flex w-full items-start gap-3 rounded-[18px] px-4 py-3.5 pr-12 text-left ${isActive ? "" : "hover:bg-white/[0.04]"}`}>
+                  <div key={conversation.id} className={`group relative rounded-[14px] ${isActive ? "border border-[#7c5cff]/24 bg-[#7c5cff]/10 shadow-[0_10px_28px_rgba(124,92,255,0.13)]" : ""}`}>
+                    <button type="button" onClick={() => { setSelectedProjectId(conversation.projectId); setActiveConversationId(conversation.id); setIsAttachmentMenuOpen(false); setOpenConversationMenuId(null); }} className={`interactive-button flex w-full items-start gap-3 rounded-[14px] px-3.5 py-3 pr-11 text-left ${isActive ? "" : "hover:bg-white/[0.04]"}`}>
                       {sidebarConversationView === "archived" ? <ArchiveIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#a78bfa]" /> : <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#a78bfa]" />}
                       {isSidebarOpen && (
                         <div className="min-w-0">
@@ -918,7 +930,7 @@ export default function ChatPage() {
                             <span className="truncate">{conversation.title}</span>
                           </p>
                           {sidebarConversationView === "archived" && conversation.projectName && <p className="mt-1 truncate text-xs text-[#a78bfa]/70">{conversation.projectName}</p>}
-                          <p className="mt-1 font-sans text-xs text-[#7a80a3]">{conversation.updatedAt.toLocaleDateString()}</p>
+                          <p className="mt-0.5 font-sans text-xs text-[#7a80a3]">{conversation.updatedAt.toLocaleDateString()}</p>
                         </div>
                       )}
                     </button>
@@ -948,7 +960,7 @@ export default function ChatPage() {
                 );
               })}
 
-              {isSidebarOpen && !isLoadingChatData && visibleSidebarConversations.length === 0 && <div className="rounded-[10px] border border-dashed border-white/[0.13] bg-white/[0.03] px-4 py-4 font-sans text-[13px] leading-5 text-[#7a80a3]">{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
+              {isSidebarOpen && !isLoadingChatData && visibleSidebarConversations.length === 0 && <div className="rounded-[14px] border border-dashed border-white/[0.11] bg-white/[0.03] px-4 py-4 font-sans text-[13px] leading-5 text-[#7a80a3]">{sidebarConversationView === "archived" ? "No archived conversations yet." : "No conversations match that search yet."}</div>}
             </div>}
           </div>
 
@@ -1036,8 +1048,10 @@ export default function ChatPage() {
             )}
 
             {activeConversation && (
-              <div className="border-t border-white/[0.13] bg-[#070c2b]/80 px-6 pb-8 pt-5 backdrop-blur-xl lg:px-12 xl:px-16">
-              <div className="mx-auto max-w-[1480px]">
+              <div className="relative px-6 pb-8 pt-4 lg:px-12 xl:px-16">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 top-0 bg-gradient-to-t from-[#070c2b]/92 via-[#070c2b]/62 to-transparent backdrop-blur-sm" />
+              <div className="relative mx-auto max-w-[980px] transition-[max-width] duration-300 ease-out">
                 <ChatComposer
                   attachedFiles={attachedFiles}
                   attachmentMenuRef={attachmentMenuRef}
@@ -1050,6 +1064,7 @@ export default function ChatPage() {
                   onFileSelect={handleFileSelect}
                   onInputMessageChange={setInputMessage}
                   onSubmit={() => sendMessage()}
+                  pendingToolName={activePendingToolName}
                   setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
                 />
               </div>

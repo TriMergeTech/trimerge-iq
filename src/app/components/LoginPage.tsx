@@ -56,6 +56,36 @@ function storeSession(email: string, accessToken: string, refreshToken?: string)
   }
 }
 
+function getHeading(viewMode: ViewMode) {
+  switch (viewMode) {
+    case "signup":
+      return "Create Staff Account";
+    case "verify":
+      return "Verify Your Account";
+    case "forgotPassword":
+      return "Reset Password";
+    case "resetSent":
+      return "Check Your Email";
+    default:
+      return "Admin Access";
+  }
+}
+
+function getSubtitle(viewMode: ViewMode) {
+  switch (viewMode) {
+    case "signup":
+      return "Create a backend account so you can manage admin tools.";
+    case "verify":
+      return "Enter the OTP sent to your email to activate your account.";
+    case "forgotPassword":
+      return "Enter your email to receive password reset instructions.";
+    case "resetSent":
+      return "We sent password reset instructions to your email address.";
+    default:
+      return "Sign in with a real backend account to access admin tools.";
+  }
+}
+
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [email, setEmail] = useState("");
@@ -75,6 +105,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const inputClass =
+    "interactive-input w-full rounded-[10px] border border-white/[0.18] bg-white/[0.04] py-[13px] pl-10 pr-4 font-sans text-[14.5px] text-white outline-none placeholder:text-white/45 focus:border-[#2e2bff] focus:bg-white/[0.06] focus:ring-2 focus:ring-[#2e2bff]/25";
+  const primaryButtonClass =
+    "interactive-button w-full rounded-[10px] bg-[#2e2bff] px-4 py-3.5 font-display text-base font-bold text-white shadow-[0_10px_30px_rgba(46,43,255,0.35)] hover:bg-[#2120e0] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0";
+  const secondaryButtonClass =
+    "interactive-button w-full rounded-[10px] border border-white/[0.18] bg-transparent px-4 py-3 font-display text-[15px] font-semibold text-white hover:border-white/35 hover:bg-white/[0.05]";
 
   const loginWithCredentials = async (nextEmail: string, nextPassword: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -272,48 +309,31 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
   };
 
-  return (
-    <section className="page-shell min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-900 via-[#0f3d7a] to-[#1e5ba8] px-4 py-12">
-      <div className="relative mx-auto w-full max-w-md">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-1/4 top-1/4 h-72 w-72 rounded-full bg-[#d4af37] opacity-20 blur-[128px]" />
-          <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-[#1e5ba8] opacity-20 blur-[128px]" />
-        </div>
+  const goToLogin = () => {
+    setViewMode("login");
+    setError("");
+    setSuccessMessage("");
+  };
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl page-section">
-          <div className="mb-8 text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] opacity-60 blur-2xl" />
-                <div className="relative rounded-2xl bg-white/95 p-4 shadow-2xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/trimerge-logo.png"
-                    alt="TriMerge Consulting Group"
-                    className="h-auto w-[220px]"
-                  />
-                </div>
+  return (
+    <section className="relative flex min-h-[calc(100vh-89px)] flex-col overflow-hidden bg-[#050b22]">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_60%_50%_at_50%_20%,rgba(46,43,255,0.28)_0%,transparent_65%),radial-gradient(ellipse_80%_60%_at_20%_100%,rgba(31,40,88,0.55)_0%,transparent_60%),linear-gradient(180deg,#04081e_0%,#0a1742_100%)] px-6 py-12">
+        <div className="pointer-events-none absolute -left-28 top-20 h-[360px] w-[360px] opacity-25 [background-image:radial-gradient(circle,rgba(255,255,255,0.12)_1.2px,transparent_1.4px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_at_center,#000_0%,transparent_70%)]" />
+        <div className="pointer-events-none absolute -right-28 bottom-10 h-[360px] w-[360px] rotate-6 opacity-25 [background-image:radial-gradient(circle,rgba(255,255,255,0.12)_1.2px,transparent_1.4px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_at_center,#000_0%,transparent_70%)]" />
+
+        <div className="relative z-10 w-full max-w-[460px] rounded-[18px] border border-white/[0.18] bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_100%)] px-6 py-8 shadow-[0_30px_60px_rgba(4,8,30,0.55),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md sm:px-[38px] sm:py-9">
+          <div className="mb-7 text-center">
+            <div className="mb-[18px] flex justify-center">
+              <div className="relative grid h-[68px] w-[68px] place-items-center rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(239,176,26,0.18)_0%,rgba(46,43,255,0.18)_60%,transparent_75%)]">
+                <span className="absolute inset-2.5 rounded-full border border-white/[0.12] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)]" />
+                <Shield className="relative z-10 h-7 w-7 text-white" />
               </div>
             </div>
-            <div className="relative mb-4 inline-block">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] opacity-50 blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#1e5ba8] to-[#d4af37] shadow-xl">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 className="mb-2 text-3xl font-bold text-white">
-              {viewMode === "login" && "Admin Access"}
-              {viewMode === "signup" && "Create Staff Account"}
-              {viewMode === "verify" && "Verify Your Account"}
-              {viewMode === "forgotPassword" && "Reset Password"}
-              {viewMode === "resetSent" && "Check Your Email"}
+            <h1 className="font-display text-[28px] font-bold tracking-normal text-white">
+              {getHeading(viewMode)}
             </h1>
-            <p className="text-blue-200">
-              {viewMode === "login" && "Sign in with a real backend account to access admin tools."}
-              {viewMode === "signup" && "Create a staff account first so you can manage skills and positions."}
-              {viewMode === "verify" && "Enter the OTP sent to your email to activate your account."}
-              {viewMode === "forgotPassword" && "Enter your email to receive a password reset OTP."}
-              {viewMode === "resetSent" && "We sent password reset instructions to your email address."}
+            <p className="mx-auto mt-2 max-w-80 font-sans text-sm leading-6 text-[#9aa2c4]">
+              {getSubtitle(viewMode)}
             </p>
           </div>
 
@@ -321,20 +341,21 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           {error && <InlineMessage tone="error" message={error} />}
 
           {viewMode === "login" && (
-            <form onSubmit={handleLoginSubmit} className="space-y-5">
+            <form onSubmit={handleLoginSubmit} className="space-y-[18px]">
               <Field label="Email Address" icon={User}>
                 <input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                  className={inputClass}
                   placeholder="staff@trimerge.com"
+                  autoComplete="email"
                 />
               </Field>
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-blue-100">Password</span>
+                  <label className="font-sans text-[13px] font-semibold text-white">Password</label>
                   <button
                     type="button"
                     onClick={() => {
@@ -342,35 +363,33 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                       setError("");
                       setSuccessMessage("");
                     }}
-                    className="interactive-base text-sm text-[#d4af37] hover:text-white"
+                    className="interactive-base font-sans text-[13px] font-semibold text-[#c7cdee] hover:text-white"
                   >
                     Forgot Password?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-blue-300" />
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa2c4]" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={`${inputClass} pr-11`}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword((current) => !current)}
-                    className="interactive-base absolute right-4 top-1/2 -translate-y-1/2 text-blue-300 hover:text-white"
+                    className="interactive-base absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9aa2c4] hover:text-white"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-              >
+              <button type="submit" disabled={isLoading} className={`${primaryButtonClass} mt-1.5`}>
                 {isLoading ? "Signing in..." : "Sign In"}
               </button>
 
@@ -381,7 +400,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   setError("");
                   setSuccessMessage("");
                 }}
-                className="interactive-button w-full rounded-xl border border-white/20 bg-white/8 py-3 font-medium text-white hover:bg-white/12"
+                className={secondaryButtonClass}
               >
                 Create New Staff Account
               </button>
@@ -390,27 +409,17 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           {viewMode === "signup" && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Login
-              </button>
+              <BackButton onClick={goToLogin} label="Back to Login" />
 
-              <form onSubmit={handleSignupSubmit} className="space-y-5">
+              <form onSubmit={handleSignupSubmit} className="space-y-[18px]">
                 <Field label="Full Name" icon={User}>
                   <input
                     type="text"
                     value={signupFullName}
                     onChange={(event) => setSignupFullName(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={inputClass}
                     placeholder="Jane Doe"
+                    autoComplete="name"
                   />
                 </Field>
 
@@ -419,50 +428,52 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     type="email"
                     value={signupEmail}
                     onChange={(event) => setSignupEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={inputClass}
                     placeholder="staff@trimerge.com"
+                    autoComplete="email"
                   />
                 </Field>
 
                 <div>
-                  <label className="mb-2 block text-sm text-blue-100">Profile</label>
+                  <label className="mb-2 block font-sans text-[13px] font-semibold text-white">Profile</label>
                   <select
                     value={signupProfile}
                     onChange={(event) => setSignupProfile(event.target.value as SignupProfile)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#d4af37]"
+                    className="interactive-input w-full rounded-[10px] border border-white/[0.18] bg-white/[0.04] px-4 py-[13px] font-sans text-[14.5px] text-white outline-none focus:border-[#2e2bff] focus:bg-white/[0.06] focus:ring-2 focus:ring-[#2e2bff]/25"
                   >
-                    <option value="staff" className="bg-slate-900">Staff</option>
-                    <option value="client" className="bg-slate-900">Client</option>
+                    <option value="staff" className="bg-[#050b22]">
+                      Staff
+                    </option>
+                    <option value="client" className="bg-[#050b22]">
+                      Client
+                    </option>
                   </select>
-                  <p className="mt-2 text-xs text-blue-200/80">
-                    Use `staff` if you want access to protected admin skills actions.
-                  </p>
                 </div>
 
-                <div className="relative">
-                  <label className="mb-2 block text-sm text-blue-100">Password</label>
-                  <Lock className="pointer-events-none absolute left-4 top-[46px] h-5 w-5 text-blue-300" />
-                  <input
-                    type={showSignupPassword ? "text" : "password"}
-                    value={signupPassword}
-                    onChange={(event) => setSignupPassword(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-12 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
-                    placeholder="Create a password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupPassword((current) => !current)}
-                    className="interactive-base absolute right-4 top-[46px] text-blue-300 hover:text-white"
-                  >
-                    {showSignupPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+                <div>
+                  <label className="mb-2 block font-sans text-[13px] font-semibold text-white">Password</label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa2c4]" />
+                    <input
+                      type={showSignupPassword ? "text" : "password"}
+                      value={signupPassword}
+                      onChange={(event) => setSignupPassword(event.target.value)}
+                      className={`${inputClass} pr-11`}
+                      placeholder="Create a password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showSignupPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowSignupPassword((current) => !current)}
+                      className="interactive-base absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9aa2c4] hover:text-white"
+                    >
+                      {showSignupPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                    </button>
+                  </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
+                <button type="submit" disabled={isLoading} className={primaryButtonClass}>
                   {isLoading ? "Creating account..." : "Create Account"}
                 </button>
               </form>
@@ -471,27 +482,24 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           {viewMode === "verify" && (
             <>
-              <button
-                type="button"
+              <BackButton
                 onClick={() => {
                   setViewMode("signup");
                   setError("");
                   setSuccessMessage("");
                 }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Signup
-              </button>
+                label="Back to Signup"
+              />
 
-              <form onSubmit={handleVerifySubmit} className="space-y-5">
+              <form onSubmit={handleVerifySubmit} className="space-y-[18px]">
                 <Field label="Email Address" icon={Mail}>
                   <input
                     type="email"
                     value={verifyEmail}
                     onChange={(event) => setVerifyEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={inputClass}
                     placeholder="staff@trimerge.com"
+                    autoComplete="email"
                   />
                 </Field>
 
@@ -500,16 +508,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     type="text"
                     value={verifyOtp}
                     onChange={(event) => setVerifyOtp(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={inputClass}
                     placeholder="123456"
+                    inputMode="numeric"
                   />
                 </Field>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
+                <button type="submit" disabled={isLoading} className={primaryButtonClass}>
                   {isLoading ? "Verifying..." : "Verify and Sign In"}
                 </button>
               </form>
@@ -518,35 +523,21 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           {viewMode === "forgotPassword" && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setError("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-base mb-4 inline-flex items-center gap-2 text-sm text-blue-200 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Login
-              </button>
+              <BackButton onClick={goToLogin} label="Back to Login" />
 
-              <form onSubmit={handleForgotPassword} className="space-y-5">
+              <form onSubmit={handleForgotPassword} className="space-y-[18px]">
                 <Field label="Email Address" icon={Mail}>
                   <input
                     type="email"
                     value={resetEmail}
                     onChange={(event) => setResetEmail(event.target.value)}
-                    className="interactive-input w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-12 pr-4 text-white outline-none placeholder:text-blue-300 focus:ring-2 focus:ring-[#d4af37]"
+                    className={inputClass}
                     placeholder="staff@trimerge.com"
+                    autoComplete="email"
                   />
                 </Field>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="interactive-button w-full rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:translate-y-0"
-                >
+                <button type="submit" disabled={isLoading} className={primaryButtonClass}>
                   {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
                 </button>
               </form>
@@ -554,60 +545,35 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           )}
 
           {viewMode === "resetSent" && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="text-center">
-                <div className="relative mb-4 inline-block">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-500 to-[#d4af37] opacity-50 blur-xl" />
-                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-[#d4af37] shadow-xl">
-                    <CheckCircle className="h-8 w-8 text-white" />
-                  </div>
+                <div className="relative mb-4 inline-grid h-16 w-16 place-items-center rounded-full bg-green-500/20">
+                  <CheckCircle className="h-8 w-8 text-green-200" />
                 </div>
-                <p className="text-sm text-[#d4af37]">{resetEmail}</p>
+                <p className="font-sans text-sm text-[#c7cdee]">{resetEmail}</p>
               </div>
 
-              <div className="rounded-xl border border-green-500/50 bg-green-500/20 p-4">
-                <p className="mb-2 text-sm text-green-200">
-                  <strong>Next Steps:</strong>
-                </p>
-                <ul className="list-inside list-disc space-y-1 text-sm text-green-200">
-                  <li>Check your email inbox</li>
-                  <li>Use the OTP or instructions from the backend email</li>
-                  <li>Reset your password from the backend flow</li>
-                  <li>Then sign in again here</li>
-                </ul>
+              <div className="rounded-[10px] border border-green-400/35 bg-green-400/10 p-4 font-sans text-sm leading-6 text-green-100">
+                Check your inbox, use the reset instructions from the backend email, then return here to sign in.
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("login");
-                  setResetEmail("");
-                  setSuccessMessage("");
-                }}
-                className="interactive-button flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1e5ba8] to-[#d4af37] py-3 font-medium text-white shadow-xl"
-              >
-                <ArrowLeft className="h-5 w-5" />
+              <button type="button" onClick={goToLogin} className={primaryButtonClass}>
                 Back to Login
               </button>
             </div>
           )}
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-blue-300">Protected by TriMerge Security</p>
+          <div className="mt-[22px] text-center font-sans text-xs text-[#9aa2c4]">
+            Protected by TriMerge Security
           </div>
         </div>
+      </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-blue-200">
-            Need help? Contact{" "}
-            <a
-              href="mailto:support@trimerge.com"
-              className="interactive-base text-[#d4af37] hover:text-white"
-            >
-              support@trimerge.com
-            </a>
-          </p>
-        </div>
+      <div className="bg-[#050b22] px-6 pb-10 text-center font-sans text-[13.5px] text-[#9aa2c4]">
+        Need help? Contact{" "}
+        <a href="mailto:support@trimerge.com" className="interactive-base font-semibold text-[#c7cdee] hover:text-white">
+          support@trimerge.com
+        </a>
       </div>
     </section>
   );
@@ -624,12 +590,31 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm text-blue-100">{label}</label>
+      <label className="mb-2 block font-sans text-[13px] font-semibold text-white">{label}</label>
       <div className="relative">
-        <Icon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-blue-300" />
+        <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa2c4]" />
         {children}
       </div>
     </div>
+  );
+}
+
+function BackButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="interactive-base mb-4 inline-flex items-center gap-2 font-sans text-sm font-semibold text-[#c7cdee] hover:text-white"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {label}
+    </button>
   );
 }
 
@@ -642,13 +627,13 @@ function InlineMessage({
 }) {
   const toneClasses =
     tone === "error"
-      ? "border-red-500/50 bg-red-500/20 text-red-200"
-      : "border-green-500/50 bg-green-500/20 text-green-200";
+      ? "border-red-400/35 bg-red-500/12 text-red-100"
+      : "border-green-400/35 bg-green-500/12 text-green-100";
 
   return (
-    <div className={`animate-fade-rise mb-5 flex items-start gap-2 rounded-xl border p-4 ${toneClasses}`}>
+    <div className={`animate-fade-rise mb-5 flex items-start gap-2 rounded-[10px] border p-4 font-sans ${toneClasses}`}>
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-      <p className="text-sm">{message}</p>
+      <p className="text-sm leading-5">{message}</p>
     </div>
   );
 }

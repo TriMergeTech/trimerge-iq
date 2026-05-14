@@ -6,12 +6,28 @@ export interface UploadedFile {
 
 export type ChatEntityId = number | string;
 
+export interface ToolArgumentDefinition {
+  type?: string;
+  description?: string;
+}
+
+export interface ToolResponseDetails {
+  id?: ChatEntityId | null;
+  name?: string;
+  description?: string;
+  arguments?: Record<string, unknown>;
+  schema?: Record<string, ToolArgumentDefinition>;
+  position?: string;
+  staff?: ChatEntityId;
+}
+
 export interface Message {
   id: ChatEntityId;
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
   files?: UploadedFile[];
+  toolResponse?: ToolResponseDetails;
 }
 
 export interface Project {

@@ -4,6 +4,11 @@ import type { ChangeEvent, FormEvent, ReactNode, RefObject } from "react";
 import { FileText, Image as ImageIcon, Plus, Send, Sparkles } from "lucide-react";
 
 import type { UploadedFile } from "./chatPageTypes";
+import {
+  ENDPOINT_CREATION_TOOL_DISPLAY_NAME,
+  ENDPOINT_CREATION_TOOL_NAME,
+  isEndpointCreationRequest,
+} from "./chatPageUtils";
 
 interface ChatComposerProps {
   attachedFiles: UploadedFile[];
@@ -17,6 +22,7 @@ interface ChatComposerProps {
   onFileSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onInputMessageChange: (value: string) => void;
   onSubmit: () => void;
+  pendingToolName?: string;
   setIsAttachmentMenuOpen: (value: boolean | ((current: boolean) => boolean)) => void;
 }
 
@@ -32,9 +38,15 @@ export default function ChatComposer({
   onFileSelect,
   onInputMessageChange,
   onSubmit,
+  pendingToolName,
   setIsAttachmentMenuOpen,
 }: ChatComposerProps) {
   const canSubmit = (inputMessage.trim().length > 0 || attachedFiles.length > 0) && !isTyping;
+  const isEndpointRequest = isEndpointCreationRequest(inputMessage);
+  const inputToolName = isEndpointRequest ? ENDPOINT_CREATION_TOOL_NAME : pendingToolName;
+  const inputToolDisplayName =
+    inputToolName === ENDPOINT_CREATION_TOOL_NAME ? ENDPOINT_CREATION_TOOL_DISPLAY_NAME : inputToolName;
+  const hasInputTool = Boolean(inputToolName);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -108,13 +120,28 @@ export default function ChatComposer({
           </button>
         </div>
 
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(event) => onInputMessageChange(event.target.value)}
-          placeholder="Ask anything"
-          className={inputTextClassName}
-        />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {hasInputTool && (
+            <span
+              aria-label={inputToolDisplayName}
+              className="inline-flex max-w-[46%] shrink-0 items-center gap-2 rounded-full border border-[#7c5cff]/24 bg-[#7c5cff]/12 px-3 py-1.5 font-sans text-sm font-semibold text-[#e6e9f5]"
+              role="img"
+              title={inputToolDisplayName}
+            >
+              <span aria-hidden="true" className="text-base leading-none">
+                {"\u{1F6E0}\uFE0F"}
+              </span>
+              <span className="truncate">{inputToolDisplayName}</span>
+            </span>
+          )}
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(event) => onInputMessageChange(event.target.value)}
+            placeholder="Ask anything"
+            className={`${inputTextClassName} w-full`}
+          />
+        </div>
         <button
           type="submit"
           disabled={!canSubmit}

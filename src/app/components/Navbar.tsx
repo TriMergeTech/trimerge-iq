@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, MessageSquare, Search, Shield } from "lucide-react";
@@ -18,28 +19,18 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-14 lg:py-[22px]">
         <Link
           href="/"
-          className="interactive-base flex items-center gap-3 text-left"
-          aria-label="TriMerge Consulting Group home"
+          className="interactive-base flex items-center text-left"
+          aria-label="TriMerge IQ home"
         >
-          <svg className="h-11 w-11 shrink-0" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <path
-              d="M9 52 32 10 55 52H9Z"
-              fill="white"
-              stroke="#1f2858"
-              strokeLinejoin="round"
-              strokeWidth="4"
-            />
-            <path d="M20 50 32 27 44 50H20Z" fill="#efb01a" />
-          </svg>
-          <div className="leading-none">
-            <div className="text-[26px] font-extrabold tracking-normal">
-              <span className="text-[#1f2858]">Tri</span>
-              <span className="text-[#efb01a]">Merge</span>
-            </div>
-            <div className="mt-1 font-sans text-[9px] font-semibold uppercase tracking-[0.32em] text-[#7a82a6]">
-              Consulting Group
-            </div>
-          </div>
+          <Image
+            src="/trimerge-iq-logo.png"
+            alt="TriMerge IQ"
+            width={2154}
+            height={342}
+            priority
+            unoptimized
+            className="h-auto w-[220px] object-contain sm:w-[280px] lg:w-[330px]"
+          />
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">

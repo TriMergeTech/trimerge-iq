@@ -1,4 +1,4 @@
-import type { ChatEntityId, Conversation, Message, ProjectFormOption, UploadedFile } from "./chatPageTypes";
+import type { ChatEntityId, Conversation, Message, ProjectFormOption, ToolArgumentDefinition, ToolResponseDetails, UploadedFile } from "./chatPageTypes";
 import { readStoredAdminPeople } from "./adminRegistryState";
 import { authenticatedAdminFetch } from "./adminAuth";
 
@@ -6,6 +6,7 @@ const DEFAULT_CHAT_API_BASE_URL = "https://trimerge-microserver-v3.vercel.app/v2
 const DEFAULT_PROJECTS_API_BASE_URL = "/api/trimerge";
 const CHAT_PROFILE_STORAGE_KEY = "trimerge_chat_profile";
 const CHAT_MESSAGE_SENDER_STORAGE_KEY = "trimerge_chat_message_senders";
+const CHAT_PENDING_TOOL_STORAGE_KEY = "trimerge_chat_pending_tools";
 
 interface ApiConversationRecord {
   id?: ChatEntityId;
@@ -20,12 +21,33 @@ interface ApiConversationRecord {
 }
 
 interface ApiMessageRecord {
+  _id?: ChatEntityId;
   id?: ChatEntityId;
   conversation?: ChatEntityId;
-  tool?: string;
+  user?: ChatEntityId;
+  error?: boolean;
+  tool?:
+    | string
+    | {
+        name?: string;
+        description?: string;
+        arguments?: Record<string, ToolArgumentDefinition>;
+      };
   text?: string;
   attachment?: UploadedFile[];
   created_at?: string;
+  pending_tool?: ChatEntityId | null;
+  position?: string;
+  staff?: ChatEntityId;
+  status?: string;
+  response?: string;
+  message?: string;
+  llm_response?: ApiMessageRecord | string;
+  arguments?: Record<string, unknown>;
+  skillDecision?: {
+    details?: string;
+    message?: string;
+  };
 }
 
 interface ApiMessagesResponse {
@@ -235,6 +257,45 @@ function writeSenderMap(senderMap: Record<string, Message["sender"]>) {
   localStorage.setItem(CHAT_MESSAGE_SENDER_STORAGE_KEY, JSON.stringify(senderMap));
 }
 
+function readPendingToolMap() {
+  if (typeof window === "undefined") return {} as Record<string, ChatEntityId>;
+
+  const rawValue = localStorage.getItem(CHAT_PENDING_TOOL_STORAGE_KEY);
+  if (!rawValue) return {} as Record<string, ChatEntityId>;
+
+  try {
+    return JSON.parse(rawValue) as Record<string, ChatEntityId>;
+  } catch {
+    return {} as Record<string, ChatEntityId>;
+  }
+}
+
+function writePendingToolMap(pendingToolMap: Record<string, ChatEntityId>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CHAT_PENDING_TOOL_STORAGE_KEY, JSON.stringify(pendingToolMap));
+}
+
+function getPendingToolKey(conversationId: ChatEntityId) {
+  return String(conversationId);
+}
+
+function getPendingTool(conversationId: ChatEntityId) {
+  return readPendingToolMap()[getPendingToolKey(conversationId)] ?? null;
+}
+
+function setPendingTool(conversationId: ChatEntityId, pendingTool: ChatEntityId | null | undefined) {
+  const pendingToolMap = readPendingToolMap();
+  const pendingToolKey = getPendingToolKey(conversationId);
+
+  if (pendingTool) {
+    pendingToolMap[pendingToolKey] = pendingTool;
+  } else {
+    delete pendingToolMap[pendingToolKey];
+  }
+
+  writePendingToolMap(pendingToolMap);
+}
+
 function getSenderMapKey(conversationId: ChatEntityId, messageId: ChatEntityId) {
   return `${conversationId}:${messageId}`;
 }
@@ -398,15 +459,94 @@ function buildProjectPayload(input: {
 }
 
 export function mapMessagesFromApi(conversationId: ChatEntityId, records: ApiMessageRecord[] | undefined): Message[] {
-  const safeRecords = records ?? [];
+  const safeRecords = (records ?? []).filter((record) => !isBackendErrorMessage(record));
 
   return safeRecords.map((record, index) => ({
-    id: record.id ?? Date.now() + index,
+    id: record.id ?? record._id ?? Date.now() + index,
     content: record.text?.trim() || "",
-    sender: inferMessageSender(conversationId, record.id ?? Date.now() + index, index, safeRecords.length),
+    sender: inferMessageSender(conversationId, record.id ?? record._id ?? Date.now() + index, index, safeRecords.length),
     timestamp: record.created_at ? new Date(record.created_at) : new Date(),
     files: Array.isArray(record.attachment) ? record.attachment : undefined,
+    toolResponse: mapToolResponseFromApi(record),
   }));
+}
+
+function getApiMessageText(record: ApiMessageRecord | null | undefined) {
+  return record?.text?.trim() || record?.response?.trim() || record?.message?.trim() || "";
+}
+
+function isBackendErrorMessage(record: ApiMessageRecord | null | undefined) {
+  if (!record) return false;
+  const messageText = getApiMessageText(record);
+  return Boolean(record.error) || messageText === "LLM did not return a skill.";
+}
+
+function getBackendErrorMessage(record: ApiMessageRecord | null | undefined) {
+  if (!isBackendErrorMessage(record)) return "";
+  return record?.skillDecision?.details ?? record?.skillDecision?.message ?? getApiMessageText(record);
+}
+
+function extractAiResponse(payload: ApiMessageRecord | null) {
+  if (!payload) return null;
+
+  if (typeof payload.llm_response === "string") {
+    return {
+      ...payload,
+      text: payload.llm_response,
+    };
+  }
+
+  if (payload.llm_response && typeof payload.llm_response === "object") {
+    return payload.llm_response;
+  }
+
+  if (
+    "pending_tool" in payload ||
+    payload.status === "completed" ||
+    typeof payload.response === "string" ||
+    typeof payload.message === "string"
+  ) {
+    return payload;
+  }
+
+  return null;
+}
+
+function mapToolResponseFromApi(record: ApiMessageRecord | null | undefined): ToolResponseDetails | undefined {
+  if (!record || (!record.pending_tool && !record.tool)) return undefined;
+
+  const tool = typeof record.tool === "object" && record.tool !== null ? record.tool : null;
+
+  return {
+    id: record.pending_tool ?? null,
+    name: tool?.name ?? (typeof record.tool === "string" ? record.tool : undefined),
+    description: tool?.description,
+    arguments: record.arguments,
+    schema: tool?.arguments,
+    position: record.position,
+    staff: record.staff,
+  };
+}
+
+function mapAiMessageFromApi(conversationId: ChatEntityId, record: ApiMessageRecord | null): Message | null {
+  const messageText = getApiMessageText(record);
+  if (!record || !messageText) return null;
+
+  const messageId =
+    record.id ??
+    record._id ??
+    `${conversationId}-ai-${record.pending_tool ?? record.status ?? Date.now()}-${messageText.slice(0, 24)}`;
+
+  rememberMessageSender(conversationId, messageId, "ai");
+
+  return {
+    id: messageId,
+    content: messageText,
+    sender: "ai",
+    timestamp: record.created_at ? new Date(record.created_at) : new Date(),
+    files: Array.isArray(record.attachment) ? record.attachment : undefined,
+    toolResponse: mapToolResponseFromApi(record),
+  };
 }
 
 export async function fetchConversations(profile: string, project?: string | null, page = 1, limit = 100, includeArchived = false) {
@@ -444,14 +584,43 @@ export async function createMessage(input: {
   tool?: string;
   attachment?: UploadedFile[];
 }) {
+  const pendingTool = getPendingTool(input.conversation);
   const payload = await postJson<ApiMessageRecord>("/new_message", {
-    tool: "chat",
-    attachment: [],
-    ...input,
+    conversation: input.conversation,
+    user: getChatProfile(),
+    text: input.text,
+    attachment: input.attachment?.length ? input.attachment : null,
+    pending_tool: pendingTool,
+    ...(input.tool ? { tool: input.tool } : {}),
   });
 
   if (payload?.id) rememberMessageSender(input.conversation, payload.id, "user");
-  return payload;
+
+  if (isBackendErrorMessage(payload)) {
+    setPendingTool(input.conversation, null);
+    return {
+      payload,
+      aiMessage: null,
+      pendingTool: null,
+      errorMessage: getBackendErrorMessage(payload),
+    };
+  }
+
+  const aiResponse = extractAiResponse(payload);
+  if (aiResponse) {
+    if (aiResponse.pending_tool) {
+      setPendingTool(input.conversation, aiResponse.pending_tool);
+    } else if (aiResponse.pending_tool === null || aiResponse.status === "completed") {
+      setPendingTool(input.conversation, null);
+    }
+  }
+
+  return {
+    payload,
+    aiMessage: mapAiMessageFromApi(input.conversation, aiResponse),
+    pendingTool: aiResponse?.pending_tool ?? null,
+    errorMessage: "",
+  };
 }
 
 export async function fetchMessages(conversationId: ChatEntityId, page = 1, limit = 100) {
