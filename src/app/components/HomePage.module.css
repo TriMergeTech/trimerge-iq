@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap");
 
 .homeRoot {
   --ink: #0b1340;
@@ -9,7 +9,7 @@
   --line: #e6e8f1;
   color: var(--ink);
   background: #fff;
-  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
 }
 
 .homeRoot,
@@ -52,7 +52,7 @@
   gap: 8px;
   padding: 10px 18px;
   border-radius: 8px;
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 15px;
   font-weight: 500;
   color: #1f2858;
@@ -232,8 +232,8 @@
 }
 
 .heroTitle {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 500;
   font-size: 62px;
   line-height: 1.08;
   letter-spacing: -1.5px;
@@ -249,7 +249,7 @@
 }
 
 .lede {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.7;
   color: #c8cdee;
@@ -267,7 +267,7 @@
 }
 
 .btn {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-weight: 500;
   font-size: 17px;
   padding: 16px 38px;
@@ -314,8 +314,8 @@
 }
 
 .sectionHead h2 {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 600;
   font-size: 38px;
   margin: 0 0 12px;
   letter-spacing: -0.8px;
@@ -335,7 +335,7 @@
 }
 
 .sectionHead p {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   color: var(--muted);
   font-size: 16px;
   margin: 6px 0 0;
@@ -345,6 +345,32 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
+}
+
+.servicesStatement {
+  max-width: 980px;
+  margin: 92px auto 0;
+  text-align: center;
+}
+
+.servicesStatement h3 {
+  margin: 0;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-size: 56px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.servicesStatement p {
+  margin: 24px auto 0;
+  max-width: 760px;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.65;
+  color: var(--muted);
 }
 
 .serviceCard {
@@ -386,16 +412,16 @@
 }
 
 .serviceCard h3 {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 21px;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0 0 10px;
   color: var(--ink);
   letter-spacing: -0.3px;
 }
 
 .serviceCard p {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 14.5px;
   line-height: 1.65;
   color: var(--muted);
@@ -439,8 +465,8 @@
 }
 
 .statNum {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 600;
   font-size: 32px;
   background: linear-gradient(90deg, #4f7bff, #2bc5ff);
   -webkit-background-clip: text;
@@ -450,7 +476,7 @@
 }
 
 .statLabel {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 13.5px;
   color: #5b6079;
   margin-top: 4px;
@@ -484,8 +510,8 @@
 }
 
 .ctaSection h2 {
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 600;
   font-size: 36px;
   color: var(--ink);
   margin: 0 0 14px;
@@ -493,7 +519,7 @@
 }
 
 .ctaSection p {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 16px;
   color: var(--muted);
   margin: 0 auto 40px;
@@ -517,7 +543,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 14px;
 }
 
@@ -555,6 +581,18 @@
 
   .servicesGrid {
     grid-template-columns: 1fr;
+  }
+
+  .servicesStatement {
+    margin-top: 64px;
+  }
+
+  .servicesStatement h3 {
+    font-size: 38px;
+  }
+
+  .servicesStatement p {
+    font-size: 16px;
   }
 
   .statsGrid {

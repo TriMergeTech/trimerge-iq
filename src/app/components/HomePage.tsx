@@ -6,9 +6,9 @@ import styles from "./HomePage.module.css";
 
 const services = [
   {
-    title: "Strategy Consulting",
+    title: "Knowledge Reliability Engine",
     description:
-      "Transform your business with data-driven strategies and actionable insights.",
+      "Continuously validate institutional knowledge, flag drift, and keep critical answers accurate across teams.",
     variant: "violet",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -20,9 +20,9 @@ const services = [
     ),
   },
   {
-    title: "Digital Transformation",
+    title: "Workflow Intelligence Enablement",
     description:
-      "Navigate the digital landscape with cutting-edge technology solutions.",
+      "Embed context-aware intelligence into daily workflows so teams can act faster without losing precision.",
     variant: "violet",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -33,9 +33,9 @@ const services = [
     ),
   },
   {
-    title: "Operational Excellence",
+    title: "Governance & Risk Controls",
     description:
-      "Optimize processes and maximize efficiency across your organization.",
+      "Apply policy-aware guardrails, role-based access, and auditable decision trails for enterprise confidence.",
     variant: "lilac",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,8 +47,8 @@ const services = [
 
 const stats = [
   {
-    value: "500+",
-    label: "Clients Served",
+    value: "42%",
+    label: "Faster Decision Cycles",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="9" cy="8" r="3.2" />
@@ -59,8 +59,8 @@ const stats = [
     ),
   },
   {
-    value: "98%",
-    label: "Client Satisfaction",
+    value: "99.2%",
+    label: "Answer Confidence",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
         <path d="m12 3 2.7 5.7 6.3.9-4.5 4.4 1 6.3L12 17.5 6.5 20.3l1-6.3-4.5-4.4 6.3-.9L12 3Z" />
@@ -68,8 +68,8 @@ const stats = [
     ),
   },
   {
-    value: "25+",
-    label: "Years Experience",
+    value: "3x",
+    label: "Research Throughput",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
         <rect x="3" y="7" width="18" height="13" rx="2" />
@@ -79,8 +79,8 @@ const stats = [
     ),
   },
   {
-    value: "150+",
-    label: "Expert Consultants",
+    value: "24/7",
+    label: "AI-Assisted Coverage",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8" r="4" />
@@ -345,11 +345,11 @@ export default function HomePage() {
             Modern <span className={styles.accent}>Business</span>
           </h1>
           <p className={styles.lede}>
-            TriMerge Consulting Group delivers comprehensive solutions that drive innovation, efficiency, and sustainable growth for organizations worldwide.
+            TriMergeIQ unifies your scattered knowledge into one governed intelligence layer so every team can move faster with dependable, permission-aware answers.
           </p>
           <div className={styles.ctaRow}>
             <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/search")}>Get Started</button>
-            <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => router.push("/admin")}>Admin Access</button>
+            <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => router.push("/admin")}>Open Admin Workspace</button>
           </div>
         </div>
       </section>
@@ -357,8 +357,8 @@ export default function HomePage() {
       <section className={styles.services}>
         <div className={styles.container}>
           <div className={styles.sectionHead}>
-            <h2>Our Services</h2>
-            <p>Tailored solutions to meet your organization&apos;s unique needs</p>
+            <h2>What TriMergeIQ Delivers</h2>
+            <p>Purpose-built capabilities for trustworthy, scalable AI operations.</p>
           </div>
           <div className={styles.servicesGrid}>
             {services.map((service) => (
@@ -368,6 +368,12 @@ export default function HomePage() {
                 <p>{service.description}</p>
               </article>
             ))}
+          </div>
+          <div className={styles.servicesStatement}>
+            <h3>TriMergeIQ governance powered by one, self-improving source of truth</h3>
+            <p>
+              Bring research, workflows, and enterprise knowledge into a single reliable system that continuously improves with every validated decision.
+            </p>
           </div>
         </div>
       </section>
@@ -398,16 +404,16 @@ export default function HomePage() {
           ))}
         </svg>
 
-        <h2>Ready to Transform Your Business?</h2>
-        <p>Let&apos;s discuss how TriMerge Consulting Group can help you achieve your strategic goals.</p>
+        <h2>Turn scattered knowledge into reliable execution.</h2>
+        <p>See how TriMergeIQ helps your teams answer faster, govern better, and operate with confidence.</p>
         <div className={styles.ctaRowCentered}>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/chat")}>Schedule a Consultation</button>
-          <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={() => router.push("/search")}>Learn More</button>
+          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/chat")}>Start a Guided Demo</button>
+          <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={() => router.push("/search")}>Browse Use Cases</button>
         </div>
       </section>
 
       <footer className={styles.footer}>
-        <div>&copy; 2026 TriMerge Consulting Group. All rights reserved.</div>
+        <div>&copy; 2026 TriMergeIQ. All rights reserved.</div>
         <div className={styles.links}>
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>

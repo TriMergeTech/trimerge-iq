@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BookOpen, Filter, RotateCcw, Search } from "lucide-react";
+import styles from "./SearchPage.module.css";
 
 interface SearchResult {
   id: number;
@@ -65,7 +66,7 @@ export default function SearchPage() {
   const [activeView, setActiveView] = useState<"search" | "filter" | "explore">(
     "search",
   );
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [sortBy, setSortBy] = useState("relevance");
   const [results, setResults] = useState<SearchResult[]>([]);
 
@@ -97,7 +98,7 @@ export default function SearchPage() {
 
   const filterByCategory = (category: string) => {
     setSelectedCategory(category);
-    if (category === "all" || category === "All Categories") {
+    if (category === "All Categories") {
       setResults([...MOCK_RESULTS]);
     } else {
       setResults(MOCK_RESULTS.filter((result) => result.category === category));
@@ -115,51 +116,114 @@ export default function SearchPage() {
     setResults(sorted);
   };
 
-  const getCategoryColor = (category: string): string => {
-    const colors: Record<string, string> = {
-      Finance: "#1e5ba8",
-      Marketing: "#d4af37",
-      Operations: "#808080",
-      Technology: "#4a90e2",
-      Strategy: "#2ecc71",
+  const getCategoryTagClass = (category: string): string => {
+    const map: Record<string, string> = {
+      Finance: styles.tagFinance,
+      Marketing: styles.tagMarketing,
+      Operations: styles.tagOperations,
+      Technology: styles.tagTechnology,
+      Strategy: styles.tagStrategy,
     };
-    return colors[category] || "#808080";
+    return map[category] ?? styles.tagDefault;
+  };
+
+  const twinkles = Array.from({ length: 44 }, (_, index) => ({
+    id: index,
+    left: `${(index * 9.37) % 100}%`,
+    top: `${(index * 5.83) % 100}%`,
+    delay: `${(index % 7) * 0.45}s`,
+    duration: `${2.2 + (index % 5) * 0.5}s`,
+  }));
+
+  const renderDotWave = (
+    rows: number,
+    cols: number,
+    dx: number,
+    dy: number,
+    amp: number,
+    freq: number,
+    phase: number,
+    color: string,
+  ) => {
+    const points: JSX.Element[] = [];
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const x = col * dx;
+        const y = row * dy + Math.sin((col / cols) * Math.PI * freq + phase) * amp;
+        const opacity = 0.4 + 0.6 * (1 - row / rows);
+        points.push(
+          <circle
+            key={`${row}-${col}`}
+            cx={x.toFixed(1)}
+            cy={y.toFixed(1)}
+            r="1.6"
+            fill={color}
+            opacity={opacity.toFixed(2)}
+          />,
+        );
+      }
+    }
+    return points;
   };
 
   return (
-    <section className="page-shell min-h-[calc(100vh-80px)] bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-4 py-12">
-      <div className="mx-auto max-w-[1500px]">
-        <div className="page-section mb-12 text-center">
-          <h1 className="text-4xl font-bold text-white">Search & Explore</h1>
-          <p className="mt-4 text-lg text-blue-200">
-            Query input and result exploration with filtering and ranked
-            results
-          </p>
+    <>
+      <section className={styles.hero}>
+        <div className={styles.wave} aria-hidden="true">
+          <svg className={styles.waveLeft} viewBox="0 0 380 380" fill="none">
+            {renderDotWave(20, 18, 18, 16, 30, 2, 0, "#a78bfa")}
+          </svg>
+          <svg className={styles.waveRight} viewBox="0 0 520 380" fill="none">
+            {renderDotWave(18, 28, 18, 16, 36, 2.4, 1, "#6b8eff")}
+          </svg>
+        </div>
+        <div className={styles.sky} aria-hidden="true">
+          {twinkles.map((twinkle) => (
+            <span
+              key={twinkle.id}
+              className={styles.twinkle}
+              style={{
+                left: twinkle.left,
+                top: twinkle.top,
+                animationDelay: twinkle.delay,
+                animationDuration: twinkle.duration,
+              }}
+            />
+          ))}
         </div>
 
-        <div className="page-section mb-8 flex justify-center gap-4 [animation-delay:90ms]">
+        <div className={styles.heroInner}>
+          <h1 className={styles.heroTitle}>
+            Search & <span className={styles.accent}>Explore</span>
+          </h1>
+          <p className={styles.lede}>
+            Query input and result exploration with filtering and ranked results
+            across your entire TriMerge knowledge layer.
+          </p>
+
+          <div className={styles.modeRow} role="tablist" aria-label="Mode">
           <button
             type="button"
             onClick={() => setActiveView("search")}
-            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
-              activeView === "search"
-                ? "bg-[#1e5ba8] text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              role="tab"
+              aria-selected={activeView === "search"}
+              className={`${styles.modeButton} ${
+                activeView === "search" ? styles.modeButtonActive : ""
+              }`}
           >
-            <Search className="h-5 w-5" />
+              <Search className={styles.modeIcon} />
             Search
           </button>
           <button
             type="button"
             onClick={() => setActiveView("filter")}
-            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
-              activeView === "filter"
-                ? "bg-[#d4af37] text-gray-900"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              role="tab"
+              aria-selected={activeView === "filter"}
+              className={`${styles.modeButton} ${
+                activeView === "filter" ? styles.modeButtonActive : ""
+              }`}
           >
-            <Filter className="h-5 w-5" />
+              <Filter className={styles.modeIcon} />
             Filter
           </button>
           <button
@@ -168,23 +232,26 @@ export default function SearchPage() {
               setActiveView("explore");
               handleRunQuery();
             }}
-            className={`interactive-button flex items-center gap-2 rounded-lg px-8 py-3 font-semibold shadow-lg ${
-              activeView === "explore"
-                ? "bg-[#808080] text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              role="tab"
+              aria-selected={activeView === "explore"}
+              className={`${styles.modeButton} ${
+                activeView === "explore" ? styles.modeButtonActive : ""
+              }`}
           >
-            <BookOpen className="h-5 w-5" />
+              <BookOpen className={styles.modeIcon} />
             Explore
           </button>
         </div>
 
-        <div className="page-section rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-lg [animation-delay:160ms]">
+          <div className={styles.searchCard}>
           {activeView === "search" && (
-            <div className="max-w-[1100px]">
-              <h2 className="mb-6 text-2xl font-bold text-white">Search Query</h2>
-              <div className="space-y-4">
-                <div className="relative">
+              <div>
+                <h2 className={styles.panelTitle}>Search Query</h2>
+                <div>
+                  <div className={styles.inputWrap}>
+                    <span className={styles.inputLead}>
+                      <Search className={styles.searchIcon} />
+                    </span>
                   <input
                     type="text"
                     value={searchQuery}
@@ -192,42 +259,37 @@ export default function SearchPage() {
                     onKeyDown={(event) =>
                       event.key === "Enter" ? handleSearch() : undefined
                     }
-                    placeholder="Enter your search query..."
-                    className="interactive-input w-full rounded-xl border-2 border-white/20 bg-white/5 px-6 py-4 pr-32 text-lg text-white outline-none placeholder:text-blue-200 focus:ring-2 focus:ring-[#1e5ba8]"
+                      placeholder="Enter your search query..."
+                      className={styles.searchInput}
                   />
                   <button
                     type="button"
                     onClick={handleSearch}
-                    className="interactive-button absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-[#1e5ba8] px-6 py-2 font-semibold text-white hover:bg-[#174a8f]"
+                      className={styles.submitButton}
                   >
                     Search
                   </button>
                 </div>
-                <p className="text-sm text-blue-200">
-                  Press Enter or click Search to execute query
-                </p>
+                  <p className={styles.hint}>Press Enter or click Search to execute query</p>
               </div>
             </div>
           )}
 
           {activeView === "filter" && (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className={styles.filterGrid}>
               <div>
-                <h2 className="mb-6 text-2xl font-bold text-white">
-                  Filter Options
-                </h2>
-                <div className="space-y-2">
+                  <h2 className={styles.panelTitle}>Filter Options</h2>
+                  <div className={styles.filterList}>
                   {categories.map((category) => (
                     <button
                       key={category}
                       type="button"
                       onClick={() => filterByCategory(category)}
-                      className={`interactive-button w-full rounded-lg px-4 py-3 text-left font-medium ${
-                        selectedCategory === category.toLowerCase() ||
-                        (category === "All Categories" && selectedCategory === "all")
-                          ? "bg-[#1e5ba8] text-white"
-                          : "bg-white/5 text-white hover:bg-white/10"
-                      }`}
+                          className={`${styles.filterOption} ${
+                            selectedCategory === category
+                              ? styles.filterOptionActive
+                              : ""
+                          }`}
                     >
                       {category}
                     </button>
@@ -236,21 +298,21 @@ export default function SearchPage() {
               </div>
 
               <div>
-                <h2 className="mb-6 text-2xl font-bold text-white">Date Range</h2>
-                <div className="space-y-3">
+                  <h2 className={styles.panelTitle}>Date Range</h2>
+                  <div>
                   <input
                     type="date"
-                    className="interactive-input w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                        className={styles.dateInput}
                   />
                   <input
                     type="date"
-                    className="interactive-input w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                        className={styles.dateInput}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleRunQuery}
-                  className="interactive-button mt-4 w-full rounded-lg bg-[#d4af37] px-6 py-3 font-bold text-gray-900 shadow-lg hover:bg-[#c19a2e]"
+                      className={styles.applyButton}
                 >
                   Apply Filters
                 </button>
@@ -259,79 +321,125 @@ export default function SearchPage() {
           )}
 
           {activeView === "explore" && (
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white">Explore Results</h2>
+              <div className={styles.exploreHead}>
+                <h2 className={styles.panelTitle}>Explore Results</h2>
               <button
                 type="button"
                 onClick={handleRunQuery}
-                className="interactive-button flex items-center gap-2 rounded-lg bg-[#808080] px-6 py-2 font-semibold text-white hover:bg-[#6b6b6b]"
+                  className={styles.runButton}
               >
-                <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className={styles.runIcon} />
                 Run Query
               </button>
             </div>
           )}
 
           {results.length > 0 && (
-            <div className="mt-8 space-y-4">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-white">
-                  Results ({results.length})
-                </h3>
+              <div>
+                <div className={styles.resultsBar}>
+                  <h3 className={styles.resultsCount}>Results ({results.length})</h3>
                 <select
                   value={sortBy}
                   onChange={(event) => sortResults(event.target.value)}
-                  className="interactive-input rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[#1e5ba8]"
+                    className={styles.sortSelect}
                 >
                   <option value="relevance">Sort by Relevance</option>
                   <option value="date">Sort by Date</option>
                 </select>
               </div>
 
+                <ol className={styles.resultList}>
               {results.map((result, index) => (
-                <div
+                    <li
                   key={result.id}
-                  className="card-lift rounded-xl border border-white/20 bg-white/5 p-6 hover:bg-white/10"
+                      className={styles.resultCard}
                 >
-                  <div className="mb-3 flex items-start justify-between">
+                      <div className={styles.resultRank}>Result {index + 1}</div>
+                      <div
+                        className={`${styles.resultTag} ${getCategoryTagClass(result.category)}`}
+                      >
+                        {result.category}
+                      </div>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#d4af37]">
-                        Result {index + 1}
-                      </p>
-                      <h4 className="text-lg font-semibold text-white">
+                        <h4 className={styles.resultTitle}>
                         {result.title}
                       </h4>
                     </div>
-                    <span
-                      className="rounded-full px-3 py-1 text-xs font-bold text-white"
-                      style={{ backgroundColor: getCategoryColor(result.category) }}
-                    >
-                      {result.category}
-                    </span>
-                  </div>
-                  <p className="mb-3 text-blue-200">{result.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-300">
+                      <p className={styles.resultDescription}>{result.description}</p>
+                      <div className={styles.resultFoot}>
+                        <span className={styles.resultDate}>
                       {result.date.toLocaleDateString()}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-32 overflow-hidden rounded-full bg-white/10">
+                        <div className={styles.scoreWrap}>
+                          <div className={styles.scoreBar}>
                         <div
-                          className="h-full rounded-full bg-[#d4af37]"
+                              className={styles.scoreFill}
                           style={{ width: `${result.relevance}%` }}
                         />
                       </div>
-                      <span className="text-sm font-bold text-[#d4af37]">
+                          <span className={styles.scorePct}>
                         {result.relevance}%
                       </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section className={styles.infoStrip}>
+        <div className={styles.infoGrid}>
+          <article className={styles.infoCard}>
+            <div className={`${styles.infoIcon} ${styles.infoIconViolet}`}>
+              <Search className={styles.infoIconSvg} />
+            </div>
+            <div>
+              <h3>Unified search</h3>
+              <p>
+                Query across decks, projects, playbooks, and client records from
+                one input.
+              </p>
+            </div>
+          </article>
+          <article className={styles.infoCard}>
+            <div className={`${styles.infoIcon} ${styles.infoIconSky}`}>
+              <Filter className={styles.infoIconSvg} />
+            </div>
+            <div>
+              <h3>Smart filters</h3>
+              <p>
+                Narrow by source, owner, date, or permission scope to find what
+                matters.
+              </p>
+            </div>
+          </article>
+          <article className={styles.infoCard}>
+            <div className={`${styles.infoIcon} ${styles.infoIconLilac}`}>
+              <BookOpen className={styles.infoIconSvg} />
+            </div>
+            <div>
+              <h3>Ranked results</h3>
+              <p>
+                Permission-aware ranking surfaces the most relevant, accessible
+                answers first.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer className={styles.footer}>
+        <div>© 2026 TriMerge Consulting Group. All rights reserved.</div>
+        <div className={styles.footerLinks}>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Contact</a>
+        </div>
+      </footer>
+    </>
   );
 }
