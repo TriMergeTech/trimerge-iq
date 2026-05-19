@@ -36,8 +36,8 @@
 }
 
 .h1 {
-  font-family: "Bricolage Grotesque", system-ui, sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 500;
   font-size: 48px;
   line-height: 1.05;
   letter-spacing: -1.2px;
@@ -54,7 +54,7 @@
 }
 
 .desc {
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 16px;
   color: #7a80a3;
   margin: 14px 0 0;

@@ -1,3 +1,4 @@
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap");
 
 .hero {
@@ -77,8 +78,8 @@
 
 .heroTitle {
   margin: 0 0 24px;
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-weight: 500;
   font-size: 60px;
   line-height: 1.08;
   letter-spacing: -1.5px;
@@ -96,7 +97,7 @@
   margin: 0 auto 40px;
   max-width: 680px;
   color: #c8cdee;
-  font-family: "Inter", sans-serif;
+  font-family: "General Sans", system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.7;
   text-wrap: pretty;
@@ -161,6 +162,10 @@
   text-align: left;
   backdrop-filter: blur(8px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.searchCardFilter {
+  max-width: 1240px;
 }
 
 .panelTitle {

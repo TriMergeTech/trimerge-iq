@@ -243,7 +243,11 @@ export default function SearchPage() {
           </button>
         </div>
 
-          <div className={styles.searchCard}>
+          <div
+            className={`${styles.searchCard} ${
+              activeView === "filter" ? styles.searchCardFilter : ""
+            }`}
+          >
           {activeView === "search" && (
               <div>
                 <h2 className={styles.panelTitle}>Search Query</h2>
