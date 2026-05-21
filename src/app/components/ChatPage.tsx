@@ -680,7 +680,6 @@ export default function ChatPage() {
 
   const {
     handleArchiveConversation,
-    handleClearActiveChat,
     handleDeleteConversation,
     handlePinConversation,
     sendMessage,
@@ -996,7 +995,6 @@ export default function ChatPage() {
                 isTyping={isTyping}
                 isWorkspaceMenuOpen={isWorkspaceMenuOpen}
                 onArchiveConversation={handleArchiveConversation}
-                onClearActiveChat={handleClearActiveChat}
                 onDeleteConversation={handleDeleteConversation}
                 onPinConversation={handlePinConversation}
                 onRenameConversation={openConversationRenameDialog}

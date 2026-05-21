@@ -198,17 +198,6 @@ export function useConversationActions({
     setOpenConversationMenuId(null);
   };
 
-  const handleClearActiveChat = () => {
-    if (!activeConversation) return;
-
-    updateConversation(activeConversation.id, (current) => ({
-      ...current,
-      messages: [],
-      updatedAt: new Date(),
-    }));
-    setIsWorkspaceMenuOpen(false);
-  };
-
   const sendMessage = async (prompt?: string) => {
     const content = (prompt ?? inputMessage).trim();
     if (!content && attachedFiles.length === 0) return;
@@ -415,7 +404,6 @@ export function useConversationActions({
 
   return {
     handleArchiveConversation,
-    handleClearActiveChat,
     handleDeleteConversation,
     handlePinConversation,
     handleRenameConversation,

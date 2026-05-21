@@ -13,7 +13,9 @@ import {
   User,
 } from "lucide-react";
 
-const API_BASE_URL = "https://trimerge-iq.onrender.com";
+import { ADMIN_API_BASE_URL } from "./adminAuth";
+
+const API_BASE_URL = ADMIN_API_BASE_URL;
 
 interface LoginPageProps {
   onLoginSuccess: () => void;

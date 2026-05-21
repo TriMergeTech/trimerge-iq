@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
-import { Archive as ArchiveIcon, ArrowDown, Eraser, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { Archive as ArchiveIcon, ArrowDown, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 
 import ConversationMenuItem from "./ConversationMenuItem";
 import type { ChatEntityId, Conversation, Message } from "./chatPageTypes";
@@ -13,7 +13,6 @@ interface ConversationViewProps {
   isTyping: boolean;
   isWorkspaceMenuOpen: boolean;
   onArchiveConversation: (conversationId: ChatEntityId, archived?: boolean) => void;
-  onClearActiveChat: () => void;
   onDeleteConversation: (conversationId: ChatEntityId) => void;
   onPinConversation: (conversationId: ChatEntityId) => void;
   onRenameConversation: (conversation: Conversation) => void;
@@ -30,7 +29,6 @@ export default function ConversationView({
   isTyping,
   isWorkspaceMenuOpen,
   onArchiveConversation,
-  onClearActiveChat,
   onDeleteConversation,
   onPinConversation,
   onRenameConversation,
@@ -85,15 +83,6 @@ export default function ConversationView({
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClearActiveChat}
-                className="interactive-button flex items-center gap-2 rounded-2xl border border-[#d4af37]/30 bg-[#101827]/75 px-4 py-2.5 text-sm font-medium text-[#f6edd0] hover:border-[#d4af37]/55 hover:bg-[#13233f] hover:text-white"
-              >
-                <Eraser className="h-4 w-4" />
-                <span>Clear chat</span>
-              </button>
-
               <div className="relative" ref={workspaceMenuRef}>
                 <button
                   type="button"

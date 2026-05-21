@@ -233,6 +233,73 @@ function formatToolArguments(argumentSchema: Record<string, unknown>) {
   return JSON.stringify(argumentSchema, null, 2);
 }
 
+function ToolArgumentsPreview({
+  text,
+}: {
+  text: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 300 || text.split("\n").length > 8;
+  const maxHeight = 120; // px when collapsed
+
+  return (
+    <div>
+      <div className="relative">
+        <code
+          className="block max-w-[360px] w-full whitespace-pre-wrap rounded-[10px] border border-[#e6e8f1] bg-[#f7f8fc] px-3 py-2 font-mono text-xs leading-5 text-[#263247]"
+          style={{ maxHeight: expanded ? undefined : `${maxHeight}px`, overflow: expanded ? "auto" : "hidden" }}
+        >
+          {text}
+        </code>
+
+        {!expanded && isLong ? (
+          <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-8 rounded-b-[10px] bg-gradient-to-t from-white/60" />
+        ) : null}
+      </div>
+
+      {isLong ? (
+        <button
+          type="button"
+          className="mt-2 text-xs font-medium text-[#2563eb] hover:underline"
+          onClick={() => setExpanded((s) => !s)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ResponsibilitiesPreview({ items }: { items: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = items.length > 4 || items.join(" ").length > 300;
+  const maxHeight = 120; // px when collapsed
+
+  return (
+    <div className="mt-4">
+      <div className="rounded-[10px] border border-[#e6e8f1] bg-white px-3 py-3 text-sm text-[#5f6b7c]" style={{ maxHeight: expanded ? undefined : `${maxHeight}px`, overflow: expanded ? "auto" : "hidden" }}>
+        <ul className="space-y-2 list-inside list-disc">
+          {items.map((item, idx) => (
+            <li key={`resp-${idx}`} className="break-words">
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {isLong ? (
+        <button
+          type="button"
+          className="mt-2 text-xs font-medium text-[#2563eb] hover:underline"
+          onClick={() => setExpanded((s) => !s)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function mapPositionFromApi(position: PositionApiRecord, skills: SkillItem[]): PositionItem {
   const skillIds = (position.skills ?? [])
     .map((skillName) => skills.find((skill) => skill.name === skillName)?.id)
@@ -515,6 +582,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [editingPosition, setEditingPosition] = useState<PositionItem | null>(null);
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editingTool, setEditingTool] = useState<ToolItem | null>(null);
   const [assigningToolStaff, setAssigningToolStaff] = useState<StaffMember | null>(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
@@ -527,6 +595,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [isLoadingStaffTools, setIsLoadingStaffTools] = useState(false);
   const [isSavingToolAssignments, setIsSavingToolAssignments] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
+  const [isLoadingToolDetails, setIsLoadingToolDetails] = useState(false);
   const [isSavingPosition, setIsSavingPosition] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
   const [isSavingClient, setIsSavingClient] = useState(false);
@@ -1094,6 +1163,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
     if (activeSection === "tools") {
       setToolError("");
+      setEditingTool(null);
     }
     if (activeSection === "position") {
       setEditingPosition(null);
@@ -1349,42 +1419,103 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setIsSavingTool(true);
       setToolError("");
       if (!accessToken) throw new Error("Sign in before saving tools.");
-
-      const response = await adminFetch(`${API_BASE_URL}/tools`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          name: payload.name,
-          description: payload.description,
-          arguments: payload.argumentSchema,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Unable to create tool (${response.status})`);
-      }
-
-      const createdPayload = await parseJsonSafely(response);
-      const createdTool = extractToolRecords(createdPayload)[0];
-      const nextTool = createdTool
-        ? mapToolFromApi(createdTool)
-        : {
-            id: crypto.randomUUID(),
+      if (editingTool) {
+        const response = await adminFetch(`${API_BASE_URL}/tools/${editingTool.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
             name: payload.name,
             description: payload.description,
-            argumentSchema: payload.argumentSchema,
-            createdAt: new Date(),
-          };
+            arguments: payload.argumentSchema,
+          }),
+        });
 
-      setTools((current) => uniqueById([...current, nextTool]));
-      setOpenModal(null);
+        if (!response.ok) {
+          throw new Error(`Unable to update tool (${response.status})`);
+        }
+
+        const updatedPayload = await parseJsonSafely(response);
+        const updatedTool = extractToolRecords(updatedPayload)[0];
+
+        if (updatedTool) {
+          const nextTool = mapToolFromApi(updatedTool);
+          setTools((current) => current.map((t) => (t.id === editingTool.id ? nextTool : t)));
+        } else {
+          setTools((current) => current.map((t) => (t.id === editingTool.id ? { ...t, ...payload } : t)));
+        }
+
+        setEditingTool(null);
+        setOpenModal(null);
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/tools`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            description: payload.description,
+            arguments: payload.argumentSchema,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to create tool (${response.status})`);
+        }
+
+        const createdPayload = await parseJsonSafely(response);
+        const createdTool = extractToolRecords(createdPayload)[0];
+        const nextTool = createdTool
+          ? mapToolFromApi(createdTool)
+          : {
+              id: crypto.randomUUID(),
+              name: payload.name,
+              description: payload.description,
+              argumentSchema: payload.argumentSchema,
+              createdAt: new Date(),
+            };
+
+        setTools((current) => uniqueById([...current, nextTool]));
+        setOpenModal(null);
+      }
     } catch (error) {
       setToolError(error instanceof Error ? error.message : "Unable to save tool.");
     } finally {
       setIsSavingTool(false);
+    }
+  };
+
+  const openEditToolModal = async (toolId: string) => {
+    try {
+      setIsLoadingToolDetails(true);
+      setToolError("");
+      if (!accessToken) throw new Error("Sign in before loading tool.");
+
+      const response = await adminFetch(`${API_BASE_URL}/tools/${toolId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Unable to load tool (${response.status})`);
+      }
+
+      const payload = await parseJsonSafely(response);
+      const apiTool = extractToolRecords(payload)[0];
+
+      if (!apiTool) throw new Error("Unable to parse tool details.");
+
+      setEditingTool(mapToolFromApi(apiTool));
+      setOpenModal("tools");
+    } catch (error) {
+      setToolError(error instanceof Error ? error.message : "Unable to load tool.");
+    } finally {
+      setIsLoadingToolDetails(false);
     }
   };
 
@@ -1994,18 +2125,23 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{tool.name}</td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{tool.description || "None"}</td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <code className="block max-w-[360px] whitespace-pre-wrap rounded-[10px] border border-[#e6e8f1] bg-[#f7f8fc] px-3 py-2 font-mono text-xs leading-5 text-[#263247]">
-                      {formatToolArguments(tool.argumentSchema)}
-                    </code>
+                    <ToolArgumentsPreview text={formatToolArguments(tool.argumentSchema)} />
                   </td>
                   <td className="px-6 py-5 text-sm text-[#5f6b7c]">{tool.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-5 text-right">
-                    <DeleteButton
-                      onClick={() => {
-                        void removeTool(tool.id);
-                      }}
-                    />
-                  </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-2">
+                          <EditButton
+                            onClick={() => {
+                              void openEditToolModal(tool.id);
+                            }}
+                          />
+                          <DeleteButton
+                            onClick={() => {
+                              void removeTool(tool.id);
+                            }}
+                          />
+                        </div>
+                      </td>
                 </tr>
               ))}
             </ManagementTable>
@@ -2082,52 +2218,47 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
           {activeSection === "position" && (
             <ManagementTable
-              headers={["Name", "Description", "Skills", "Actions"]}
-              emptyMessage={isLoadingPositions ? "Loading positions..." : "No positions found."}
-            >
-              {filteredPositions.map((position) => (
-                <tr key={position.id} className="border-t border-[#eef2f8] align-top">
-                  <td className="px-6 py-5">
-                    <p className="text-sm font-semibold text-[#263247]">{position.title}</p>
-                    <div className="mt-4 space-y-1.5 text-sm text-[#5f6b7c]">
-                      {position.responsibilities.map((responsibility) => (
-                        <div key={`${position.id}-${responsibility}`} className="flex items-start gap-2">
-                          <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#6d7a8c]" />
-                          <span>{responsibility}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
-                  <td className="px-6 py-5 text-sm text-[#5f6b7c]">
-                    <div className="flex flex-wrap gap-2">
-                      {position.skillIds.map((skillId) => {
-                        const skill = skills.find((item) => item.id === skillId);
-                        if (!skill) return null;
-                        return (
-                          <span
-                            key={skillId}
-                            className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
-                          >
-                            {skill.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-right">
-                    <div className="flex justify-end gap-2">
-                      <EditButton
-                        onClick={() => {
-                          openEditPositionModal(position.id);
-                        }}
-                      />
-                      <DeleteButton onClick={() => { void removePosition(position.id); }} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </ManagementTable>
+                headers={["Name", "Responsibilities", "Description", "Skills", "Actions"]}
+                emptyMessage={isLoadingPositions ? "Loading positions..." : "No positions found."}
+              >
+                {filteredPositions.map((position) => (
+                  <tr key={position.id} className="border-t border-[#eef2f8] align-top">
+                    <td className="px-6 py-5 text-sm font-semibold text-[#263247]">{position.title}</td>
+
+                    <td className="px-6 py-5 text-sm text-[#5f6b7c] w-[220px]">
+                      <ResponsibilitiesPreview items={position.responsibilities} />
+                    </td>
+
+                    <td className="px-6 py-5 text-sm text-[#5f6b7c]">{position.description}</td>
+                    <td className="px-6 py-5 text-sm text-[#5f6b7c]">
+                      <div className="flex flex-wrap gap-2">
+                        {position.skillIds.map((skillId) => {
+                          const skill = skills.find((item) => item.id === skillId);
+                          if (!skill) return null;
+                          return (
+                            <span
+                              key={skillId}
+                              className="rounded-full border border-[#d9e2f0] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#3b4f6b]"
+                            >
+                              {skill.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex justify-end gap-2">
+                        <EditButton
+                          onClick={() => {
+                            openEditPositionModal(position.id);
+                          }}
+                        />
+                        <DeleteButton onClick={() => { void removePosition(position.id); }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </ManagementTable>
           )}
         </div>
       </div>
@@ -2198,10 +2329,18 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       {openModal === "tools" && (
         <ToolModal
           isSaving={isSavingTool}
-          onClose={() => setOpenModal(null)}
+          onClose={() => {
+            setEditingTool(null);
+            setOpenModal(null);
+          }}
           onSave={(payload) => {
             void saveTool(payload);
           }}
+          initialName={editingTool?.name ?? ""}
+          initialDescription={editingTool?.description ?? ""}
+          initialArgumentSchema={editingTool?.argumentSchema ?? {}}
+          title={editingTool ? "Edit Tool" : "Add New Tool"}
+          submitLabel={editingTool ? "Save changes" : "Create tool"}
         />
       )}
 
@@ -2685,15 +2824,46 @@ function ToolModal({
   isSaving = false,
   onSave,
   onClose,
+  initialName = "",
+  initialDescription = "",
+  initialArgumentSchema = {},
+  title = "Add New Tool",
+  submitLabel = "Create tool",
 }: {
   isSaving?: boolean;
   onSave: (payload: { argumentSchema: Record<string, unknown>; description: string; name: string }) => void;
   onClose: () => void;
+  initialName?: string;
+  initialDescription?: string;
+  initialArgumentSchema?: Record<string, unknown>;
+  title?: string;
+  submitLabel?: string;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
   const [argumentsList, setArgumentsList] = useState<ToolArgumentDraft[]>([]);
   const [argumentError, setArgumentError] = useState("");
+
+  useEffect(() => {
+    setName(initialName);
+    setDescription(initialDescription);
+
+    const list: ToolArgumentDraft[] = Object.entries(initialArgumentSchema || {}).map(([key, value]) => {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const asObj = value as Record<string, unknown>;
+        return {
+          name: key,
+          type: (asObj.type as string) ?? "string",
+          description: (asObj.description as string) ?? "",
+        };
+      }
+
+      return { name: key, type: typeof value === "string" ? "string" : "object", description: String(value ?? "") };
+    });
+
+    setArgumentsList(list);
+    setArgumentError("");
+  }, [initialName, initialDescription, initialArgumentSchema]);
 
   const addArgument = () => {
     setArgumentsList((current) => [...current, { name: "", type: "string", description: "" }]);
