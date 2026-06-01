@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap");
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 56px 22px 28px;
+  background: #fff;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+}
+
+.logoImage {
+  display: block;
+  width: auto;
+  height: 42px;
+  max-width: min(34vw, 300px);
+  object-fit: contain;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2858;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.navBtn:hover {
+  background: #f3f4f9;
+}
+
+.navBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.caret {
+  width: 10px;
+  height: 10px;
+  opacity: 0.55;
+}
+
+.labelText {
+  /* visible by default */
+}
+
+.primary {
+  background: #2e2bff;
+  color: #fff;
+}
+
+.primary:hover {
+  background: #2120e0;
+}
+
+@media (max-width: 940px) {
+  .nav {
+    padding: 18px 24px 18px 14px;
+  }
+
+  .logoImage {
+    height: 32px;
+    max-width: min(52vw, 220px);
+  }
+}
