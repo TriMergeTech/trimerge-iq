@@ -12,7 +12,7 @@ import {
   Shield,
   User,
 } from "lucide-react";
-import { ADMIN_API_BASE_URL } from "./adminAuth";
+import { PROFILE_SERVICE } from "./adminAuth";
 import styles from "./LoginPage.module.css";
 
 interface LoginPageProps {
@@ -33,7 +33,9 @@ interface AuthResponsePayload {
   };
 }
 
-async function parseJsonSafely(response: Response): Promise<AuthResponsePayload | null> {
+async function parseJsonSafely(
+  response: Response,
+): Promise<AuthResponsePayload | null> {
   const responseText = await response.text();
   if (!responseText) return null;
 
@@ -44,16 +46,9 @@ async function parseJsonSafely(response: Response): Promise<AuthResponsePayload 
   }
 }
 
-function storeSession(email: string, accessToken: string, refreshToken?: string) {
-  localStorage.setItem("trimerge_admin_auth", "true");
-  localStorage.setItem("trimerge_admin_email", email);
+function storeSession(profile: string, accessToken: string) {
+  localStorage.setItem("trimerge_admin_auth", JSON.stringify({ profile }));
   localStorage.setItem("trimerge_admin_access_token", accessToken);
-
-  if (refreshToken) {
-    localStorage.setItem("trimerge_admin_refresh_token", refreshToken);
-  } else {
-    localStorage.removeItem("trimerge_admin_refresh_token");
-  }
 }
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
@@ -76,35 +71,33 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const loginWithCredentials = async (nextEmail: string, nextPassword: string) => {
-    const response = await fetch(`${ADMIN_API_BASE_URL}/auth/login`, {
+  const loginWithCredentials = async (
+    nextEmail: string,
+    nextPassword: string,
+  ) => {
+    console.log("Logging in with credentials:", nextEmail, nextPassword);
+    let payload = {
+      profile_type: process.env.NEXT_PUBLIC_ADMIN_PROFILE_TYPE,
+      credentials: { email: nextEmail.trim(), password: nextPassword },
+    };
+    console.log("Login payload:", payload);
+    let response = await fetch(`${PROFILE_SERVICE}/signin`, {
       method: "POST",
       headers: {
+        "x-api-version": "v3",
+        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        email: nextEmail.trim(),
-        password: nextPassword,
-      }),
+      body: JSON.stringify(payload),
     });
-console.log("Login response status:", response.status);
-    const payload = await parseJsonSafely(response);
-    const accessToken = payload?.access_token ?? payload?.data?.access_token;
-    const refreshToken = payload?.refresh_token ?? payload?.data?.refresh_token;
 
-    if (!response.ok || !accessToken) {
-      if (response.status === 401) {
-        throw new Error("Invalid email or password.");
-      }
+    response = await response.json();
 
-      if (response.status === 403) {
-        throw new Error("Your account is not verified yet.");
-      }
-
-      throw new Error(payload?.message ?? payload?.data?.message ?? `Login failed (${response.status}).`);
+    if (!response.ok) {
+      throw new Error(response?.message ?? "Login failed.");
     }
 
-    storeSession(nextEmail.trim(), accessToken, refreshToken);
+    storeSession(response.data, response.token);
   };
 
   const handleLoginSubmit = async (event: React.FormEvent) => {
@@ -124,10 +117,13 @@ console.log("Login response status:", response.status);
 
     try {
       setIsLoading(true);
+      console.log("Attempting login with email:", email, password);
       await loginWithCredentials(email, password);
       onLoginSuccess();
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Unable to sign in.");
+      setError(
+        loginError instanceof Error ? loginError.message : "Unable to sign in.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -176,16 +172,26 @@ console.log("Login response status:", response.status);
           throw new Error("This email is already registered.");
         }
 
-        throw new Error(payload?.message ?? payload?.data?.message ?? `Signup failed (${response.status}).`);
+        throw new Error(
+          payload?.message ??
+            payload?.data?.message ??
+            `Signup failed (${response.status}).`,
+        );
       }
 
       setVerifyEmail(signupEmail.trim());
       setVerifyPassword(signupPassword);
       setVerifyOtp("");
       setViewMode("verify");
-      setSuccessMessage("We sent an OTP to your email. Enter it below to activate your account.");
+      setSuccessMessage(
+        "We sent an OTP to your email. Enter it below to activate your account.",
+      );
     } catch (signupError) {
-      setError(signupError instanceof Error ? signupError.message : "Unable to create account.");
+      setError(
+        signupError instanceof Error
+          ? signupError.message
+          : "Unable to create account.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -223,13 +229,21 @@ console.log("Login response status:", response.status);
       const payload = await parseJsonSafely(response);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? payload?.data?.message ?? `Verification failed (${response.status}).`);
+        throw new Error(
+          payload?.message ??
+            payload?.data?.message ??
+            `Verification failed (${response.status}).`,
+        );
       }
 
       await loginWithCredentials(verifyEmail, verifyPassword);
       onLoginSuccess();
     } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "Unable to verify account.");
+      setError(
+        verifyError instanceof Error
+          ? verifyError.message
+          : "Unable to verify account.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -248,25 +262,36 @@ console.log("Login response status:", response.status);
     try {
       setIsLoading(true);
 
-      const response = await fetch(`${ADMIN_API_BASE_URL}/auth/forgot-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${ADMIN_API_BASE_URL}/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: resetEmail.trim(),
+          }),
         },
-        body: JSON.stringify({
-          email: resetEmail.trim(),
-        }),
-      });
+      );
 
       const payload = await parseJsonSafely(response);
 
       if (!response.ok) {
-        throw new Error(payload?.message ?? payload?.data?.message ?? `Request failed (${response.status}).`);
+        throw new Error(
+          payload?.message ??
+            payload?.data?.message ??
+            `Request failed (${response.status}).`,
+        );
       }
 
       setViewMode("resetSent");
     } catch (forgotError) {
-      setError(forgotError instanceof Error ? forgotError.message : "Unable to send reset instructions.");
+      setError(
+        forgotError instanceof Error
+          ? forgotError.message
+          : "Unable to send reset instructions.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -290,21 +315,30 @@ console.log("Login response status:", response.status);
           {viewMode === "resetSent" && "Check Your Email"}
         </h1>
         <p className={styles.subtitle}>
-          {viewMode === "login" && "Sign in with a real backend account to access admin tools."}
-          {viewMode === "signup" && "Create a staff account first so you can manage skills and positions."}
-          {viewMode === "verify" && "Enter the OTP sent to your email to activate your account."}
-          {viewMode === "forgotPassword" && "Enter your email to receive a password reset OTP."}
-          {viewMode === "resetSent" && "We sent password reset instructions to your email address."}
+          {viewMode === "login" &&
+            "Sign in with a real backend account to access admin tools."}
+          {viewMode === "signup" &&
+            "Create a staff account first so you can manage skills and positions."}
+          {viewMode === "verify" &&
+            "Enter the OTP sent to your email to activate your account."}
+          {viewMode === "forgotPassword" &&
+            "Enter your email to receive a password reset OTP."}
+          {viewMode === "resetSent" &&
+            "We sent password reset instructions to your email address."}
         </p>
 
-        {successMessage && <InlineMessage tone="success" message={successMessage} />}
+        {successMessage && (
+          <InlineMessage tone="success" message={successMessage} />
+        )}
         {error && <InlineMessage tone="error" message={error} />}
 
         {viewMode === "login" && (
           <form onSubmit={handleLoginSubmit}>
             <div className={styles.field}>
               <div className={styles.fieldHead}>
-                <label className={styles.label} htmlFor="email">Email Address</label>
+                <label className={styles.label} htmlFor="email">
+                  Email Address
+                </label>
               </div>
               <div className={styles.inputWrap}>
                 <User className={styles.lead} />
@@ -322,11 +356,17 @@ console.log("Login response status:", response.status);
 
             <div className={styles.field}>
               <div className={styles.fieldHead}>
-                <label className={styles.label} htmlFor="password">Password</label>
+                <label className={styles.label} htmlFor="password">
+                  Password
+                </label>
                 <button
                   type="button"
                   className={styles.forgot}
-                  onClick={() => { setViewMode("forgotPassword"); setError(""); setSuccessMessage(""); }}
+                  onClick={() => {
+                    setViewMode("forgotPassword");
+                    setError("");
+                    setSuccessMessage("");
+                  }}
                 >
                   Forgot Password?
                 </button>
@@ -353,17 +393,27 @@ console.log("Login response status:", response.status);
               </div>
             </div>
 
-            <button type="submit" className={styles.signin} disabled={isLoading}>
+            <button
+              type="submit"
+              className={styles.signin}
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
             <button
               type="button"
               className={styles.signup}
-              onClick={() => { setViewMode("signup"); setError(""); setSuccessMessage(""); }}
+              onClick={() => {
+                setViewMode("signup");
+                setError("");
+                setSuccessMessage("");
+              }}
             >
               Create New Staff Account
             </button>
-            <div className={styles.protected}>Protected by TriMerge Security</div>
+            <div className={styles.protected}>
+              Protected by TriMerge Security
+            </div>
           </form>
         )}
 
@@ -372,7 +422,11 @@ console.log("Login response status:", response.status);
             <button
               type="button"
               className={styles.backBtn}
-              onClick={() => { setViewMode("login"); setError(""); setSuccessMessage(""); }}
+              onClick={() => {
+                setViewMode("login");
+                setError("");
+                setSuccessMessage("");
+              }}
             >
               <ArrowLeft size={14} />
               Back to Login
@@ -418,13 +472,16 @@ console.log("Login response status:", response.status);
                 <select
                   className={styles.select}
                   value={signupProfile}
-                  onChange={(event) => setSignupProfile(event.target.value as SignupProfile)}
+                  onChange={(event) =>
+                    setSignupProfile(event.target.value as SignupProfile)
+                  }
                 >
                   <option value="staff">Staff</option>
                   <option value="client">Client</option>
                 </select>
                 <p className={styles.profileHint}>
-                  Use &ldquo;staff&rdquo; if you want access to protected admin skills actions.
+                  Use &ldquo;staff&rdquo; if you want access to protected admin
+                  skills actions.
                 </p>
               </div>
 
@@ -446,12 +503,20 @@ console.log("Login response status:", response.status);
                     className={styles.trail}
                     onClick={() => setShowSignupPassword((current) => !current)}
                   >
-                    {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showSignupPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
                   </button>
                 </div>
               </div>
 
-              <button type="submit" className={styles.signin} disabled={isLoading}>
+              <button
+                type="submit"
+                className={styles.signin}
+                disabled={isLoading}
+              >
                 {isLoading ? "Creating account..." : "Create Account"}
               </button>
             </form>
@@ -463,7 +528,11 @@ console.log("Login response status:", response.status);
             <button
               type="button"
               className={styles.backBtn}
-              onClick={() => { setViewMode("signup"); setError(""); setSuccessMessage(""); }}
+              onClick={() => {
+                setViewMode("signup");
+                setError("");
+                setSuccessMessage("");
+              }}
             >
               <ArrowLeft size={14} />
               Back to Signup
@@ -502,7 +571,11 @@ console.log("Login response status:", response.status);
                 </div>
               </div>
 
-              <button type="submit" className={styles.signin} disabled={isLoading}>
+              <button
+                type="submit"
+                className={styles.signin}
+                disabled={isLoading}
+              >
                 {isLoading ? "Verifying..." : "Verify and Sign In"}
               </button>
             </form>
@@ -514,7 +587,11 @@ console.log("Login response status:", response.status);
             <button
               type="button"
               className={styles.backBtn}
-              onClick={() => { setViewMode("login"); setError(""); setSuccessMessage(""); }}
+              onClick={() => {
+                setViewMode("login");
+                setError("");
+                setSuccessMessage("");
+              }}
             >
               <ArrowLeft size={14} />
               Back to Login
@@ -537,7 +614,11 @@ console.log("Login response status:", response.status);
                 </div>
               </div>
 
-              <button type="submit" className={styles.signin} disabled={isLoading}>
+              <button
+                type="submit"
+                className={styles.signin}
+                disabled={isLoading}
+              >
                 {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
               </button>
             </form>
@@ -566,7 +647,11 @@ console.log("Login response status:", response.status);
             <button
               type="button"
               className={styles.signin}
-              onClick={() => { setViewMode("login"); setResetEmail(""); setSuccessMessage(""); }}
+              onClick={() => {
+                setViewMode("login");
+                setResetEmail("");
+                setSuccessMessage("");
+              }}
             >
               Back to Login
             </button>
@@ -596,5 +681,3 @@ function InlineMessage({
     </div>
   );
 }
-
-

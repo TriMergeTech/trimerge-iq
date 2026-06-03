@@ -13,10 +13,7 @@ export default function AdminRoute() {
 
   useEffect(() => {
     setIsAdminAuthenticated(
-      Boolean(
-        localStorage.getItem("trimerge_admin_auth") &&
-        localStorage.getItem("trimerge_admin_access_token"),
-      ),
+      Boolean(localStorage.getItem("trimerge_admin_token")),
     );
     setIsReady(true);
   }, []);
@@ -27,11 +24,6 @@ export default function AdminRoute() {
   };
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem("trimerge_admin_auth");
-    localStorage.removeItem("trimerge_admin_email");
-    localStorage.removeItem("trimerge_admin_profile");
-    localStorage.removeItem("trimerge_admin_access_token");
-    localStorage.removeItem("trimerge_admin_refresh_token");
     setIsAdminAuthenticated(false);
     router.push("/");
     router.refresh();
@@ -41,7 +33,10 @@ export default function AdminRoute() {
     window.addEventListener("trimerge_admin_session_expired", handleLogout);
 
     return () => {
-      window.removeEventListener("trimerge_admin_session_expired", handleLogout);
+      window.removeEventListener(
+        "trimerge_admin_session_expired",
+        handleLogout,
+      );
     };
   }, [handleLogout]);
 

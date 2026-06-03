@@ -1,5 +1,13 @@
 export const ADMIN_API_BASE_URL =
-  process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() || "https://trimerge-iq.onrender.com";
+  process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() ||
+  "https://trimerge-iq.onrender.com";
+
+let DEV = false;
+const PROFILE_SERVICE = DEV
+  ? "http://localhost:4000"
+  : "https://profile-api.savvyaisolution.com";
+
+export { PROFILE_SERVICE };
 
 const ACCESS_TOKEN_STORAGE_KEY = "trimerge_admin_access_token";
 const REFRESH_TOKEN_STORAGE_KEY = "trimerge_admin_refresh_token";
@@ -55,7 +63,9 @@ function expireStoredSession() {
   window.dispatchEvent(new Event("trimerge_admin_session_expired"));
 }
 
-async function parseJsonSafely(response: Response): Promise<AuthTokenPayload | null> {
+async function parseJsonSafely(
+  response: Response,
+): Promise<AuthTokenPayload | null> {
   const responseText = await response.text();
   if (!responseText) return null;
 
@@ -89,8 +99,16 @@ async function requestFreshAccessToken() {
     });
 
     const payload = await parseJsonSafely(response);
-    const nextAccessToken = payload?.access_token ?? payload?.accessToken ?? payload?.data?.access_token ?? payload?.data?.accessToken;
-    const nextRefreshToken = payload?.refresh_token ?? payload?.refreshToken ?? payload?.data?.refresh_token ?? payload?.data?.refreshToken;
+    const nextAccessToken =
+      payload?.access_token ??
+      payload?.accessToken ??
+      payload?.data?.access_token ??
+      payload?.data?.accessToken;
+    const nextRefreshToken =
+      payload?.refresh_token ??
+      payload?.refreshToken ??
+      payload?.data?.refresh_token ??
+      payload?.data?.refreshToken;
 
     if (response.ok && nextAccessToken) {
       storeTokens(nextAccessToken, nextRefreshToken);
@@ -112,7 +130,10 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
-function buildAuthenticatedInit(init: RequestInit, accessToken: string): RequestInit {
+function buildAuthenticatedInit(
+  init: RequestInit,
+  accessToken: string,
+): RequestInit {
   const headers = new Headers(init.headers);
 
   if (init.body && !headers.has("Content-Type")) {
@@ -127,7 +148,10 @@ function buildAuthenticatedInit(init: RequestInit, accessToken: string): Request
   };
 }
 
-export async function authenticatedAdminFetch(pathOrUrl: string, init: AuthenticatedFetchOptions = {}) {
+export async function authenticatedAdminFetch(
+  pathOrUrl: string,
+  init: AuthenticatedFetchOptions = {},
+) {
   const { onTokenRefresh, ...requestInit } = init;
   const accessToken = getStoredAccessToken();
 
@@ -136,7 +160,10 @@ export async function authenticatedAdminFetch(pathOrUrl: string, init: Authentic
   }
 
   const url = buildAdminApiUrl(pathOrUrl);
-  const response = await fetch(url, buildAuthenticatedInit(requestInit, accessToken));
+  const response = await fetch(
+    url,
+    buildAuthenticatedInit(requestInit, accessToken),
+  );
 
   if (response.status !== 401) {
     return response;
