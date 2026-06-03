@@ -12,9 +12,8 @@ export default function AdminRoute() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   useEffect(() => {
-    setIsAdminAuthenticated(
-      Boolean(localStorage.getItem("trimerge_admin_token")),
-    );
+    let tok = localStorage.getItem("trimerge_admin_access_token");
+    setIsAdminAuthenticated(Boolean(tok));
     setIsReady(true);
   }, []);
 
