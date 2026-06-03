@@ -81,6 +81,10 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       credentials: { email: nextEmail.trim(), password: nextPassword },
     };
     console.log("Login payload:", payload);
+    console.log(
+      "Using platform API key:",
+      process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+    );
     let response = await fetch(`${PROFILE_SERVICE}/signin`, {
       method: "POST",
       headers: {
