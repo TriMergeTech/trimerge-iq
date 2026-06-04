@@ -26,6 +26,7 @@ import {
   ADMIN_API_BASE_URL,
   API_BASE_URL,
   authenticatedAdminFetch,
+  PROFILE_SERVICE,
 } from "./adminAuth";
 import styles from "./AdminPage.module.css";
 
@@ -39,7 +40,7 @@ type AdminSection =
 type CreateModal = AdminSection | null;
 
 interface StaffMember {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   positionId?: string;
@@ -47,14 +48,14 @@ interface StaffMember {
 }
 
 interface SkillItem {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   createdAt: Date;
 }
 
 interface ServiceItem {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   skillIds: string[];
@@ -63,14 +64,14 @@ interface ServiceItem {
 }
 
 interface ClientItem {
-  id: string;
+  _id: string;
   name: string;
   about: string;
   createdAt: Date;
 }
 
 interface PositionItem {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   responsibilities: string[];
@@ -83,7 +84,7 @@ interface AdminPageProps {
 }
 
 interface PositionApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   name?: string;
   title?: string;
@@ -96,7 +97,7 @@ interface PositionApiRecord {
 }
 
 interface SkillApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   name?: string;
   description?: string;
@@ -105,7 +106,7 @@ interface SkillApiRecord {
 }
 
 interface ServiceApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   title?: string;
   name?: string;
@@ -117,7 +118,7 @@ interface ServiceApiRecord {
 }
 
 interface ClientApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   name?: string;
   about?: string;
@@ -126,19 +127,19 @@ interface ClientApiRecord {
 }
 
 interface StaffApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   name?: string;
   email?: string;
   position?:
     | string
-    | { id?: string; _id?: string; name?: string; title?: string };
+    | { _id?: string; _id?: string; name?: string; title?: string };
   createdAt?: string;
   created_at?: string;
 }
 
 interface UserApiRecord {
-  id?: string;
+  _id?: string;
   _id?: string;
   user_id?: string;
   uuid?: string;
@@ -156,7 +157,7 @@ const INITIAL_SKILLS: SkillItem[] = [];
 
 const INITIAL_POSITIONS: PositionItem[] = [];
 
-function uniqueById<T extends { id: string }>(records: T[]) {
+function uniqueById<T extends { _id: string }>(records: T[]) {
   const seenIds = new Set<string>();
   return records.filter((record) => {
     if (seenIds.has(record._id)) return false;
@@ -167,8 +168,8 @@ function uniqueById<T extends { id: string }>(records: T[]) {
 
 function mapClientFromApi(client: ClientApiRecord): ClientItem {
   return {
-    id:
-      client.id ??
+    _id:
+      client._id ??
       client._id ??
       `${client.name ?? "client"}-${client.created ?? client.created_at ?? "local"}`,
     name: client.name ?? "Untitled Client",
@@ -183,14 +184,14 @@ function mapClientFromApi(client: ClientApiRecord): ClientItem {
 function getPositionIdFromApi(position: StaffApiRecord["position"]) {
   if (typeof position === "string") return position;
   if (position && typeof position === "object")
-    return position.id ?? position._id;
+    return position._id ?? position._id;
   return undefined;
 }
 
 function mapStaffFromApi(staff: StaffApiRecord): StaffMember {
   return {
-    id:
-      staff.id ??
+    _id:
+      staff._id ??
       staff._id ??
       staff.email ??
       `${staff.name ?? "staff"}-${staff.createdAt ?? staff.created_at ?? "local"}`,
@@ -211,7 +212,7 @@ function mapUserFromApi(user: UserApiRecord): StaffMember {
     : "Unnamed user";
 
   return {
-    id: user.id ?? user._id ?? user.user_id ?? user.uuid ?? email,
+    _id: user._id ?? user._id ?? user.user_id ?? user.uuid ?? email,
     name: user.fullName ?? user.full_name ?? user.name ?? fallbackName,
     email,
     createdAt:
@@ -561,22 +562,29 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingStaff(true);
         setStaffError("");
 
-        const response = await adminFetch(`${API_BASE_URL}/staff`, {
+        console.log(
+          PROFILE_SERVICE,
+          process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
+          "uhh",
+          accessToken,
+        );
+        const response = await fetch(`${PROFILE_SERVICE}/get_profiles`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            "x-api-version": "v3",
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
           },
+          body: JSON.stringify({
+            profile_type: process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
+          }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to load staff (${response.status})`);
-        }
+        let reply = await response.json();
 
-        const payload = await parseJsonSafely(response);
-        const apiStaff = extractStaffRecords(payload).map(mapStaffFromApi);
-
-        if (!ignore) {
-          setStaffMembers(apiStaff);
-        }
+        console.log(reply);
+        if (reply.ok) {
+          setStaffMembers(reply.data);
+        } else throw new Error(reply.data);
       } catch (error) {
         if (!ignore) {
           setStaffError(
@@ -637,12 +645,12 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               ...apiUsers.filter((user) => {
                 const original = userRecords.find((item) => {
                   const itemId =
-                    item.id ??
+                    item._id ??
                     item._id ??
                     item.user_id ??
                     item.uuid ??
                     item.email;
-                  return itemId === user.id;
+                  return itemId === user._id;
                 });
                 const role = (
                   original?.profile ??
@@ -873,10 +881,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return staffMembers;
     return staffMembers.filter((member) => {
       const positionName =
-        positions.find((position) => position.id === member.positionId)
+        positions.find((position) => position._id === member.positionId)
           ?.title ?? "";
       return (
-        member.name.toLowerCase().includes(query) ||
+        member.fullname.toLowerCase().includes(query) ||
         member.email.toLowerCase().includes(query) ||
         positionName.toLowerCase().includes(query)
       );
@@ -898,7 +906,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return skills;
     return skills.filter(
       (skill) =>
-        skill.name.toLowerCase().includes(query) ||
+        skill.title.toLowerCase().includes(query) ||
         skill.description.toLowerCase().includes(query),
     );
   }, [searchQuery, skills]);
@@ -906,13 +914,13 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const filteredServices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    // normalize and dedupe services by a stable key (_id, id or fallback)
+    // normalize and dedupe services by a stable key (_id, _id or fallback)
     const uniqueMap = new Map<string, (typeof services)[number]>();
     for (const s of services) {
       const key =
         (s as any)._id ??
-        (s as any).id ??
-        `${(s as any).title ?? (s as any).name ?? "service"}-${(s as any).created ?? (s as any).createdAt ?? (s as any).created_at ?? "local"}`;
+        (s as any)._id ??
+        `${(s as any).title ?? (s as any).name ?? "service"}-${(s as any).created ?? (s as any).createdAt ?? (s as any).created ?? "local"}`;
       if (!uniqueMap.has(key)) uniqueMap.set(key, s);
     }
     const uniqueServices = Array.from(uniqueMap.values());
@@ -974,7 +982,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return positions.filter((position) => {
       const skillNames = position.skillIds
         .map(
-          (skillId) => skills.find((skill) => skill.id === skillId)?.name ?? "",
+          (skillId) =>
+            skills.find((skill) => skill._id === skillId)?.title ?? "",
         )
         .join(" ");
       return (
@@ -1028,63 +1037,56 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         throw new Error("Choose a position before saving staff.");
 
       if (editingStaff) {
-        const response = await adminFetch(
-          `${API_BASE_URL}/staff/${editingStaff.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              name: payload.name,
-              email: payload.email,
-              position: payload.positionId,
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error(`Unable to update staff (${response.status})`);
-        }
-
-        const updatedPayload = await parseJsonSafely(response);
-        const updatedStaff = extractStaffRecords(updatedPayload)[0];
-        const nextStaff = updatedStaff
-          ? mapStaffFromApi(updatedStaff)
-          : { ...editingStaff, ...payload };
-
-        setStaffMembers((current) =>
-          current.map((member) =>
-            member.id === editingStaff.id ? nextStaff : member,
-          ),
-        );
-      } else {
-        const response = await adminFetch(`${API_BASE_URL}/staff`, {
+        const response = await fetch(`${PROFILE_SERVICE}/edit_profile`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
+            "x-api-version": "v3",
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
           },
           body: JSON.stringify({
-            name: payload.name,
-            email: payload.email,
-            position: payload.positionId,
+            profle_id: editingStaff._id,
+            profle_type: process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
+            update: {
+              fullname: payload.fullname,
+              email: payload.email,
+              position: payload.positionId,
+            },
           }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to create staff (${response.status})`);
-        }
+        let res = await response.json();
 
-        const createdPayload = await parseJsonSafely(response);
-        const createdStaff = extractStaffRecords(createdPayload)[0];
-
-        if (createdStaff) {
+        if (res.ok) {
           setStaffMembers((current) =>
-            uniqueById([...current, mapStaffFromApi(createdStaff)]),
+            current.map((member) =>
+              member._id === editingStaff._id ? res.data : member,
+            ),
           );
-        }
+        } else throw new Error(res.message);
+      } else {
+        const response = await fetch(`${PROFILE_SERVICE}/add_profile`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-version": "v3",
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+          },
+          body: JSON.stringify({
+            profile_type: process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
+            password: "@ABC-123",
+            details: {
+              fullname: payload.fullname,
+              email: payload.email,
+              position: payload.positionId,
+            },
+          }),
+        });
+
+        let reply = await response.json();
+        if (reply.ok) {
+          setStaffMembers((current) => uniqueById([...current, reply.data]));
+        } else throw new Error(reply.message);
       }
 
       setEditingStaff(null);
@@ -1099,7 +1101,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const openEditStaffModal = (staffId: string) => {
-    const existingStaff = staffMembers.find((item) => item.id === staffId);
+    const existingStaff = staffMembers.find((item) => item._id === staffId);
     if (!existingStaff) {
       setStaffError("Unable to load staff.");
       return;
@@ -1127,7 +1129,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       }
 
       setStaffMembers((current) =>
-        current.filter((item) => item.id !== staffId),
+        current.filter((item) => item._id !== staffId),
       );
     } catch (error) {
       setStaffError(
@@ -1274,7 +1276,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const openEditPositionModal = (positionId: string) => {
-    const existingPosition = positions.find((item) => item.id === positionId);
+    const existingPosition = positions.find((item) => item._id === positionId);
     if (!existingPosition) {
       setPositionError("Unable to load position.");
       return;
@@ -1286,7 +1288,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const savePosition = async (
-    payload: Omit<PositionItem, "id" | "createdAt">,
+    payload: Omit<PositionItem, "_id" | "createdAt">,
   ) => {
     try {
       setIsSavingPosition(true);
@@ -1354,7 +1356,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const saveService = async (
-    payload: Omit<ServiceItem, "id" | "createdAt">,
+    payload: Omit<ServiceItem, "_id" | "createdAt">,
   ) => {
     try {
       setIsSavingService(true);
@@ -1424,7 +1426,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const openEditClientModal = (clientId: string) => {
-    const existingClient = clients.find((item) => item.id === clientId);
+    const existingClient = clients.find((item) => item._id === clientId);
     if (!existingClient) {
       setClientError("Unable to load client.");
       return;
@@ -1435,7 +1437,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     setOpenModal("clients");
   };
 
-  const saveClient = async (payload: Omit<ClientItem, "id" | "createdAt">) => {
+  const saveClient = async (payload: Omit<ClientItem, "_id" | "createdAt">) => {
     try {
       setIsSavingClient(true);
       setClientError("");
@@ -1625,34 +1627,34 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
           {activeSection === "staff" && (
             <ManagementTable
-              headers={["Name", "Email", "Position", "Created", "Actions"]}
+              headers={["Fullname", "Email", "Position", "Created", "Actions"]}
               emptyMessage={
                 isLoadingStaff ? "Loading staff..." : "No staff members found."
               }
             >
               {filteredStaff.map((member) => (
-                <tr key={member.id}>
+                <tr key={member._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {member.name}
+                    {member.fullname}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {member.email}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {positions.find((p) => p.id === member.positionId)?.title ??
+                    {positions.find((p) => p._id === member.position)?.title ??
                       "Unassigned"}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {member.createdAt.toLocaleDateString()}
+                    {new Date(member.created).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
                       <EditButton
-                        onClick={() => openEditStaffModal(member.id)}
+                        onClick={() => openEditStaffModal(member._id)}
                       />
                       <DeleteButton
                         onClick={() => {
-                          void removeStaff(member.id);
+                          void removeStaff(member._id);
                         }}
                       />
                     </div>
@@ -1670,15 +1672,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               }
             >
               {filteredAdmins.map((member) => (
-                <tr key={member.id}>
+                <tr key={member._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {member.name}
+                    {member.fullname}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {member.email}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {member.createdAt.toLocaleDateString()}
+                    {new Date(member.created).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
@@ -1804,7 +1806,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               }
             >
               {filteredClients.map((client) => (
-                <tr key={client.id}>
+                <tr key={client._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
                     {client.name}
                   </td>
@@ -1817,11 +1819,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
                       <EditButton
-                        onClick={() => openEditClientModal(client.id)}
+                        onClick={() => openEditClientModal(client._id)}
                       />
                       <DeleteButton
                         onClick={() => {
-                          void removeClient(client.id);
+                          void removeClient(client._id);
                         }}
                       />
                     </div>
@@ -1841,13 +1843,13 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               }
             >
               {filteredPositions.map((position) => (
-                <tr key={position.id}>
+                <tr key={position._id}>
                   <td className={styles.td}>
                     <span className={styles.tdName}>{position.title}</span>
                     <div className={styles.respList}>
                       {position.responsibilities.map((r) => (
                         <div
-                          key={`${position.id}-${r}`}
+                          key={`${position._id}-${r}`}
                           className={styles.respListItem}
                         >
                           <span className={styles.respDot} />
@@ -1875,11 +1877,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
                       <EditButton
-                        onClick={() => openEditPositionModal(position.id)}
+                        onClick={() => openEditPositionModal(position._id)}
                       />
                       <DeleteButton
                         onClick={() => {
-                          void removePosition(position.id);
+                          void removePosition(position._id);
                         }}
                       />
                     </div>
@@ -1895,8 +1897,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       {openModal === "staff" && (
         <PersonModal
           initialEmail={editingStaff?.email ?? ""}
-          initialName={editingStaff?.name ?? ""}
-          initialPositionId={editingStaff?.positionId ?? ""}
+          initialName={editingStaff?.fullname ?? ""}
+          initialPositionId={editingStaff?.position ?? ""}
           isSaving={isSavingStaff}
           title={editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
           positions={positions}
@@ -2132,7 +2134,7 @@ function PersonModal({
         onSubmit={(event) => {
           event.preventDefault();
           onSave({
-            name: name.trim(),
+            fullname: name.trim(),
             email: email.trim(),
             positionId: positionId || undefined,
           });
@@ -2175,7 +2177,7 @@ function PersonModal({
                   : "Create a position first"}
               </option>
               {positions.map((position) => (
-                <option key={position.id} value={position.id}>
+                <option key={position._id} value={position._id}>
                   {position.title}
                 </option>
               ))}
@@ -2276,7 +2278,7 @@ function ClientModal({
   initialName?: string;
   isSaving?: boolean;
   title: string;
-  onSave: (payload: Omit<ClientItem, "id" | "createdAt">) => void;
+  onSave: (payload: Omit<ClientItem, "_id" | "createdAt">) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(initialName);
@@ -2337,7 +2339,7 @@ function ServiceModal({
   skills: SkillItem[];
   positions: PositionItem[];
   isSaving?: boolean;
-  onSave: (payload: Omit<ServiceItem, "id" | "createdAt">) => void;
+  onSave: (payload: Omit<ServiceItem, "_id" | "createdAt">) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
@@ -2466,7 +2468,7 @@ function PositionModal({
   initialResponsibilities?: string[];
   initialSkillIds?: string[];
   isSaving?: boolean;
-  onSave: (payload: Omit<PositionItem, "id" | "createdAt">) => void;
+  onSave: (payload: Omit<PositionItem, "_id" | "createdAt">) => void;
   onClose: () => void;
 }) {
   const [positionTitle, setPositionTitle] = useState(initialTitle);
