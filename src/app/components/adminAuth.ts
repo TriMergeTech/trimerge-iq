@@ -7,7 +7,11 @@ const PROFILE_SERVICE = DEV
   ? "http://localhost:4000"
   : "https://profile-api.savvyaisolution.com";
 
-export { PROFILE_SERVICE };
+const API_BASE_URL = DEV
+  ? "http://localhost:8005"
+  : "https://api.trimergeiq.com";
+
+export { PROFILE_SERVICE, API_BASE_URL };
 
 const ACCESS_TOKEN_STORAGE_KEY = "trimerge_admin_access_token";
 const REFRESH_TOKEN_STORAGE_KEY = "trimerge_admin_refresh_token";
