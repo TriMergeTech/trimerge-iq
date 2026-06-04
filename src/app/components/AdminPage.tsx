@@ -165,88 +165,17 @@ function uniqueById<T extends { id: string }>(records: T[]) {
   });
 }
 
-function mapSkillFromApi(skill: SkillApiRecord): SkillItem {
-  return {
-    id:
-      skill.id ??
-      skill._id ??
-      `${skill.name ?? "skill"}-${skill.createdAt ?? skill.created_at ?? "local"}`,
-    name: skill.name ?? "Untitled Skill",
-    description: skill.description ?? "",
-    createdAt:
-      skill.createdAt || skill.created_at
-        ? new Date(skill.createdAt ?? skill.created_at ?? "")
-        : new Date(),
-  };
-}
-
-function mapPositionFromApi(
-  position: PositionApiRecord,
-  skills: SkillItem[],
-): PositionItem {
-  const skillIds = (position.skills ?? [])
-    .map((skillName) => skills.find((skill) => skill.name === skillName)?.id)
-    .filter((skillId): skillId is string => Boolean(skillId));
-
-  return {
-    id:
-      position.id ??
-      position._id ??
-      `${position.name ?? position.title ?? "position"}-${position.createdAt ?? position.created_at ?? "local"}`,
-    title: position.name ?? position.title ?? "Untitled Position",
-    description: position.description ?? "",
-    responsibilities:
-      position.responsibility ?? position.responsibilities ?? [],
-    skillIds,
-    createdAt:
-      position.createdAt || position.created_at
-        ? new Date(position.createdAt ?? position.created_at ?? "")
-        : new Date(),
-  };
-}
-
-function mapServiceFromApi(
-  service: ServiceApiRecord,
-  skills: SkillItem[],
-): ServiceItem {
-  const skillIds = (service.skills ?? [])
-    .map((skillNameOrId) => {
-      const normalizedSkill = skillNameOrId.toLowerCase();
-      return skills.find(
-        (skill) =>
-          skill.id === skillNameOrId ||
-          skill.name.toLowerCase() === normalizedSkill,
-      )?.id;
-    })
-    .filter((skillId): skillId is string => Boolean(skillId));
-
-  return {
-    id:
-      service.id ??
-      service._id ??
-      `${service.title ?? service.name ?? "service"}-${service.createdAt ?? service.created_at ?? "local"}`,
-    name: service.title ?? service.name ?? "Untitled Service",
-    description: service.descriptions ?? service.description ?? "",
-    skillIds,
-    positionIds: [],
-    createdAt:
-      service.createdAt || service.created_at
-        ? new Date(service.createdAt ?? service.created_at ?? "")
-        : new Date(),
-  };
-}
-
 function mapClientFromApi(client: ClientApiRecord): ClientItem {
   return {
     id:
       client.id ??
       client._id ??
-      `${client.name ?? "client"}-${client.createdAt ?? client.created_at ?? "local"}`,
+      `${client.name ?? "client"}-${client.created ?? client.created_at ?? "local"}`,
     name: client.name ?? "Untitled Client",
     about: client.about ?? "",
-    createdAt:
-      client.createdAt || client.created_at
-        ? new Date(client.createdAt ?? client.created_at ?? "")
+    created:
+      client.created || client.created_at
+        ? new Date(client.created ?? client.created_at ?? "")
         : new Date(),
   };
 }
@@ -803,24 +732,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingPositions(true);
         setPositionError("");
 
-        const response = await adminFetch(`${API_BASE_URL}/positions`, {
+        const response = await fetch(`${API_BASE_URL}/get_positions`, {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to load positions (${response.status})`);
-        }
-
-        const payload = await parseJsonSafely(response);
-        const apiPositions = extractPositionRecords(payload).map((position) =>
-          mapPositionFromApi(position, skills),
-        );
-
-        if (!ignore) {
-          setPositions(apiPositions);
-        }
+        let payload = await response.json();
+        if (payload.ok) {
+          setPositions(payload.data);
+        } else throw new Error(payload.message);
       } catch (error) {
         if (!ignore) {
           setPositionError(
@@ -987,24 +909,53 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
   const filteredServices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return services;
-    return services.filter((service) => {
-      const skillNames = service.skills
-        .map(
-          (skillId) =>
-            skills.find((skill) => skill._id === skillId)?.title ?? "",
-        )
-        .join(" ");
-      const positionNames = service.positions
-        .map(
-          (positionId) =>
-            positions.find((position) => position._id === positionId)?.title ??
-            "",
-        )
-        .join(" ");
+
+    // normalize and dedupe services by a stable key (_id, id or fallback)
+    const uniqueMap = new Map<string, (typeof services)[number]>();
+    for (const s of services) {
+      const key =
+        (s as any)._id ??
+        (s as any).id ??
+        `${(s as any).title ?? (s as any).name ?? "service"}-${(s as any).created ?? (s as any).createdAt ?? (s as any).created_at ?? "local"}`;
+      if (!uniqueMap.has(key)) uniqueMap.set(key, s);
+    }
+    const uniqueServices = Array.from(uniqueMap.values());
+
+    if (!query) return uniqueServices;
+
+    return uniqueServices.filter((service) => {
+      const skillNames =
+        (service as any).skills ??
+        []
+          .map(
+            (skillId: string) =>
+              skills.find((skill) => (skill as any)._id === skillId)?.title ??
+              "",
+          )
+          .join(" ");
+      const positionNames =
+        (service as any).positions ??
+        []
+          .map(
+            (positionId: string) =>
+              positions.find((position) => (position as any)._id === positionId)
+                ?.title ?? "",
+          )
+          .join(" ");
+      const title = ((service as any).title ?? (service as any).name ?? "")
+        .toString()
+        .toLowerCase();
+      const description = (
+        (service as any).description ??
+        (service as any).descriptions ??
+        ""
+      )
+        .toString()
+        .toLowerCase();
+
       return (
-        service.title.toLowerCase().includes(query) ||
-        service.description.toLowerCase().includes(query) ||
+        title.includes(query) ||
+        description.includes(query) ||
         skillNames.toLowerCase().includes(query) ||
         positionNames.toLowerCase().includes(query)
       );
@@ -1196,7 +1147,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       if (!accessToken) throw new Error("Sign in before saving skills.");
 
       if (editingSkill) {
-        const response = await adminFetch(`${API_BASE_URL}/add_skill`, {
+        const response = await adminFetch(`${API_BASE_URL}/update_skill`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1302,38 +1253,23 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setPositionError("");
       if (!accessToken) throw new Error("Sign in before deleting positions.");
 
-      const response = await adminFetch(
-        `${API_BASE_URL}/positions/${positionId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+      const response = await fetch(`${API_BASE_URL}/remove_position`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
-      );
+        body: JSON.stringify({ position: positionId }),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Unable to delete position (${response.status})`);
+      let reply = await response.json();
+
+      if (reply.ok) {
+        setPositions((current) =>
+          current.filter((item) => item._id !== positionId),
+        );
+      } else {
+        throw new Error(reply.message);
       }
-
-      setPositions((current) =>
-        current.filter((item) => item.id !== positionId),
-      );
-      setStaffMembers((current) =>
-        current.map((member) =>
-          member.positionId === positionId
-            ? { ...member, positionId: undefined }
-            : member,
-        ),
-      );
-      setServices((current) =>
-        current.map((service) => ({
-          ...service,
-          positionIds: service.positionIds.filter(
-            (item) => item !== positionId,
-          ),
-        })),
-      );
     } catch (error) {
       setPositionError(
         error instanceof Error ? error.message : "Unable to delete position.",
@@ -1362,75 +1298,52 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       if (!accessToken) throw new Error("Sign in before saving positions.");
 
       if (editingPosition) {
-        const response = await adminFetch(
-          `${API_BASE_URL}/positions/${editingPosition.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              name: payload.title,
-              description: payload.description,
-              responsibility: payload.responsibilities,
-              skills: payload.skillIds
-                .map(
-                  (skillId) =>
-                    skills.find((skill) => skill.id === skillId)?.name,
-                )
-                .filter((skillName): skillName is string => Boolean(skillName)),
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error(`Unable to update position (${response.status})`);
-        }
-
-        const updatedPayload = await parseJsonSafely(response);
-        const updatedPosition = extractPositionRecords(updatedPayload)[0];
-        const nextPosition = updatedPosition
-          ? mapPositionFromApi(updatedPosition, skills)
-          : { ...editingPosition, ...payload };
-
-        setPositions((current) =>
-          current.map((position) =>
-            position.id === editingPosition.id ? nextPosition : position,
-          ),
-        );
-      } else {
-        const response = await adminFetch(`${API_BASE_URL}/positions`, {
+        const response = await fetch(`${API_BASE_URL}/update_position`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            name: payload.title,
+            position: editingPosition?._id,
+            title: payload.title,
             description: payload.description,
-            responsibility: payload.responsibilities,
-            skills: payload.skillIds
-              .map(
-                (skillId) => skills.find((skill) => skill.id === skillId)?.name,
-              )
-              .filter((skillName): skillName is string => Boolean(skillName)),
+            responsibilities: payload.responsibilities,
+            skills: payload.skillIds,
           }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to create position (${response.status})`);
-        }
+        let reply = await response.json();
 
-        const createdPayload = await parseJsonSafely(response);
-        const createdPosition = extractPositionRecords(createdPayload)[0];
-
-        if (createdPosition) {
-          setPositions((current) => [
-            ...current,
-            mapPositionFromApi(createdPosition, skills),
-          ]);
+        if (reply.ok) {
+          setPositions((current) =>
+            current.map((position) =>
+              position._id === editingPosition._id ? reply.data : position,
+            ),
+          );
+        } else {
+          throw new Error(reply.message);
         }
+      } else {
+        const response = await fetch(`${API_BASE_URL}/add_position`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            title: payload.title,
+            description: payload.description,
+            responsibilities: payload.responsibilities,
+            skills: payload.skillIds,
+          }),
+        });
+
+        let reply = await response.json();
+
+        if (reply.ok) {
+          setPositions((current) => [...current, reply.data]);
+        } else throw new Error(reply.message);
       }
 
       setEditingPosition(null);
@@ -1456,9 +1369,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         title: payload.title,
         description: payload.description,
         skills: payload.skills
-          .map(
-            (skillId) => skills.find((skill) => skill._id === skillId)?.title,
-          )
+          .map((skillId) => skills.find((skill) => skill._id === skillId)?._id)
           .filter((skillName): skillName is string => Boolean(skillName)),
       };
       console.log(bdy);
@@ -1535,38 +1446,29 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       if (!accessToken) throw new Error("Sign in before saving clients.");
 
       if (editingClient) {
-        const response = await adminFetch(
-          `${API_BASE_URL}/clients/${editingClient.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              name: payload.name,
-              about: payload.about,
-            }),
+        const response = await fetch(`${API_BASE_URL}/edit_client`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
-        );
+          body: JSON.stringify({
+            client: editingClient?._id,
+            name: payload.name,
+            description: payload.about,
+          }),
+        });
 
-        if (!response.ok) {
-          throw new Error(`Unable to update client (${response.status})`);
-        }
-
-        const updatedPayload = await parseJsonSafely(response);
-        const updatedClient = extractClientRecords(updatedPayload)[0];
-        const nextClient = updatedClient
-          ? mapClientFromApi(updatedClient)
-          : { ...editingClient, ...payload };
-
-        setClients((current) =>
-          current.map((client) =>
-            client.id === editingClient.id ? nextClient : client,
-          ),
-        );
+        let reply = await response.json();
+        if (reply.ok) {
+          setClients((current) =>
+            current.map((client) =>
+              client._id === editingClient._id ? reply.data : client,
+            ),
+          );
+        } else throw new Error(reply.data);
       } else {
-        const response = await adminFetch(`${API_BASE_URL}/clients`, {
+        const response = await adminFetch(`${API_BASE_URL}/add_client`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1578,19 +1480,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to create client (${response.status})`);
-        }
-
-        const createdPayload = await parseJsonSafely(response);
-        const createdClient = extractClientRecords(createdPayload)[0];
-
-        if (createdClient) {
-          setClients((current) => [
-            ...current,
-            mapClientFromApi(createdClient),
-          ]);
-        }
+        let reply = await response.json();
+        if (reply.ok) {
+          setClients((current) => [...current, reply.data]);
+        } else throw new Error(reply.message);
       }
 
       setEditingClient(null);
@@ -1609,18 +1502,20 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setClientError("");
       if (!accessToken) throw new Error("Sign in before deleting clients.");
 
-      const response = await adminFetch(`${API_BASE_URL}/clients/${clientId}`, {
-        method: "DELETE",
+      const response = await adminFetch(`${API_BASE_URL}/remove_client`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+        body: JSON.stringify({ client: clientId }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Unable to delete client (${response.status})`);
-      }
-
-      setClients((current) => current.filter((item) => item.id !== clientId));
+      let reply = await response.json();
+      if (reply.ok)
+        setClients((current) =>
+          current.filter((item) => item._id !== clientId),
+        );
+      else throw new Error(reply.message);
     } catch (error) {
       setClientError(
         error instanceof Error ? error.message : "Unable to delete client.",
@@ -1921,7 +1816,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     {client.about || "None"}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {client.createdAt.toLocaleDateString()}
+                    {new Date(client.created).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
@@ -1970,12 +1865,12 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   </td>
                   <td className={styles.td}>
                     <div className={styles.pillsWrap}>
-                      {position.skillIds.map((skillId) => {
-                        const skill = skills.find((s) => s.id === skillId);
+                      {position.skills?.map((skillId) => {
+                        const skill = skills.find((s) => s._id === skillId);
                         if (!skill) return null;
                         return (
                           <span key={skillId} className={styles.pill}>
-                            {skill.name}
+                            {skill.title}
                           </span>
                         );
                       })}
@@ -2026,7 +1921,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           onSave={(payload) => {
             setAdminMembers((current) => [
               ...current,
-              { id: crypto.randomUUID(), createdAt: new Date(), ...payload },
+              { _id: crypto.randomUUID(), created: new Date(), ...payload },
             ]);
             setOpenModal(null);
           }}
@@ -2684,13 +2579,13 @@ function PositionModal({
           {skills.length > 0 ? (
             <div className={styles.checkboxGrid}>
               {skills.map((skill) => (
-                <label key={skill.id} className={styles.checkPill}>
+                <label key={skill._id} className={styles.checkPill}>
                   <input
                     type="checkbox"
-                    checked={selectedSkillIds.includes(skill.id)}
-                    onChange={() => toggleSkill(skill.id)}
+                    checked={selectedSkillIds.includes(skill._id)}
+                    onChange={() => toggleSkill(skill._id)}
                   />
-                  <span>{skill.name}</span>
+                  <span>{skill.title}</span>
                 </label>
               ))}
             </div>

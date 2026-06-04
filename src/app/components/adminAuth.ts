@@ -2,7 +2,7 @@ export const ADMIN_API_BASE_URL =
   process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() ||
   "https://trimerge-iq.onrender.com";
 
-let DEV = false;
+let DEV = process.env.NEXT_PUBLIC_DEV;
 const PROFILE_SERVICE = DEV
   ? "http://localhost:4000"
   : "https://profile-api.savvyaisolution.com";
