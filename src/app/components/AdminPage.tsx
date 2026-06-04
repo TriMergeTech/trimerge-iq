@@ -159,8 +159,8 @@ const INITIAL_POSITIONS: PositionItem[] = [];
 function uniqueById<T extends { id: string }>(records: T[]) {
   const seenIds = new Set<string>();
   return records.filter((record) => {
-    if (seenIds.has(record.id)) return false;
-    seenIds.add(record.id);
+    if (seenIds.has(record._id)) return false;
+    seenIds.add(record._id);
     return true;
   });
 }
@@ -819,21 +819,17 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingClients(true);
         setClientError("");
 
-        const response = await adminFetch(`${API_BASE_URL}/clients`, {
+        const response = await adminFetch(`${API_BASE_URL}/get_clients`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`Unable to load clients (${response.status})`);
-        }
-
-        const payload = await parseJsonSafely(response);
-        const apiClients = extractClientRecords(payload).map(mapClientFromApi);
-
-        if (!ignore) {
-          setClients((current) => uniqueById([...apiClients, ...current]));
+        let reply = await response.json();
+        if (reply.ok) {
+          setClients((current) => uniqueById([...reply.data, ...current]));
+        } else {
+          throw new Error(reply.message);
         }
       } catch (error) {
         if (!ignore) {
