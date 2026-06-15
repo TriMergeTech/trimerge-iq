@@ -11,7 +11,14 @@ const services = [
       "Continuously validate institutional knowledge, flag drift, and keep critical answers accurate across teams.",
     variant: "violet",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M4 20V10" />
         <path d="M10 20V4" />
         <path d="M16 20v-7" />
@@ -25,7 +32,14 @@ const services = [
       "Embed context-aware intelligence into daily workflows so teams can act faster without losing precision.",
     variant: "violet",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="2" y="4" width="20" height="13" rx="2" />
         <path d="M8 21h8" />
         <path d="M12 17v4" />
@@ -38,7 +52,14 @@ const services = [
       "Apply policy-aware guardrails, role-based access, and auditable decision trails for enterprise confidence.",
     variant: "lilac",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3Z" />
       </svg>
     ),
@@ -50,7 +71,14 @@ const stats = [
     value: "42%",
     label: "Faster Decision Cycles",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="9" cy="8" r="3.2" />
         <circle cx="17" cy="9" r="2.6" />
         <path d="M3 19c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" />
@@ -62,7 +90,13 @@ const stats = [
     value: "99.2%",
     label: "Answer Confidence",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      >
         <path d="m12 3 2.7 5.7 6.3.9-4.5 4.4 1 6.3L12 17.5 6.5 20.3l1-6.3-4.5-4.4 6.3-.9L12 3Z" />
       </svg>
     ),
@@ -71,7 +105,13 @@ const stats = [
     value: "3x",
     label: "Research Throughput",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      >
         <rect x="3" y="7" width="18" height="13" rx="2" />
         <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
         <path d="M3 13h18" />
@@ -82,7 +122,14 @@ const stats = [
     value: "24/7",
     label: "AI-Assisted Coverage",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <circle cx="12" cy="8" r="4" />
         <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
       </svg>
@@ -106,7 +153,10 @@ function createDotWave(options: {
   for (let r = 0; r < options.rows; r += 1) {
     for (let c = 0; c < options.cols; c += 1) {
       const x = c * options.dx;
-      const y = r * options.dy + Math.sin((c / options.cols) * Math.PI * options.freq + options.phase) * options.amp;
+      const y =
+        r * options.dy +
+        Math.sin((c / options.cols) * Math.PI * options.freq + options.phase) *
+          options.amp;
       const opacity = options.opacity * (0.4 + 0.6 * (1 - r / options.rows));
       dots.push({ x, y, opacity });
     }
@@ -159,7 +209,13 @@ function createSky() {
     });
   }
 
-  const shapes: StarShape[] = ["shapeDot", "shapeDot", "shapeDot", "shapeStreak", "shapeSpark"];
+  const shapes: StarShape[] = [
+    "shapeDot",
+    "shapeDot",
+    "shapeDot",
+    "shapeStreak",
+    "shapeSpark",
+  ];
   const tints: StarTint[] = ["", "", "tintCyan", "tintViolet"];
   const stars: SkyStar[] = [];
   for (let i = 0; i < 42; i += 1) {
@@ -261,33 +317,82 @@ export default function HomePage() {
       <header className={styles.nav}>
         <div className={styles.logo}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/trimerge-iq-logo.png" alt="TriMerge IQ" className={styles.logoImage} />
+          <img
+            src="/trimerge-iq-logo.png"
+            alt="TriMerge IQ"
+            className={styles.logoImage}
+          />
         </div>
 
         <nav className={styles.navLinks}>
-          <button type="button" className={`${styles.navBtn} ${styles.primary}`} onClick={() => router.push("/")}>Home</button>
-          <button type="button" className={styles.navBtn} onClick={() => router.push("/search")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button
+            type="button"
+            className={`${styles.navBtn} ${styles.primary}`}
+            onClick={() => router.push("/")}
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => router.push("/search")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" />
             </svg>
             <span className={styles.labelText}>Search</span>
-            <svg className={styles.caret} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className={styles.caret}
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="m2 4 4 4 4-4" />
             </svg>
           </button>
-          <button type="button" className={styles.navBtn} onClick={() => router.push("/admin")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => router.push("/admin")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="12" cy="8" r="4" />
               <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
             </svg>
             <span className={styles.labelText}>Admin</span>
-            <svg className={styles.caret} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className={styles.caret}
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="m2 4 4 4 4-4" />
             </svg>
           </button>
-          <button type="button" className={styles.navBtn} onClick={() => router.push("/chat")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => router.push("/chat")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.1 4.1A8 8 0 0 1 21 12Z" />
             </svg>
             <span className={styles.labelText}>Chat</span>
@@ -299,17 +404,31 @@ export default function HomePage() {
         <div className={styles.wave} aria-hidden="true">
           <svg className={styles.waveLeft} viewBox="0 0 380 380" fill="none">
             {leftWave.map((dot, index) => (
-              <circle key={`left-${index}`} cx={dot.x} cy={dot.y} r="1.6" fill="#a78bfa" opacity={dot.opacity} />
+              <circle
+                key={`left-${index}`}
+                cx={dot.x}
+                cy={dot.y}
+                r="1.6"
+                fill="#a78bfa"
+                opacity={dot.opacity}
+              />
             ))}
           </svg>
           <svg className={styles.waveRight} viewBox="0 0 520 380" fill="none">
             {rightWave.map((dot, index) => (
-              <circle key={`right-${index}`} cx={dot.x} cy={dot.y} r="1.6" fill="#6b8eff" opacity={dot.opacity} />
+              <circle
+                key={`right-${index}`}
+                cx={dot.x}
+                cy={dot.y}
+                r="1.6"
+                fill="#6b8eff"
+                opacity={dot.opacity}
+              />
             ))}
           </svg>
         </div>
 
-        <div className={styles.sky} aria-hidden="true">
+        {/* <div className={styles.sky} aria-hidden="true">
           {sky.twinkles.map((twinkle, index) => (
             <span
               key={`twinkle-${index}`}
@@ -336,7 +455,7 @@ export default function HomePage() {
               }}
             />
           ))}
-        </div>
+        </div> */}
 
         <div className={styles.heroInner}>
           <h1 className={styles.heroTitle}>
@@ -345,11 +464,25 @@ export default function HomePage() {
             Modern <span className={styles.accent}>Business</span>
           </h1>
           <p className={styles.lede}>
-            TriMergeIQ unifies your scattered knowledge into one governed intelligence layer so every team can move faster with dependable, permission-aware answers.
+            TriMergeIQ unifies your scattered knowledge into one governed
+            intelligence layer so every team can move faster with dependable,
+            permission-aware answers.
           </p>
           <div className={styles.ctaRow}>
-            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/search")}>Get Started</button>
-            <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => router.push("/admin")}>Open Admin Workspace</button>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={() => router.push("/search")}
+            >
+              Get Started
+            </button>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnGhost}`}
+              onClick={() => router.push("/admin")}
+            >
+              Open Admin Workspace
+            </button>
           </div>
         </div>
       </section>
@@ -358,21 +491,33 @@ export default function HomePage() {
         <div className={styles.container}>
           <div className={styles.sectionHead}>
             <h2>What TriMergeIQ Delivers</h2>
-            <p>Purpose-built capabilities for trustworthy, scalable AI operations.</p>
+            <p>
+              Purpose-built capabilities for trustworthy, scalable AI
+              operations.
+            </p>
           </div>
           <div className={styles.servicesGrid}>
             {services.map((service) => (
               <article key={service.title} className={styles.serviceCard}>
-                <div className={`${styles.iconTile} ${styles[service.variant]}`}>{service.icon}</div>
+                <div
+                  className={`${styles.iconTile} ${styles[service.variant]}`}
+                >
+                  {service.icon}
+                </div>
                 <h3>{service.title}</h3>
                 <p>{service.description}</p>
               </article>
             ))}
           </div>
           <div className={styles.servicesStatement}>
-            <h3>TriMergeIQ governance powered by one, self-improving source of truth</h3>
+            <h3>
+              TriMergeIQ governance powered by one, self-improving source of
+              truth
+            </h3>
             <p>
-              Bring research, workflows, and enterprise knowledge into a single reliable system that continuously improves with every validated decision.
+              Bring research, workflows, and enterprise knowledge into a single
+              reliable system that continuously improves with every validated
+              decision.
             </p>
           </div>
         </div>
@@ -393,22 +538,59 @@ export default function HomePage() {
       </section>
 
       <section className={styles.ctaSection}>
-        <svg className={`${styles.waveDeco} ${styles.left}`} viewBox="0 0 280 380" aria-hidden="true">
+        <svg
+          className={`${styles.waveDeco} ${styles.left}`}
+          viewBox="0 0 280 380"
+          aria-hidden="true"
+        >
           {ctaLeftWave.map((dot, index) => (
-            <circle key={`cta-left-${index}`} cx={dot.x} cy={dot.y} r="1.4" fill="#7c5cff" opacity={dot.opacity} />
+            <circle
+              key={`cta-left-${index}`}
+              cx={dot.x}
+              cy={dot.y}
+              r="1.4"
+              fill="#7c5cff"
+              opacity={dot.opacity}
+            />
           ))}
         </svg>
-        <svg className={`${styles.waveDeco} ${styles.right}`} viewBox="0 0 280 380" aria-hidden="true">
+        <svg
+          className={`${styles.waveDeco} ${styles.right}`}
+          viewBox="0 0 280 380"
+          aria-hidden="true"
+        >
           {ctaRightWave.map((dot, index) => (
-            <circle key={`cta-right-${index}`} cx={dot.x} cy={dot.y} r="1.4" fill="#7c5cff" opacity={dot.opacity} />
+            <circle
+              key={`cta-right-${index}`}
+              cx={dot.x}
+              cy={dot.y}
+              r="1.4"
+              fill="#7c5cff"
+              opacity={dot.opacity}
+            />
           ))}
         </svg>
 
         <h2>Turn scattered knowledge into reliable execution.</h2>
-        <p>See how TriMergeIQ helps your teams answer faster, govern better, and operate with confidence.</p>
+        <p>
+          See how TriMergeIQ helps your teams answer faster, govern better, and
+          operate with confidence.
+        </p>
         <div className={styles.ctaRowCentered}>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => router.push("/chat")}>Start a Guided Demo</button>
-          <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={() => router.push("/search")}>Browse Use Cases</button>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            onClick={() => router.push("/chat")}
+          >
+            Start a Guided Demo
+          </button>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnOutline}`}
+            onClick={() => router.push("/search")}
+          >
+            Browse Use Cases
+          </button>
         </div>
       </section>
 
