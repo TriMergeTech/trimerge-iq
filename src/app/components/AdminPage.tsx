@@ -35,6 +35,7 @@ type AdminSection =
   | "admin"
   | "position"
   | "skills"
+  | "company_overview"
   | "services"
   | "clients";
 type CreateModal = AdminSection | null;
@@ -397,6 +398,12 @@ const SECTION_META: Record<
     addLabel: string;
   }
 > = {
+  company_overview: {
+    label: "Company Overview",
+    icon: Users,
+    addLabel: "Add New",
+  },
+
   skills: { label: "Skills Management", icon: Wrench, addLabel: "Add New" },
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
@@ -426,6 +433,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   );
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editing_detail, set_editing_detail] = useState(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
@@ -433,6 +441,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
+  const [is_saving_detail, set_is_saving_detail] = useState(false);
+  const [is_loading_detail, set_is_loading_detail] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
   const [isSavingPosition, setIsSavingPosition] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
@@ -441,6 +451,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [skillError, setSkillError] = useState("");
   const [positionError, setPositionError] = useState("");
   const [serviceError, setServiceError] = useState("");
+  const [detail_error, set_detail_error] = useState("");
   const [clientError, setClientError] = useState("");
   const [staffError, setStaffError] = useState("");
   const [userError, setUserError] = useState("");
@@ -454,6 +465,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
+  const [company_details, set_company_details] = useState([]);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
 
   useEffect(() => {
@@ -604,6 +616,54 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       ignore = true;
     };
   }, [accessToken, adminFetch]);
+
+  useEffect(() => {
+    console.log("LOADING DETAiLS...");
+    if (!accessToken) return;
+
+    let ignore = false;
+
+    const load_company_details = async () => {
+      try {
+        set_is_loading_detail(true);
+        set_detail_error("");
+
+        let response = await fetch(`${API_BASE_URL}/get_company_details`, {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        let payload = await response.json();
+
+        console.log(payload, "detail");
+        if (!payload.ok) {
+          throw new Error(payload.message);
+        }
+
+        if (!ignore && payload.ok) {
+          set_company_details(payload.data);
+        }
+      } catch (error) {
+        if (!ignore) {
+          set_detail_error(
+            error instanceof Error ? error.message : "Unable to load skills.",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          set_is_loading_detail(false);
+        }
+      }
+    };
+
+    load_company_details();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -1138,6 +1198,102 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
+  const save_detail = async (payload) => {
+    try {
+      set_is_saving_detail(true);
+      set_detail_error("");
+
+      if (!accessToken) throw new Error("Sign in before saving skills.");
+
+      if (editing_detail) {
+        const response = await fetch(`${API_BASE_URL}/update_detail`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            detail: editing_detail._id,
+            title: payload.name,
+            description: payload.description,
+          }),
+        });
+        const reply = await response.json();
+
+        if (reply.ok) {
+          set_company_details((current) =>
+            current.map((detail) =>
+              detail._id === editing_detail._id ? reply.data : detail,
+            ),
+          );
+        } else {
+          set_company_details((current) =>
+            current.map((detail) =>
+              detail._id === editing_detail._id
+                ? { ...editing_detail }
+                : detail,
+            ),
+          );
+        }
+      } else {
+        const response = await adminFetch(`${API_BASE_URL}/add_detail`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            title: payload.name,
+            detail: payload.description,
+          }),
+        });
+
+        const reply = await response.json();
+
+        if (reply.ok) {
+          set_company_details((current) => [...current, reply.data]);
+        } else throw new Error(reply.message);
+      }
+
+      set_editing_detail(null);
+      setOpenModal(null);
+    } catch (error) {
+      set_detail_error(
+        error instanceof Error ? error.message : "Unable to save skill.",
+      );
+    } finally {
+      set_is_saving_detail(false);
+    }
+  };
+
+  const remove_detail = async (detail_id: string) => {
+    try {
+      set_detail_error("");
+      if (!accessToken) throw new Error("Sign in before deleting details.");
+
+      const response = await fetch(`${API_BASE_URL}/remove_detail`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ detail: detail_id }),
+      });
+
+      let repl = await response.json();
+      if (repl?.ok) {
+        set_company_details((current) =>
+          current.filter((item) => item._id !== detail_id),
+        );
+      } else {
+        throw new Error(repl.message);
+      }
+    } catch (error) {
+      set_detail_error(
+        error instanceof Error ? error.message : "Unable to delete detail.",
+      );
+    }
+  };
+
   const saveSkill = async (payload: { name: string; description: string }) => {
     try {
       setIsSavingSkill(true);
@@ -1200,6 +1356,24 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       );
     } finally {
       setIsSavingSkill(false);
+    }
+  };
+
+  const open_edit_detail_modal = async (detail) => {
+    try {
+      set_is_loading_detail(true);
+      set_detail_error("");
+      if (!accessToken) throw new Error("Sign in before loading details.");
+
+      setEditingSkill(detail);
+
+      setOpenModal("company_overview");
+    } catch (error) {
+      set_detail_error(
+        error instanceof Error ? error.message : "Unable to load detail.",
+      );
+    } finally {
+      set_is_loading_detail(false);
     }
   };
 
@@ -1624,6 +1798,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "admin" && userError && (
             <div className={styles.infoBanner}>{userError}</div>
           )}
+          {activeSection === "company_overview" && userError && (
+            <div className={styles.infoBanner}>{detail_error}</div>
+          )}
 
           {activeSection === "staff" && (
             <ManagementTable
@@ -1716,6 +1893,44 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                       <DeleteButton
                         onClick={() => {
                           void removeSkill(skill._id);
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "company_overview" && (
+            <ManagementTable
+              headers={["Title", "Detail", "Created", "Actions"]}
+              emptyMessage={
+                isLoadingSkills ? "Loading details..." : "No details found."
+              }
+            >
+              {company_details.map((detail) => (
+                <tr key={detail._id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>
+                    {detail.title}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    {detail.detail}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    {new Date(detail.created).toLocaleDateString()}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
+                      <EditButton
+                        disabled={is_loading_detail}
+                        onClick={() => {
+                          void open_edit_detail_modal(detail);
+                        }}
+                      />
+                      <DeleteButton
+                        onClick={() => {
+                          void remove_detail(detail._id);
                         }}
                       />
                     </div>
@@ -1944,6 +2159,24 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         />
       )}
 
+      {openModal === "company_overview" && (
+        <RegistryModal
+          title={editing_detail ? "Edit Detail" : "Add New Detail"}
+          nameLabel="Title"
+          initialDescription={editing_detail?.detail ?? ""}
+          initialName={editing_detail?.title ?? ""}
+          isSaving={is_saving_detail}
+          onClose={() => {
+            set_editing_detail(null);
+            setOpenModal(null);
+          }}
+          onSave={(payload) => {
+            void save_detail(payload);
+          }}
+          submitLabel={editing_detail ? "Save changes" : "Add Detail"}
+        />
+      )}
+
       {openModal === "services" && (
         <ServiceModal
           title="Add New Service"
@@ -1994,6 +2227,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     </div>
   );
 }
+
 function SidebarButton({
   active,
   icon: Icon,
