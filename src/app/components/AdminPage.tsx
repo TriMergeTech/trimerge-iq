@@ -37,7 +37,8 @@ type AdminSection =
   | "skills"
   | "company_overview"
   | "services"
-  | "clients";
+  | "clients"
+  | "tools";
 type CreateModal = AdminSection | null;
 
 interface StaffMember {
@@ -405,6 +406,7 @@ const SECTION_META: Record<
   },
 
   skills: { label: "Skills Management", icon: Wrench, addLabel: "Add New" },
+  tools: { label: "Tools Management", icon: Wrench, addLabel: "Add New" },
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
   services: {
@@ -618,7 +620,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   }, [accessToken, adminFetch]);
 
   useEffect(() => {
-    console.log("LOADING DETAiLS...");
+    console.log("LOADING DETAiLS...", accessToken || "NONE??");
     if (!accessToken) return;
 
     let ignore = false;
@@ -663,7 +665,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -1236,7 +1238,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           );
         }
       } else {
-        const response = await adminFetch(`${API_BASE_URL}/add_detail`, {
+        const response = await fetch(`${API_BASE_URL}/add_detail`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1365,7 +1367,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       set_detail_error("");
       if (!accessToken) throw new Error("Sign in before loading details.");
 
-      setEditingSkill(detail);
+      set_editing_detail(detail);
 
       setOpenModal("company_overview");
     } catch (error) {
