@@ -38,7 +38,7 @@ type AdminSection =
   | "company_overview"
   | "services"
   | "clients"
-  | "tools";
+  | "platforms";
 type CreateModal = AdminSection | null;
 
 interface StaffMember {
@@ -406,7 +406,11 @@ const SECTION_META: Record<
   },
 
   skills: { label: "Skills Management", icon: Wrench, addLabel: "Add New" },
-  tools: { label: "Tools Management", icon: Wrench, addLabel: "Add New" },
+  platforms: {
+    label: "Platforms Management",
+    icon: Wrench,
+    addLabel: "Add New",
+  },
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
   services: {
@@ -436,13 +440,16 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [editing_detail, set_editing_detail] = useState(null);
+  const [editing_platform, set_editing_platform] = useState(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [is_loading_platforms, set_is_loading_platforms] = useState(false);
   const [isSavingSkill, setIsSavingSkill] = useState(false);
+  const [is_saving_platform, set_is_saving_platform] = useState(false);
   const [is_saving_detail, set_is_saving_detail] = useState(false);
   const [is_loading_detail, set_is_loading_detail] = useState(false);
   const [isLoadingSkillDetails, setIsLoadingSkillDetails] = useState(false);
@@ -453,6 +460,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [skillError, setSkillError] = useState("");
   const [positionError, setPositionError] = useState("");
   const [serviceError, setServiceError] = useState("");
+  const [tools_error, set_platform_error] = useState("");
   const [detail_error, set_detail_error] = useState("");
   const [clientError, setClientError] = useState("");
   const [staffError, setStaffError] = useState("");
@@ -468,6 +476,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [company_details, set_company_details] = useState([]);
+  const [platforms, set_platforms] = useState([]);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
 
   useEffect(() => {
@@ -797,6 +806,49 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
     let ignore = false;
 
+    const load_platforms = async () => {
+      try {
+        set_is_loading_platforms(true);
+        set_platform_error("");
+
+        const response = await fetch(`${API_BASE_URL}/get_platforms`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        let payload = await response.json();
+        if (payload.ok) {
+          set_platforms(payload.data);
+        } else throw new Error(payload.message);
+      } catch (error) {
+        if (!ignore) {
+          set_platform_error(
+            error instanceof Error
+              ? error.message
+              : "Unable to load platforms.",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          set_is_loading_platforms(false);
+        }
+      }
+    };
+
+    void load_platforms();
+
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken, adminFetch]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let ignore = false;
+
     const loadPositions = async () => {
       try {
         setIsLoadingPositions(true);
@@ -833,7 +885,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return () => {
       ignore = true;
     };
-  }, [accessToken, adminFetch, skills]);
+  }, [accessToken, adminFetch]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -1200,12 +1252,110 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
+  const save_platform = async (payload) => {
+    try {
+      set_is_saving_platform(true);
+      set_platform_error("");
+
+      if (!accessToken) throw new Error("Sign in before saving Tools.");
+
+      if (editing_platform) {
+        const response = await fetch(`${API_BASE_URL}/update_platform`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            platform: editing_platform._id,
+            name: payload.name,
+            description: payload.description,
+            url: payload.url,
+          }),
+        });
+        const reply = await response.json();
+
+        if (reply.ok) {
+          set_platforms((current) =>
+            current.map((detail) =>
+              detail._id === editing_platform._id ? reply.data : detail,
+            ),
+          );
+        } else {
+          set_platforms((current) =>
+            current.map((detail) =>
+              detail._id === editing_platform._id
+                ? { ...editing_platform }
+                : detail,
+            ),
+          );
+        }
+      } else {
+        const response = await fetch(`${API_BASE_URL}/add_platform`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            description: payload.description,
+            url: payload.url,
+          }),
+        });
+
+        const reply = await response.json();
+
+        if (reply.ok) {
+          set_platforms((current) => [...current, reply.data]);
+        } else throw new Error(reply.message);
+      }
+
+      set_editing_platform(null);
+      setOpenModal(null);
+    } catch (error) {
+      set_platform_error(
+        error instanceof Error ? error.message : "Unable to save skill.",
+      );
+    } finally {
+      set_is_saving_platform(false);
+    }
+  };
+
+  const remove_platform = async (tool_id: string) => {
+    try {
+      set_platform_error("");
+      if (!accessToken) throw new Error("Sign in before deleting platform.");
+
+      const response = await fetch(`${API_BASE_URL}/remove_platform`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ platform: tool_id }),
+      });
+
+      let repl = await response.json();
+      if (repl?.ok) {
+        set_platforms((current) =>
+          current.filter((item) => item._id !== tool_id),
+        );
+      } else {
+        throw new Error(repl.message);
+      }
+    } catch (error) {
+      set_platform_error(
+        error instanceof Error ? error.message : "Unable to delete platform.",
+      );
+    }
+  };
+
   const save_detail = async (payload) => {
     try {
       set_is_saving_detail(true);
       set_detail_error("");
 
-      if (!accessToken) throw new Error("Sign in before saving skills.");
+      if (!accessToken) throw new Error("Sign in before saving details.");
 
       if (editing_detail) {
         const response = await fetch(`${API_BASE_URL}/update_detail`, {
@@ -1376,6 +1526,24 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       );
     } finally {
       set_is_loading_detail(false);
+    }
+  };
+
+  const open_edit_platform_modal = async (platform) => {
+    try {
+      set_is_loading_platforms(true);
+      set_platform_error("");
+      if (!accessToken) throw new Error("Sign in before loading details.");
+
+      set_editing_platform(platform);
+
+      setOpenModal("platforms");
+    } catch (error) {
+      set_platform_error(
+        error instanceof Error ? error.message : "Unable to load platform.",
+      );
+    } finally {
+      set_is_loading_platforms(false);
     }
   };
 
@@ -1803,6 +1971,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           {activeSection === "company_overview" && userError && (
             <div className={styles.infoBanner}>{detail_error}</div>
           )}
+          {activeSection === "platforms" && userError && (
+            <div className={styles.infoBanner}>{tools_error}</div>
+          )}
 
           {activeSection === "staff" && (
             <ManagementTable
@@ -1860,6 +2031,51 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {new Date(member.created).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </ManagementTable>
+          )}
+
+          {activeSection === "platforms" && (
+            <ManagementTable
+              headers={["Title", "Description", "URL", "Created", "Actions"]}
+              emptyMessage={
+                is_loading_platforms
+                  ? "Loading platforms..."
+                  : "No platforms found."
+              }
+            >
+              {platforms.map((platform) => (
+                <tr key={platform._id}>
+                  <td className={`${styles.td} ${styles.tdName}`}>
+                    {platform.name}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    {platform.description}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    <a href={platform.url} target="_blank">
+                      {platform.url}
+                    </a>
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted}`}>
+                    {new Date(platform.created).toLocaleDateString()}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdActions}`}>
+                    <div className={styles.actionsRow}>
+                      <EditButton
+                        disabled={is_loading_platforms}
+                        onClick={() => {
+                          void open_edit_platform_modal(platform);
+                        }}
+                      />
+                      <DeleteButton
+                        onClick={() => {
+                          void remove_platform(platform._id);
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -2161,6 +2377,25 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         />
       )}
 
+      {openModal === "platforms" && (
+        <PlatformModal
+          title={editing_platform ? "Edit Platform" : "Add New Platform"}
+          nameLabel="Name"
+          initialDescription={editing_platform?.description ?? ""}
+          initialName={editing_platform?.title ?? ""}
+          initialUrl={editing_platform?.url ?? ""}
+          isSaving={is_saving_platform}
+          onClose={() => {
+            set_editing_platform(null);
+            setOpenModal(null);
+          }}
+          onSave={(payload) => {
+            void save_platform(payload);
+          }}
+          submitLabel={editing_platform ? "Save changes" : "Create Platform"}
+        />
+      )}
+
       {openModal === "company_overview" && (
         <RegistryModal
           title={editing_detail ? "Edit Detail" : "Add New Detail"}
@@ -2431,6 +2666,89 @@ function PersonModal({
           onClose={onClose}
           submitDisabled={isSaving}
           submitLabel={isSaving ? "Saving..." : "Save"}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
+function PlatformModal({
+  initialDescription = "",
+  initialName = "",
+  initialUrl = "",
+  isSaving = false,
+  title,
+  nameLabel,
+  onSave,
+  onClose,
+  submitLabel = "Save",
+}: {
+  initialDescription?: string;
+  initialName?: string;
+  initialUrl?: string;
+  isSaving?: boolean;
+  title: string;
+  nameLabel: string;
+  onSave: (payload: { name: string; description: string }) => void;
+  onClose: () => void;
+  submitLabel?: string;
+}) {
+  const [name, setName] = useState(initialName);
+  const [url, set_url] = useState(initialUrl);
+  const [description, setDescription] = useState(initialDescription);
+
+  useEffect(() => {
+    setName(initialName);
+    setDescription(initialDescription);
+    set_url(initialUrl);
+  }, [initialDescription, initialName, initialUrl]);
+
+  return (
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({
+            name: name.trim(),
+            url: url.trim(),
+            description: description.trim(),
+          });
+        }}
+      >
+        <ModalField label={nameLabel}>
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className={styles.formInput}
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className={styles.formTextarea}
+            required
+          />
+        </ModalField>
+
+        <ModalField label="URL">
+          <input
+            type="text"
+            value={url}
+            onChange={(event) => set_url(event.target.value)}
+            className={styles.formInput}
+            required
+          />
+        </ModalField>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : submitLabel}
         />
       </form>
     </BaseModal>
