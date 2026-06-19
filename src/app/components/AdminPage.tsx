@@ -941,7 +941,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingClients(true);
         setClientError("");
 
-        const response = await adminFetch(`${API_BASE_URL}/get_clients`, {
+        const response = await fetch(`${API_BASE_URL}/get_clients`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -971,7 +971,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     return () => {
       ignore = true;
     };
-  }, [accessToken, adminFetch]);
+  }, [accessToken]);
 
   const loggedInName = useMemo(() => {
     const localPart = loggedInEmail.split("@")[0] ?? "";
@@ -1481,7 +1481,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           );
         }
       } else {
-        const response = await adminFetch(`${API_BASE_URL}/add_skill`, {
+        const response = await fetch(`${API_BASE_URL}/add_skill`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1746,7 +1746,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setServiceError("");
       if (!accessToken) throw new Error("Sign in before deleting services.");
 
-      const response = await adminFetch(`${API_BASE_URL}/remove_service`, {
+      const response = await fetch(`${API_BASE_URL}/remove_service`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -1810,7 +1810,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           );
         } else throw new Error(reply.data);
       } else {
-        const response = await adminFetch(`${API_BASE_URL}/add_client`, {
+        const response = await fetch(`${API_BASE_URL}/add_client`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1844,7 +1844,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       setClientError("");
       if (!accessToken) throw new Error("Sign in before deleting clients.");
 
-      const response = await adminFetch(`${API_BASE_URL}/remove_client`, {
+      const response = await fetch(`${API_BASE_URL}/remove_client`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,

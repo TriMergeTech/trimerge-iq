@@ -82,7 +82,6 @@ export default function ChatPage() {
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const projectActionMenuRef = useRef<HTMLDivElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
-  const chatSkyRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = useMemo(() => conversations.find((c) => c.id === activeConversationId) ?? null, [activeConversationId, conversations]);
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
@@ -684,43 +683,6 @@ export default function ChatPage() {
     setOpenConversationMenuId,
   });
 
-  useEffect(() => {
-    const root = chatSkyRef.current;
-    if (!root) return;
-
-    root.innerHTML = "";
-
-    const fragment = document.createDocumentFragment();
-    const createParticle = (className: string, durationRange: [number, number], topOffset = -40) => {
-      const particle = document.createElement("span");
-      particle.className = `chat-star ${className}`;
-      particle.style.left = `${Math.random() * 100}%`;
-      particle.style.top = `${topOffset}px`;
-      particle.style.animationDuration = `${durationRange[0] + Math.random() * (durationRange[1] - durationRange[0])}s`;
-      particle.style.animationDelay = `${Math.random() * 8}s`;
-      particle.style.opacity = `${0.35 + Math.random() * 0.55}`;
-      return particle;
-    };
-
-    for (let index = 0; index < 18; index += 1) {
-      fragment.appendChild(createParticle("dot", [16, 28]));
-    }
-
-    for (let index = 0; index < 7; index += 1) {
-      fragment.appendChild(createParticle("streak", [11, 19], -70));
-    }
-
-    for (let index = 0; index < 8; index += 1) {
-      fragment.appendChild(createParticle("cyan-dot", [18, 32]));
-    }
-
-    root.appendChild(fragment);
-
-    return () => {
-      root.innerHTML = "";
-    };
-  }, []);
-
   return (
     <section style={{ position: "relative", overflow: "hidden" }}>
       {isCreateProjectModalOpen && (
@@ -947,7 +909,6 @@ export default function ChatPage() {
         </aside>
 
         <div className={styles.main}>
-          <div className={styles.chatSky} ref={chatSkyRef} aria-hidden="true" />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {lastChatError && (
               <div className={styles.alertWrap}>
