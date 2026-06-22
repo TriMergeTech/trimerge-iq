@@ -124,7 +124,10 @@
   font-family: "Bricolage Grotesque", sans-serif;
   font-size: 16px;
   font-weight: 500;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease,
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease,
     box-shadow 0.15s ease;
   backdrop-filter: blur(6px);
 }
@@ -184,7 +187,9 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
     background-color 0.15s ease;
 }
 
@@ -268,7 +273,9 @@
   font-family: "Bricolage Grotesque", sans-serif;
   font-size: 15px;
   font-weight: 500;
-  transition: background 0.15s ease, border-color 0.15s ease,
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
     transform 0.1s ease;
 }
 
@@ -278,7 +285,11 @@
 }
 
 .filterOptionActive {
-  background: linear-gradient(90deg, rgba(46, 43, 255, 0.85), rgba(124, 92, 255, 0.7));
+  background: linear-gradient(
+    90deg,
+    rgba(46, 43, 255, 0.85),
+    rgba(124, 92, 255, 0.7)
+  );
   border-color: rgba(124, 92, 255, 0.55);
   box-shadow: 0 8px 22px rgba(46, 43, 255, 0.35);
 }
@@ -316,7 +327,10 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 10px 26px rgba(239, 176, 26, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
 }
 
 .applyButton:hover {
@@ -346,7 +360,9 @@
   font-family: "Bricolage Grotesque", sans-serif;
   font-size: 14.5px;
   font-weight: 500;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .runButton:hover {
@@ -408,7 +424,10 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.05);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .resultCard:hover {
@@ -698,4 +717,69 @@
     flex-wrap: wrap;
     justify-content: center;
   }
+}
+
+.categoriesSection {
+  margin-top: 32px;
+  padding: 24px;
+  /* background: #ffffff; */
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+
+.categoriesTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.categoriesDescription {
+  color: #ccc;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.categoriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.categoryCard {
+  /* background: #f9fafb; */
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  font-weight: 500;
+  color: #f8f8f8;
+  transition: all 0.2s ease;
+}
+
+.categoryCard:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.categoriesSection {
+  margin-top: 24px;
+}
+
+.categoriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.categoryCard {
+  padding: 16px;
+  border-radius: 12px;
+
+  /* same styling used elsewhere in the app */
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+
+  font-weight: 600;
 }

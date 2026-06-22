@@ -6,9 +6,9 @@ import styles from "./HomePage.module.css";
 
 const services = [
   {
-    title: "Knowledge Reliability Engine",
+    title: "Knowledge Management",
     description:
-      "Continuously validate institutional knowledge, flag drift, and keep critical answers accurate across teams.",
+      "Centralize SOPs, policies, research, project files, templates, lessons learned, and organizational knowledge in a single searchable platform.",
     variant: "violet",
     icon: (
       <svg
@@ -27,9 +27,9 @@ const services = [
     ),
   },
   {
-    title: "Workflow Intelligence Enablement",
+    title: "Opportunity & Project Intelligence",
     description:
-      "Embed context-aware intelligence into daily workflows so teams can act faster without losing precision.",
+      "Track opportunities, proposals, contracts, projects, and deliverables while maintaining institutional knowledge across the organization.",
     variant: "violet",
     icon: (
       <svg
@@ -47,9 +47,27 @@ const services = [
     ),
   },
   {
-    title: "Governance & Risk Controls",
+    title: "Workforce & Expertise Management",
     description:
-      "Apply policy-aware guardrails, role-based access, and auditable decision trails for enterprise confidence.",
+      "Connect people, skills, certifications, resumes, and subject matter expertise so teams can quickly identify resources and capabilities.",
+    variant: "lilac",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3Z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Governance & Secure Access",
+    description:
+      "Protect organizational knowledge through role-based permissions, auditability, and controlled access to sensitive information.",
     variant: "lilac",
     icon: (
       <svg
@@ -397,6 +415,21 @@ export default function HomePage() {
             </svg>
             <span className={styles.labelText}>Chat</span>
           </button>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => router.push("/proposal-hub")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.1 4.1A8 8 0 0 1 21 12Z" />
+            </svg>
+            <span className={styles.labelText}>Proposal Hub</span>
+          </button>
         </nav>
       </header>
 
@@ -459,14 +492,14 @@ export default function HomePage() {
 
         <div className={styles.heroInner}>
           <h1 className={styles.heroTitle}>
-            Strategic Consulting for
+            The Operating System for
             <br />
-            Modern <span className={styles.accent}>Business</span>
+            Organizational <span className={styles.accent}>Intelligence</span>
           </h1>
           <p className={styles.lede}>
-            TriMergeIQ unifies your scattered knowledge into one governed
-            intelligence layer so every team can move faster with dependable,
-            permission-aware answers.
+            TriMergeIQ connects knowledge, opportunities, projects, people, and
+            organizational experience into a single searchable platform powered
+            by AI.
           </p>
           <div className={styles.ctaRow}>
             <button
@@ -491,9 +524,11 @@ export default function HomePage() {
         <div className={styles.container}>
           <div className={styles.sectionHead}>
             <h2>What TriMergeIQ Delivers</h2>
+            <p>Organize. Search. Learn. Execute.</p>
             <p>
-              Purpose-built capabilities for trustworthy, scalable AI
-              operations.
+              TriMergeIQ helps organizations transform knowledge, opportunities,
+              projects, people, and institutional experience into actionable
+              intelligence.
             </p>
           </div>
           <div className={styles.servicesGrid}>
@@ -510,14 +545,11 @@ export default function HomePage() {
             ))}
           </div>
           <div className={styles.servicesStatement}>
-            <h3>
-              TriMergeIQ governance powered by one, self-improving source of
-              truth
-            </h3>
+            <h3>One Platform. One Source of Truth.</h3>
             <p>
-              Bring research, workflows, and enterprise knowledge into a single
-              reliable system that continuously improves with every validated
-              decision.
+              Bring together knowledge, opportunities, projects, people,
+              partners, and organizational experience into a single intelligent
+              platform that grows with your organization.
             </p>
           </div>
         </div>
@@ -525,7 +557,105 @@ export default function HomePage() {
 
       <section className={styles.stats}>
         <div className={styles.statsGrid}>
-          {stats.map((stat) => (
+          {(() => {
+            // clear the numeric stats so the existing map below renders nothing
+            // (mutating the array in-place is intentional here to avoid editing the top-level declaration)
+            // eslint-disable-next-line no-param-reassign
+            (stats as unknown as { length: number }).length = 0;
+            return null;
+          })()}
+
+          <div className={styles.stat}>
+            <div className={styles.statIcon}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="14" rx="2" />
+                <path d="M3 10h18" />
+              </svg>
+            </div>
+            <div>
+              <div className={styles.statNum}>Knowledge Assets</div>
+              <div className={styles.statLabel}>
+                Store and organize institutional knowledge.
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.stat}>
+            <div className={styles.statIcon}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </div>
+            <div>
+              <div className={styles.statNum}>AI Search</div>
+              <div className={styles.statLabel}>
+                Find information across the organization instantly.
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.stat}>
+            <div className={styles.statIcon}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2v6" />
+                <path d="M6 8v12" />
+                <path d="M18 8v12" />
+                <rect x="3" y="8" width="18" height="14" rx="2" />
+              </svg>
+            </div>
+            <div>
+              <div className={styles.statNum}>Role-Based Access</div>
+              <div className={styles.statLabel}>
+                Secure access to information based on user roles.
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.stat}>
+            <div className={styles.statIcon}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2v6" />
+                <path d="M5 11h14" />
+                <path d="M7 21h10" />
+              </svg>
+            </div>
+            <div>
+              <div className={styles.statNum}>Organizational Intelligence</div>
+              <div className={styles.statLabel}>
+                Turn data and experience into actionable insights.
+              </div>
+            </div>
+          </div>
+          {/* {stats.map((stat) => (
             <div key={stat.label} className={styles.stat}>
               <div className={styles.statIcon}>{stat.icon}</div>
               <div>
@@ -533,7 +663,7 @@ export default function HomePage() {
                 <div className={styles.statLabel}>{stat.label}</div>
               </div>
             </div>
-          ))}
+          ))} */}
         </div>
       </section>
 
@@ -571,7 +701,10 @@ export default function HomePage() {
           ))}
         </svg>
 
-        <h2>Turn scattered knowledge into reliable execution.</h2>
+        <h2>
+          Connect knowledge, opportunities, projects, people, and experience in
+          one intelligent platform.
+        </h2>
         <p>
           See how TriMergeIQ helps your teams answer faster, govern better, and
           operate with confidence.
@@ -589,7 +722,7 @@ export default function HomePage() {
             className={`${styles.btn} ${styles.btnOutline}`}
             onClick={() => router.push("/search")}
           >
-            Browse Use Cases
+            See How TriMergeIQ Works
           </button>
         </div>
       </section>

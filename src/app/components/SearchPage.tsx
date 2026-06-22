@@ -149,7 +149,8 @@ export default function SearchPage() {
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
         const x = col * dx;
-        const y = row * dy + Math.sin((col / cols) * Math.PI * freq + phase) * amp;
+        const y =
+          row * dy + Math.sin((col / cols) * Math.PI * freq + phase) * amp;
         const opacity = 0.4 + 0.6 * (1 - row / rows);
         points.push(
           <circle
@@ -194,61 +195,63 @@ export default function SearchPage() {
 
         <div className={styles.heroInner}>
           <h1 className={styles.heroTitle}>
-            Search & <span className={styles.accent}>Explore</span>
+            Search{" "}
+            <span className={styles.accent}>Organizational Knowledge</span>
           </h1>
           <p className={styles.lede}>
-            Query input and result exploration with filtering and ranked results
-            across your entire TriMerge knowledge layer.
+            Search opportunities, projects, clients, staff expertise, past
+            performance, documents, templates, policies, and organizational
+            knowledge from a single platform.
           </p>
 
           <div className={styles.modeRow} role="tablist" aria-label="Mode">
-          <button
-            type="button"
-            onClick={() => setActiveView("search")}
+            <button
+              type="button"
+              onClick={() => setActiveView("search")}
               role="tab"
               aria-selected={activeView === "search"}
               className={`${styles.modeButton} ${
                 activeView === "search" ? styles.modeButtonActive : ""
               }`}
-          >
+            >
               <Search className={styles.modeIcon} />
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView("filter")}
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("filter")}
               role="tab"
               aria-selected={activeView === "filter"}
               className={`${styles.modeButton} ${
                 activeView === "filter" ? styles.modeButtonActive : ""
               }`}
-          >
+            >
               <Filter className={styles.modeIcon} />
-            Filter
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveView("explore");
-              handleRunQuery();
-            }}
+              Filter
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView("explore");
+                handleRunQuery();
+              }}
               role="tab"
               aria-selected={activeView === "explore"}
               className={`${styles.modeButton} ${
                 activeView === "explore" ? styles.modeButtonActive : ""
               }`}
-          >
+            >
               <BookOpen className={styles.modeIcon} />
-            Explore
-          </button>
-        </div>
+              Explore
+            </button>
+          </div>
 
           <div
             className={`${styles.searchCard} ${
               activeView === "filter" ? styles.searchCardFilter : ""
             }`}
           >
-          {activeView === "search" && (
+            {activeView === "search" && (
               <div>
                 <h2 className={styles.panelTitle}>Search Query</h2>
                 <div>
@@ -256,134 +259,242 @@ export default function SearchPage() {
                     <span className={styles.inputLead}>
                       <Search className={styles.searchIcon} />
                     </span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    onKeyDown={(event) =>
-                      event.key === "Enter" ? handleSearch() : undefined
-                    }
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      onKeyDown={(event) =>
+                        event.key === "Enter" ? handleSearch() : undefined
+                      }
+                      ref={(el) => {
+                        const suggestions = [
+                          "Show all FEMA projects",
+                          "Find CPA resumes with grant experience",
+                          "Search grant compliance templates",
+                          "Find active opportunities",
+                          "Search past performance for local government clients",
+                          "Find SOPs related to financial management",
+                          "Search project deliverables",
+                          "Find partners with cybersecurity experience",
+                        ];
+
+                        if (!el) {
+                          // when ref is cleared, try to clear any running interval stored on window
+                          const id = (window as any)
+                            .__searchPlaceholderInterval;
+                          if (id) {
+                            clearInterval(id);
+                            delete (window as any).__searchPlaceholderInterval;
+                            delete (window as any).__searchPlaceholderEl;
+                          }
+                          return;
+                        }
+
+                        // avoid double-init on remounts
+                        if ((window as any).__searchPlaceholderEl === el)
+                          return;
+
+                        // clear previous interval if a different input was initialized
+                        if ((window as any).__searchPlaceholderInterval) {
+                          clearInterval(
+                            (window as any).__searchPlaceholderInterval,
+                          );
+                          delete (window as any).__searchPlaceholderInterval;
+                          delete (window as any).__searchPlaceholderEl;
+                        }
+
+                        (window as any).__searchPlaceholderEl = el;
+                        let idx = 0;
+                        const update = () => {
+                          // don't change placeholder while user is typing / input is focused
+                          if (document.activeElement === el) return;
+                          el.placeholder = suggestions[idx];
+                          idx = (idx + 1) % suggestions.length;
+                        };
+
+                        // seed immediately and then rotate
+                        update();
+                        (window as any).__searchPlaceholderInterval =
+                          window.setInterval(update, 3000);
+
+                        // clear placeholder while focused, resume on blur
+                        const onFocus = () => {
+                          el.placeholder = "";
+                        };
+                        const onBlur = () => {
+                          // ensure a visible suggestion shows right after blur
+                          update();
+                        };
+                        el.addEventListener("focus", onFocus);
+                        el.addEventListener("blur", onBlur);
+
+                        // best-effort cleanup if element is removed from the DOM
+                        const mo = new MutationObserver(() => {
+                          if (!document.body.contains(el)) {
+                            if ((window as any).__searchPlaceholderInterval) {
+                              clearInterval(
+                                (window as any).__searchPlaceholderInterval,
+                              );
+                              delete (window as any)
+                                .__searchPlaceholderInterval;
+                              delete (window as any).__searchPlaceholderEl;
+                            }
+                            mo.disconnect();
+                          }
+                        });
+                        mo.observe(document, {
+                          childList: true,
+                          subtree: true,
+                        });
+                      }}
                       placeholder="Enter your search query..."
                       className={styles.searchInput}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSearch}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSearch}
                       className={styles.submitButton}
-                  >
-                    Search
-                  </button>
+                    >
+                      Search
+                    </button>
+                  </div>
+                  <p className={styles.hint}>
+                    Press Enter or click Search to execute query
+                  </p>
                 </div>
-                  <p className={styles.hint}>Press Enter or click Search to execute query</p>
-              </div>
-            </div>
-          )}
 
-          {activeView === "filter" && (
+                <div className={styles.categoriesSection}>
+                  <h3 className={styles.categoriesTitle}>
+                    Search Across Organizational Knowledge
+                  </h3>
+
+                  <p className={styles.categoriesDescription}>
+                    Access opportunities, clients, projects, staff expertise,
+                    documents, templates, SOPs, and historical organizational
+                    knowledge from a single platform.
+                  </p>
+
+                  <div className={styles.categoriesGrid}>
+                    {[
+                      "Opportunities",
+                      "Clients",
+                      "Projects",
+                      "Staff",
+                      "Partners",
+                      "Documents",
+                      "SOPs",
+                      "Templates",
+                      "Past Performance",
+                    ].map((category) => (
+                      <div key={category} className={styles.categoryCard}>
+                        {category}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeView === "filter" && (
               <div className={styles.filterGrid}>
-              <div>
+                <div>
                   <h2 className={styles.panelTitle}>Filter Options</h2>
                   <div className={styles.filterList}>
-                  {categories.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => filterByCategory(category)}
-                          className={`${styles.filterOption} ${
-                            selectedCategory === category
-                              ? styles.filterOptionActive
-                              : ""
-                          }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
+                    {categories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => filterByCategory(category)}
+                        className={`${styles.filterOption} ${
+                          selectedCategory === category
+                            ? styles.filterOptionActive
+                            : ""
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div>
+                <div>
                   <h2 className={styles.panelTitle}>Date Range</h2>
                   <div>
-                  <input
-                    type="date"
-                        className={styles.dateInput}
-                  />
-                  <input
-                    type="date"
-                        className={styles.dateInput}
-                  />
+                    <input type="date" className={styles.dateInput} />
+                    <input type="date" className={styles.dateInput} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRunQuery}
+                    className={styles.applyButton}
+                  >
+                    Apply Filters
+                  </button>
                 </div>
+              </div>
+            )}
+
+            {activeView === "explore" && (
+              <div className={styles.exploreHead}>
+                <h2 className={styles.panelTitle}>Explore Results</h2>
                 <button
                   type="button"
                   onClick={handleRunQuery}
-                      className={styles.applyButton}
+                  className={styles.runButton}
                 >
-                  Apply Filters
+                  <RotateCcw className={styles.runIcon} />
+                  Run Query
                 </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeView === "explore" && (
-              <div className={styles.exploreHead}>
-                <h2 className={styles.panelTitle}>Explore Results</h2>
-              <button
-                type="button"
-                onClick={handleRunQuery}
-                  className={styles.runButton}
-              >
-                  <RotateCcw className={styles.runIcon} />
-                Run Query
-              </button>
-            </div>
-          )}
-
-          {results.length > 0 && (
+            {results.length > 0 && (
               <div>
                 <div className={styles.resultsBar}>
-                  <h3 className={styles.resultsCount}>Results ({results.length})</h3>
-                <select
-                  value={sortBy}
-                  onChange={(event) => sortResults(event.target.value)}
+                  <h3 className={styles.resultsCount}>
+                    Results ({results.length})
+                  </h3>
+                  <select
+                    value={sortBy}
+                    onChange={(event) => sortResults(event.target.value)}
                     className={styles.sortSelect}
-                >
-                  <option value="relevance">Sort by Relevance</option>
-                  <option value="date">Sort by Date</option>
-                </select>
-              </div>
+                  >
+                    <option value="relevance">Sort by Relevance</option>
+                    <option value="date">Sort by Date</option>
+                  </select>
+                </div>
 
                 <ol className={styles.resultList}>
-              {results.map((result, index) => (
-                    <li
-                  key={result.id}
-                      className={styles.resultCard}
-                >
-                      <div className={styles.resultRank}>Result {index + 1}</div>
+                  {results.map((result, index) => (
+                    <li key={result.id} className={styles.resultCard}>
+                      <div className={styles.resultRank}>
+                        Result {index + 1}
+                      </div>
                       <div
                         className={`${styles.resultTag} ${getCategoryTagClass(result.category)}`}
                       >
                         {result.category}
                       </div>
-                    <div>
-                        <h4 className={styles.resultTitle}>
-                        {result.title}
-                      </h4>
-                    </div>
-                      <p className={styles.resultDescription}>{result.description}</p>
+                      <div>
+                        <h4 className={styles.resultTitle}>{result.title}</h4>
+                      </div>
+                      <p className={styles.resultDescription}>
+                        {result.description}
+                      </p>
                       <div className={styles.resultFoot}>
                         <span className={styles.resultDate}>
-                      {result.date.toLocaleDateString()}
-                    </span>
+                          {result.date.toLocaleDateString()}
+                        </span>
                         <div className={styles.scoreWrap}>
                           <div className={styles.scoreBar}>
-                        <div
+                            <div
                               className={styles.scoreFill}
-                          style={{ width: `${result.relevance}%` }}
-                        />
-                      </div>
+                              style={{ width: `${result.relevance}%` }}
+                            />
+                          </div>
                           <span className={styles.scorePct}>
-                        {result.relevance}%
-                      </span>
+                            {result.relevance}%
+                          </span>
                         </div>
                       </div>
                     </li>
@@ -402,10 +513,10 @@ export default function SearchPage() {
               <Search className={styles.infoIconSvg} />
             </div>
             <div>
-              <h3>Unified search</h3>
+              <h3>Search Across Organizational Knowledge</h3>
               <p>
-                Query across decks, projects, playbooks, and client records from
-                one input.
+                Search opportunities, projects, documents, SOPs, templates,
+                staff profiles, partners, and historical records.
               </p>
             </div>
           </article>
@@ -414,10 +525,10 @@ export default function SearchPage() {
               <Filter className={styles.infoIconSvg} />
             </div>
             <div>
-              <h3>Smart filters</h3>
+              <h3>Filter and Refine Results</h3>
               <p>
-                Narrow by source, owner, date, or permission scope to find what
-                matters.
+                Filter by client, project, service area, staff member, date,
+                document type, or category.
               </p>
             </div>
           </article>
@@ -426,10 +537,10 @@ export default function SearchPage() {
               <BookOpen className={styles.infoIconSvg} />
             </div>
             <div>
-              <h3>Ranked results</h3>
+              <h3>Relevant and Secure Results</h3>
               <p>
-                Permission-aware ranking surfaces the most relevant, accessible
-                answers first.
+                Results are ranked by relevance while respecting user
+                permissions and access levels.
               </p>
             </div>
           </article>
