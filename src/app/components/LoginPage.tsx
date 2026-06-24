@@ -17,6 +17,7 @@ import styles from "./LoginPage.module.css";
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
+  kind: string;
 }
 
 type ViewMode = "login" | "signup" | "verify" | "forgotPassword" | "resetSent";
@@ -51,7 +52,7 @@ function storeSession(profile: string, accessToken: string) {
   localStorage.setItem("trimerge_admin_access_token", accessToken);
 }
 
-export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
+export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -312,7 +313,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         </div>
 
         <h1 className={styles.title}>
-          {viewMode === "login" && "Admin Access"}
+          {viewMode === "login" &&
+            `${kind === "staff" ? "Staff" : "Admin"} Access`}
           {viewMode === "signup" && "Create Staff Account"}
           {viewMode === "verify" && "Verify Your Account"}
           {viewMode === "forgotPassword" && "Reset Password"}
@@ -320,13 +322,13 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         </h1>
         <p className={styles.subtitle}>
           {viewMode === "login" &&
-            "Sign in with a real backend account to access admin tools."}
+            `Sign in with your authorised credentials to access ${kind || "admin"} tools.`}
           {viewMode === "signup" &&
             "Create a staff account first so you can manage skills and positions."}
           {viewMode === "verify" &&
             "Enter the OTP sent to your email to activate your account."}
           {viewMode === "forgotPassword" &&
-            "Enter your email to receive a password reset OTP."}
+            "Enter your email to receive a password reset url."}
           {viewMode === "resetSent" &&
             "We sent password reset instructions to your email address."}
         </p>
@@ -404,7 +406,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
-            <button
+            {/* <button
               type="button"
               className={styles.signup}
               onClick={() => {
@@ -414,7 +416,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               }}
             >
               Create New Staff Account
-            </button>
+            </button> */}
             <div className={styles.protected}>
               Protected by TriMerge Security
             </div>
