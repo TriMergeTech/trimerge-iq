@@ -50,6 +50,8 @@ async function parseJsonSafely(
 function storeSession(profile: string, accessToken: string) {
   localStorage.setItem("trimerge_admin_auth", JSON.stringify({ profile }));
   localStorage.setItem("trimerge_admin_access_token", accessToken);
+
+  window.location.reload();
 }
 
 export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
@@ -78,7 +80,10 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
   ) => {
     console.log("Logging in with credentials:", nextEmail, nextPassword);
     let payload = {
-      profile_type: process.env.NEXT_PUBLIC_ADMIN_PROFILE_TYPE,
+      profile_type:
+        kind === "staff"
+          ? process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE
+          : process.env.NEXT_PUBLIC_ADMIN_PROFILE_TYPE,
       credentials: { email: nextEmail.trim(), password: nextPassword },
     };
     console.log("Login payload:", payload);

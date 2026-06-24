@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AdminPage from "./AdminPage";
 import LoginPage from "./LoginPage";
 import Navbar from "./Navbar";
+import { PROFILE_SERVICE } from "./adminAuth";
 
 export default function AdminRoute() {
   const router = useRouter();
@@ -22,10 +23,24 @@ export default function AdminRoute() {
     router.replace("/admin");
   };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     setIsAdminAuthenticated(false);
+
+    localStorage.removeItem("trimerge_admin_auth");
+    localStorage.removeItem("trimerge_admin_access_token");
     router.push("/");
     router.refresh();
+
+    let response = await fetch(`${PROFILE_SERVICE}/signout`, {
+      method: "POST",
+      headers: {
+        "x-api-version": "v3",
+        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("trimerge_admin_access_token")}`,
+      },
+      body: JSON.stringify({}),
+    });
   }, [router]);
 
   useEffect(() => {

@@ -465,6 +465,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [clientError, setClientError] = useState("");
   const [staffError, setStaffError] = useState("");
   const [userError, setUserError] = useState("");
+  const [certifications, set_certifications] = useState([]);
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() =>
     readStoredAdminPeople().filter((person) => person.role === "staff"),
@@ -2358,13 +2359,23 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           }}
         />
       )}
-
       {openModal === "skills" && (
-        <RegistryModal
+        <SkillModal
           title={editingSkill ? "Edit Skill" : "Add New Skill"}
-          nameLabel="Title"
-          initialDescription={editingSkill?.description ?? ""}
-          initialName={editingSkill?.title ?? ""}
+          initialValues={
+            editingSkill
+              ? {
+                  name: editingSkill.name,
+                  category: editingSkill.category,
+                  description: editingSkill.description,
+                  certificationIds: editingSkill.certificationIds ?? [],
+                  staffMemberIds: editingSkill.staffMemberIds ?? [],
+                  proficiencyLevel: editingSkill.proficiencyLevel ?? "",
+                }
+              : undefined
+          }
+          certifications={certifications}
+          staffMembers={staffMembers}
           isSaving={isSavingSkill}
           onClose={() => {
             setEditingSkill(null);
@@ -2373,7 +2384,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           onSave={(payload) => {
             void saveSkill(payload);
           }}
-          submitLabel={editingSkill ? "Save changes" : "Create skill"}
+          submitLabel={editingSkill ? "Save Changes" : "Create Skill"}
         />
       )}
 
@@ -2743,6 +2754,194 @@ function PlatformModal({
             className={styles.formInput}
             required
           />
+        </ModalField>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : submitLabel}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
+type SkillPayload = {
+  name: string;
+  category: string;
+  description: string;
+  certificationIds: string[];
+  staffMemberId: string[];
+  proficiencyLevel: string;
+};
+
+type Certification = {
+  id: string;
+  name: string;
+};
+
+type StaffMember = {
+  id: string;
+  full_name: string;
+};
+
+function SkillModal({
+  initialValues,
+  certifications,
+  staffMembers,
+  isSaving = false,
+  title,
+  onSave,
+  onClose,
+  submitLabel = "Save",
+}: {
+  initialValues?: Partial<SkillPayload>;
+  certifications: Certification[];
+  staffMembers: StaffMember[];
+  isSaving?: boolean;
+  title: string;
+  onSave: (payload: SkillPayload) => void;
+  onClose: () => void;
+  submitLabel?: string;
+}) {
+  const [name, setName] = useState(initialValues?.name ?? "");
+  const [category, setCategory] = useState(initialValues?.category ?? "");
+  const [description, setDescription] = useState(
+    initialValues?.description ?? "",
+  );
+
+  const [selectedCertifications, setSelectedCertifications] = useState<
+    string[]
+  >(initialValues?.certificationIds ?? []);
+
+  const [proficiencyLevel, setProficiencyLevel] = useState(
+    initialValues?.proficiencyLevel ?? "",
+  );
+
+  const [selectedStaffMembers, setSelectedStaffMembers] = useState<string[]>(
+    initialValues?.staffMemberIds ?? [],
+  );
+
+  const toggleStaffMember = (staffId: string) => {
+    setSelectedStaffMembers((current) =>
+      current.includes(staffId)
+        ? current.filter((id) => id !== staffId)
+        : [...current, staffId],
+    );
+  };
+
+  useEffect(() => {
+    setName(initialValues?.name ?? "");
+    setCategory(initialValues?.category ?? "");
+    setDescription(initialValues?.description ?? "");
+    setSelectedCertifications(initialValues?.certificationIds ?? []);
+    setSelectedStaffMembers(initialValues?.staffMemberIds ?? []);
+    setProficiencyLevel(initialValues?.proficiencyLevel ?? "");
+  }, [initialValues]);
+
+  const toggleCertification = (certificationId: string) => {
+    setSelectedCertifications((current) =>
+      current.includes(certificationId)
+        ? current.filter((id) => id !== certificationId)
+        : [...current, certificationId],
+    );
+  };
+
+  return (
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+
+          onSave({
+            name: name.trim(),
+            category,
+            description: description.trim(),
+            certificationIds: selectedCertifications,
+            staffMemberIds: selectedStaffMembers,
+            proficiencyLevel,
+          });
+        }}
+      >
+        <ModalField label="Skill Name">
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className={styles.formInput}
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Category">
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className={styles.formSelect}
+            required
+          >
+            <option value="">Select Category</option>
+            <option value="financial_management">Financial Management</option>
+            <option value="consulting">Consulting</option>
+            <option value="human_capital">Human Capital</option>
+            <option value="technology">Technology</option>
+            <option value="emergency_management">Emergency Management</option>
+          </select>
+        </ModalField>
+
+        <ModalField label="Description">
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            className={styles.formTextarea}
+            required
+          />
+        </ModalField>
+
+        <ModalField label="Related Certifications">
+          <div className={styles.checkboxGroup}>
+            {certifications.map((certification) => (
+              <label key={certification.id} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={selectedCertifications.includes(certification.id)}
+                  onChange={() => toggleCertification(certification.id)}
+                />
+                {certification.name}
+              </label>
+            ))}
+          </div>
+        </ModalField>
+
+        <ModalField label="Staff Members Possessing Skill">
+          <div className={styles.checkboxGroup}>
+            {staffMembers.map((staff) => (
+              <label key={staff.id} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={selectedStaffMembers.includes(staff.id)}
+                  onChange={() => toggleStaffMember(staff.id)}
+                />
+                &nbsp;{staff.fullname}
+              </label>
+            ))}
+          </div>
+        </ModalField>
+
+        <ModalField label="Proficiency Level">
+          <select
+            value={proficiencyLevel}
+            onChange={(event) => setProficiencyLevel(event.target.value)}
+            className={styles.formSelect}
+            required
+          >
+            <option value="">Select Level</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Expert">Expert</option>
+          </select>
         </ModalField>
 
         <ModalActions
