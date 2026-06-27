@@ -672,7 +672,9 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
 
       <div className={styles.help}>
         Need help? Contact{" "}
-        <a href="mailto:support@trimerge.com">support@trimerge.com</a>
+        <a href="mailto:tech@trimergeconsulting.com">
+          tech@trimergeconsulting.com
+        </a>
       </div>
     </div>
   );
