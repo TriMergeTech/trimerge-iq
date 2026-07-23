@@ -1,0 +1,90 @@
+.feedback-stack {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  pointer-events: none;
+}
+
+.feedback {
+  min-width: 260px;
+  max-width: 420px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 14px 18px;
+
+  border-radius: 16px;
+
+  color: white;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+  pointer-events: auto;
+
+  animation:
+    feedback-in 0.2s ease,
+    feedback-out 0.25s ease forwards;
+
+  animation-delay: 0s, 3.2s;
+}
+
+.feedback--success {
+  background: #16a34a;
+}
+
+.feedback--error {
+  background: #dc2626;
+}
+
+.feedback--info {
+  background: #2563eb;
+}
+
+.feedback--warning {
+  background: #d97706;
+}
+
+.feedback__close {
+  border: none;
+  background: transparent;
+
+  color: inherit;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes feedback-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
