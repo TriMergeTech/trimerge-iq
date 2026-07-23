@@ -2,7 +2,7 @@
 
 import styles from "../AdminPage.module.css";
 
-import type { SkillItem } from "../components/types";
+import type { SkillItem } from "./types";
 import { DeleteButton, EditButton } from "./buttons";
 import ManagementTable from "./management_table";
 

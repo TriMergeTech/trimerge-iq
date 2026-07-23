@@ -102,6 +102,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
     });
 
     response = await response.json();
+    console.log(response, "howww");
 
     if (!response.ok) {
       throw new Error(response?.message ?? "Login failed.");

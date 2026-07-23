@@ -1,0 +1,290 @@
+.proposal-steps {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.proposal-step {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.proposal-step__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.proposal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proposal-field label {
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.proposal-field input,
+.proposal-field textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  color: white;
+  outline: none;
+}
+
+.proposal-field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.proposal-step__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.proposal-save-btn {
+  background: #5b5cf6;
+  border: none;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.proposal-search-row {
+  margin-top: 20px;
+}
+
+.proposal-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.proposal-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+}
+
+/* .proposal-step__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.proposal-field input {
+  min-width: 260px;
+  width: 100%;
+} */
+
+/* .proposal-step__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+} */
+
+.proposal-bulk {
+  margin-top: 24px;
+}
+
+.proposal-bulk__panel {
+  margin-top: 14px;
+
+  padding: 22px;
+
+  border-radius: 22px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.015)
+  );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  backdrop-filter: blur(12px);
+}
+
+.proposal-bulk__head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.proposal-bulk__head p {
+  margin-top: 6px;
+
+  color: rgba(255, 255, 255, 0.68);
+
+  line-height: 1.5;
+}
+
+.proposal-bulk__example {
+  margin-top: 18px;
+
+  border-radius: 16px;
+
+  overflow: hidden;
+
+  background: rgba(0, 0, 0, 0.35);
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.proposal-bulk__example strong {
+  display: block;
+
+  padding: 12px 16px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  font-size: 13px;
+}
+
+.proposal-bulk__example pre {
+  margin: 0;
+
+  padding: 16px;
+
+  overflow-x: auto;
+
+  font-size: 13px;
+  line-height: 1.6;
+
+  color: #d1d5db;
+}
+
+.proposal-bulk__label {
+  display: block;
+
+  margin-top: 20px;
+  margin-bottom: 10px;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.proposal-bulk__textarea {
+  width: 100%;
+
+  min-height: 260px;
+
+  resize: vertical;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 18px;
+
+  background: rgba(0, 0, 0, 0.22);
+
+  color: white;
+
+  padding: 18px;
+
+  font-size: 14px;
+  line-height: 1.7;
+
+  font-family: "SF Mono", "JetBrains Mono", monospace;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.proposal-bulk__textarea:focus {
+  border-color: rgba(99, 102, 241, 0.7);
+
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.proposal-bulk__footer {
+  margin-top: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.proposal-bulk__meta {
+  font-size: 13px;
+
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.proposal-bulk__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proposal-bulk__ghost {
+  height: 42px;
+
+  padding: 0 18px;
+
+  border-radius: 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  background: transparent;
+
+  color: white;
+
+  cursor: pointer;
+}
+
+.proposal-bulk__submit {
+  height: 42px;
+
+  padding: 0 18px;
+
+  border: none;
+
+  border-radius: 14px;
+
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+  color: white;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  cursor: pointer;
+
+  font-weight: 600;
+
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.proposal-bulk__submit:hover {
+  transform: translateY(-1px);
+}
