@@ -131,13 +131,13 @@ export function PlatformModal({
   submitLabel?: string;
 }) {
   const [name, setName] = useState(initialName);
-  const [url, set_url] = useState(initialUrl);
+  const [url, setUrl] = useState(initialUrl);
   const [description, setDescription] = useState(initialDescription);
 
   useEffect(() => {
     setName(initialName);
     setDescription(initialDescription);
-    set_url(initialUrl);
+    setUrl(initialUrl);
   }, [initialDescription, initialName, initialUrl]);
 
   return (
@@ -176,7 +176,7 @@ export function PlatformModal({
           <input
             type="text"
             value={url}
-            onChange={(event) => set_url(event.target.value)}
+            onChange={(event) => setUrl(event.target.value)}
             className={styles.formInput}
             required
           />
@@ -375,6 +375,76 @@ export function SkillModal({
   );
 }
 
+// Shared by RegistryModal and ClientModal, which are both just
+// "name + one long text field" forms differing only in labels and
+// the key their second field is saved under.
+function SimpleTextModal({
+  initialName = "",
+  initialSecondField = "",
+  nameLabel = "Name",
+  secondFieldLabel,
+  isSaving = false,
+  title,
+  onSave,
+  onClose,
+  submitLabel = "Save",
+}: {
+  initialName?: string;
+  initialSecondField?: string;
+  nameLabel?: string;
+  secondFieldLabel: string;
+  isSaving?: boolean;
+  title: string;
+  onSave: (payload: { name: string; secondField: string }) => void;
+  onClose: () => void;
+  submitLabel?: string;
+}) {
+  const [name, setName] = useState(initialName);
+  const [secondField, setSecondField] = useState(initialSecondField);
+
+  useEffect(() => {
+    setName(initialName);
+    setSecondField(initialSecondField);
+  }, [initialName, initialSecondField]);
+
+  return (
+    <BaseModal title={title} onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave({ name: name.trim(), secondField: secondField.trim() });
+        }}
+      >
+        <ModalField label={nameLabel}>
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className={styles.formInput}
+            required
+          />
+        </ModalField>
+
+        <ModalField label={secondFieldLabel}>
+          <textarea
+            value={secondField}
+            onChange={(event) => setSecondField(event.target.value)}
+            rows={4}
+            className={styles.formTextarea}
+            required
+          />
+        </ModalField>
+
+        <ModalActions
+          onClose={onClose}
+          submitDisabled={isSaving}
+          submitLabel={isSaving ? "Saving..." : submitLabel}
+        />
+      </form>
+    </BaseModal>
+  );
+}
+
 export function RegistryModal({
   initialDescription = "",
   initialName = "",
@@ -394,49 +464,20 @@ export function RegistryModal({
   onClose: () => void;
   submitLabel?: string;
 }) {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-
-  useEffect(() => {
-    setName(initialName);
-    setDescription(initialDescription);
-  }, [initialDescription, initialName]);
-
   return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({ name: name.trim(), description: description.trim() });
-        }}
-      >
-        <ModalField label={nameLabel}>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : submitLabel}
-        />
-      </form>
-    </BaseModal>
+    <SimpleTextModal
+      title={title}
+      nameLabel={nameLabel}
+      secondFieldLabel="Description"
+      initialName={initialName}
+      initialSecondField={initialDescription}
+      isSaving={isSaving}
+      submitLabel={submitLabel}
+      onClose={onClose}
+      onSave={(payload) =>
+        onSave({ name: payload.name, description: payload.secondField })
+      }
+    />
   );
 }
 
@@ -455,49 +496,18 @@ export function ClientModal({
   onSave: (payload: Omit<ClientItem, "_id" | "createdAt">) => void;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(initialName);
-  const [about, setAbout] = useState(initialAbout);
-
-  useEffect(() => {
-    setName(initialName);
-    setAbout(initialAbout);
-  }, [initialAbout, initialName]);
-
   return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({ name: name.trim(), about: about.trim() });
-        }}
-      >
-        <ModalField label="Name">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="About">
-          <textarea
-            value={about}
-            onChange={(event) => setAbout(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : "Save"}
-        />
-      </form>
-    </BaseModal>
+    <SimpleTextModal
+      title={title}
+      secondFieldLabel="About"
+      initialName={initialName}
+      initialSecondField={initialAbout}
+      isSaving={isSaving}
+      onClose={onClose}
+      onSave={(payload) =>
+        onSave({ name: payload.name, about: payload.secondField })
+      }
+    />
   );
 }
 
@@ -679,7 +689,7 @@ export function PositionModal({
     <BaseModal
       title={title ?? "Add New Position"}
       onClose={onClose}
-      maxWidthClass="max-w-[760px]"
+      wide
     >
       <form
         onSubmit={(event) => {

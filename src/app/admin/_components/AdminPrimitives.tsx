@@ -107,23 +107,15 @@ export function BaseModal({
   onClose,
   children,
   wide = false,
-  maxWidthClass,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
-  maxWidthClass?: string;
 }) {
   return (
     <div className={styles.modalOverlay}>
-      <div
-        className={
-          wide || maxWidthClass
-            ? `${styles.modal} ${styles.modalWide}`
-            : styles.modal
-        }
-      >
+      <div className={wide ? `${styles.modal} ${styles.modalWide}` : styles.modal}>
         <div className={styles.modalHead}>
           <h3>{title}</h3>
           <button type="button" onClick={onClose} className={styles.modalClose}>

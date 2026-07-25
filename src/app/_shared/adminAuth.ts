@@ -67,14 +67,14 @@ function expireStoredSession() {
   window.dispatchEvent(new Event("trimerge_admin_session_expired"));
 }
 
-async function parseJsonSafely(
+export async function parseJsonSafely<T = unknown>(
   response: Response,
-): Promise<AuthTokenPayload | null> {
+): Promise<T | null> {
   const responseText = await response.text();
   if (!responseText) return null;
 
   try {
-    return JSON.parse(responseText) as AuthTokenPayload;
+    return JSON.parse(responseText) as T;
   } catch {
     return null;
   }
@@ -102,7 +102,7 @@ async function requestFreshAccessToken() {
       }),
     });
 
-    const payload = await parseJsonSafely(response);
+    const payload = await parseJsonSafely<AuthTokenPayload>(response);
     const nextAccessToken =
       payload?.access_token ??
       payload?.accessToken ??
