@@ -5,16 +5,13 @@ import {
   Building2,
   Briefcase,
   LogOut,
-  Pencil,
   Plus,
   Search,
   Shield,
-  Trash2,
   User,
   UserCog,
   Users,
   Wrench,
-  X,
 } from "lucide-react";
 
 import {
@@ -29,367 +26,43 @@ import {
   PROFILE_SERVICE,
 } from "../../_shared/adminAuth";
 import styles from "./AdminPage.module.css";
-
-type AdminSection =
-  | "staff"
-  | "admin"
-  | "position"
-  | "skills"
-  | "company_overview"
-  | "services"
-  | "clients"
-  | "platforms";
-type CreateModal = AdminSection | null;
-
-interface StaffMember {
-  _id: string;
-  name: string;
-  email: string;
-  positionId?: string;
-  createdAt: Date;
-}
-
-interface SkillItem {
-  _id: string;
-  name: string;
-  description: string;
-  createdAt: Date;
-}
-
-interface ServiceItem {
-  _id: string;
-  name: string;
-  description: string;
-  skillIds: string[];
-  positionIds: string[];
-  createdAt: Date;
-}
-
-interface ClientItem {
-  _id: string;
-  name: string;
-  about: string;
-  createdAt: Date;
-}
-
-interface PositionItem {
-  _id: string;
-  title: string;
-  description: string;
-  responsibilities: string[];
-  skillIds: string[];
-  createdAt: Date;
-}
+import {
+  SidebarButton,
+  ManagementTable,
+  DeleteButton,
+  EditButton,
+} from "./AdminPrimitives";
+import {
+  PersonModal,
+  PlatformModal,
+  SkillModal,
+  RegistryModal,
+  ClientModal,
+  ServiceModal,
+  PositionModal,
+  type Certification,
+} from "./AdminModals";
+import {
+  uniqueById,
+  mapUserFromApi,
+  extractUserRecords,
+  parseJsonSafely,
+  type AdminSection,
+  type CreateModal,
+  type StaffMember,
+  type SkillItem,
+  type ServiceItem,
+  type ClientItem,
+  type PositionItem,
+} from "./adminTypes";
 
 interface AdminPageProps {
   onLogout: () => void;
 }
 
-interface PositionApiRecord {
-  _id?: string;
-  _id?: string;
-  name?: string;
-  title?: string;
-  description?: string;
-  responsibility?: string[];
-  responsibilities?: string[];
-  skills?: string[];
-  createdAt?: string;
-  created_at?: string;
-}
-
-interface SkillApiRecord {
-  _id?: string;
-  _id?: string;
-  name?: string;
-  description?: string;
-  createdAt?: string;
-  created_at?: string;
-}
-
-interface ServiceApiRecord {
-  _id?: string;
-  _id?: string;
-  title?: string;
-  name?: string;
-  descriptions?: string;
-  description?: string;
-  skills?: string[];
-  createdAt?: string;
-  created_at?: string;
-}
-
-interface ClientApiRecord {
-  _id?: string;
-  _id?: string;
-  name?: string;
-  about?: string;
-  createdAt?: string;
-  created_at?: string;
-}
-
-interface StaffApiRecord {
-  _id?: string;
-  _id?: string;
-  name?: string;
-  email?: string;
-  position?:
-    | string
-    | { _id?: string; _id?: string; name?: string; title?: string };
-  createdAt?: string;
-  created_at?: string;
-}
-
-interface UserApiRecord {
-  _id?: string;
-  _id?: string;
-  user_id?: string;
-  uuid?: string;
-  fullName?: string;
-  full_name?: string;
-  name?: string;
-  email?: string;
-  profile?: string;
-  role?: string;
-  createdAt?: string;
-  created_at?: string;
-}
-
 const INITIAL_SKILLS: SkillItem[] = [];
 
 const INITIAL_POSITIONS: PositionItem[] = [];
-
-function uniqueById<T extends { _id: string }>(records: T[]) {
-  const seenIds = new Set<string>();
-  return records.filter((record) => {
-    if (seenIds.has(record._id)) return false;
-    seenIds.add(record._id);
-    return true;
-  });
-}
-
-function mapClientFromApi(client: ClientApiRecord): ClientItem {
-  return {
-    _id:
-      client._id ??
-      client._id ??
-      `${client.name ?? "client"}-${client.created ?? client.created_at ?? "local"}`,
-    name: client.name ?? "Untitled Client",
-    about: client.about ?? "",
-    created:
-      client.created || client.created_at
-        ? new Date(client.created ?? client.created_at ?? "")
-        : new Date(),
-  };
-}
-
-function getPositionIdFromApi(position: StaffApiRecord["position"]) {
-  if (typeof position === "string") return position;
-  if (position && typeof position === "object")
-    return position._id ?? position._id;
-  return undefined;
-}
-
-function mapStaffFromApi(staff: StaffApiRecord): StaffMember {
-  return {
-    _id:
-      staff._id ??
-      staff._id ??
-      staff.email ??
-      `${staff.name ?? "staff"}-${staff.createdAt ?? staff.created_at ?? "local"}`,
-    name: staff.name ?? staff.email ?? "Unnamed staff",
-    email: staff.email ?? "",
-    positionId: getPositionIdFromApi(staff.position),
-    createdAt:
-      staff.createdAt || staff.created_at
-        ? new Date(staff.createdAt ?? staff.created_at ?? "")
-        : new Date(),
-  };
-}
-
-function mapUserFromApi(user: UserApiRecord): StaffMember {
-  const email = user.email ?? "";
-  const fallbackName = email
-    ? email.split("@")[0]?.replace(/[._-]+/g, " ")
-    : "Unnamed user";
-
-  return {
-    _id: user._id ?? user._id ?? user.user_id ?? user.uuid ?? email,
-    name: user.fullName ?? user.full_name ?? user.name ?? fallbackName,
-    email,
-    createdAt:
-      user.createdAt || user.created_at
-        ? new Date(user.createdAt ?? user.created_at ?? "")
-        : new Date(),
-  };
-}
-
-function extractPositionRecords(payload: unknown): PositionApiRecord[] {
-  if (Array.isArray(payload)) return payload as PositionApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      position?: unknown;
-      positions?: unknown;
-    };
-    if (Array.isArray(typedPayload.positions))
-      return typedPayload.positions as PositionApiRecord[];
-    if (typedPayload.position && typeof typedPayload.position === "object") {
-      return [typedPayload.position as PositionApiRecord];
-    }
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as PositionApiRecord[];
-
-    if (data && typeof data === "object") return [data as PositionApiRecord];
-    return [payload as PositionApiRecord];
-  }
-
-  return [];
-}
-
-function extractServiceRecords(payload: unknown): ServiceApiRecord[] {
-  if (Array.isArray(payload)) return payload as ServiceApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      service?: unknown;
-      services?: unknown;
-    };
-    if (Array.isArray(typedPayload.services))
-      return typedPayload.services as ServiceApiRecord[];
-    if (typedPayload.service && typeof typedPayload.service === "object") {
-      return [typedPayload.service as ServiceApiRecord];
-    }
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as ServiceApiRecord[];
-
-    if (data && typeof data === "object") return [data as ServiceApiRecord];
-    return [payload as ServiceApiRecord];
-  }
-
-  return [];
-}
-
-function extractClientRecords(payload: unknown): ClientApiRecord[] {
-  if (Array.isArray(payload)) return payload as ClientApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      client?: unknown;
-      clients?: unknown;
-    };
-    if (Array.isArray(typedPayload.clients))
-      return typedPayload.clients as ClientApiRecord[];
-    if (typedPayload.client && typeof typedPayload.client === "object") {
-      return [typedPayload.client as ClientApiRecord];
-    }
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as ClientApiRecord[];
-
-    if (data && typeof data === "object") return [data as ClientApiRecord];
-    return [payload as ClientApiRecord];
-  }
-
-  return [];
-}
-
-function extractStaffRecords(payload: unknown): StaffApiRecord[] {
-  if (Array.isArray(payload)) return payload as StaffApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      staff?: unknown;
-      staffs?: unknown;
-      members?: unknown;
-    };
-    if (Array.isArray(typedPayload.staff))
-      return typedPayload.staff as StaffApiRecord[];
-    if (Array.isArray(typedPayload.staffs))
-      return typedPayload.staffs as StaffApiRecord[];
-    if (Array.isArray(typedPayload.members))
-      return typedPayload.members as StaffApiRecord[];
-    if (typedPayload.staff && typeof typedPayload.staff === "object") {
-      return [typedPayload.staff as StaffApiRecord];
-    }
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as StaffApiRecord[];
-    if (data && typeof data === "object") return [data as StaffApiRecord];
-    return [payload as StaffApiRecord];
-  }
-
-  return [];
-}
-
-function extractUserRecords(payload: unknown): UserApiRecord[] {
-  if (Array.isArray(payload)) return payload as UserApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      user?: unknown;
-      users?: unknown;
-      profile?: unknown;
-    };
-    if (Array.isArray(typedPayload.users))
-      return typedPayload.users as UserApiRecord[];
-    if (typedPayload.user && typeof typedPayload.user === "object")
-      return [typedPayload.user as UserApiRecord];
-    if (typedPayload.profile && typeof typedPayload.profile === "object")
-      return [typedPayload.profile as UserApiRecord];
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as UserApiRecord[];
-
-    if (data && typeof data === "object") return [data as UserApiRecord];
-    return [payload as UserApiRecord];
-  }
-
-  return [];
-}
-
-function extractSkillRecords(payload: unknown): SkillApiRecord[] {
-  if (Array.isArray(payload)) return payload as SkillApiRecord[];
-
-  if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      skill?: unknown;
-      skills?: unknown;
-    };
-    if (Array.isArray(typedPayload.skills))
-      return typedPayload.skills as SkillApiRecord[];
-    if (typedPayload.skill && typeof typedPayload.skill === "object") {
-      return [typedPayload.skill as SkillApiRecord];
-    }
-
-    const data = typedPayload.data;
-    if (Array.isArray(data)) return data as SkillApiRecord[];
-
-    if (data && typeof data === "object") return [data as SkillApiRecord];
-    return [payload as SkillApiRecord];
-  }
-
-  return [];
-}
-
-async function parseJsonSafely(response: Response): Promise<unknown> {
-  const responseText = await response.text();
-  if (!responseText) return null;
-
-  try {
-    return JSON.parse(responseText) as unknown;
-  } catch {
-    return null;
-  }
-}
 
 const SECTION_META: Record<
   AdminSection,
@@ -439,8 +112,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   );
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [editing_detail, set_editing_detail] = useState(null);
-  const [editing_platform, set_editing_platform] = useState(null);
+  const [editing_detail, set_editing_detail] = useState<any>(null);
+  const [editing_platform, set_editing_platform] = useState<any>(null);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
@@ -465,19 +138,23 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const [clientError, setClientError] = useState("");
   const [staffError, setStaffError] = useState("");
   const [userError, setUserError] = useState("");
-  const [certifications, set_certifications] = useState([]);
+  const [certifications, set_certifications] = useState<Certification[]>([]);
 
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() =>
-    readStoredAdminPeople().filter((person) => person.role === "staff"),
+    readStoredAdminPeople()
+      .filter((person) => person.role === "staff")
+      .map((person) => ({ ...person, _id: person.id, fullname: person.name })),
   );
   const [adminMembers, setAdminMembers] = useState<StaffMember[]>(() =>
-    readStoredAdminPeople().filter((person) => person.role === "admin"),
+    readStoredAdminPeople()
+      .filter((person) => person.role === "admin")
+      .map((person) => ({ ...person, _id: person.id, fullname: person.name })),
   );
   const [skills, setSkills] = useState<SkillItem[]>(INITIAL_SKILLS);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
-  const [company_details, set_company_details] = useState([]);
-  const [platforms, set_platforms] = useState([]);
+  const [company_details, set_company_details] = useState<any[]>([]);
+  const [platforms, set_platforms] = useState<any[]>([]);
   const [positions, setPositions] = useState<PositionItem[]>(INITIAL_POSITIONS);
 
   useEffect(() => {
@@ -569,11 +246,29 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
   useEffect(() => {
     const people: StoredAdminPerson[] = [
-      ...staffMembers.map((member) => ({ ...member, role: "staff" as const })),
-      ...adminMembers.map((member) => ({ ...member, role: "admin" as const })),
+      ...staffMembers.map((member) => ({
+        id: member._id,
+        name: member.fullname ?? member.name ?? "",
+        email: member.email,
+        positionId: member.positionId ?? member.position,
+        role: "staff" as const,
+        createdAt: member.createdAt ?? new Date(),
+      })),
+      ...adminMembers.map((member) => ({
+        id: member._id,
+        name: member.fullname ?? member.name ?? "",
+        email: member.email,
+        positionId: member.positionId ?? member.position,
+        role: "admin" as const,
+        createdAt: member.createdAt ?? new Date(),
+      })),
     ];
 
-    writeStoredAdminPeople(uniqueById(people));
+    const uniquePeople = Array.from(
+      new Map(people.map((person) => [person.id, person])).values(),
+    );
+
+    writeStoredAdminPeople(uniquePeople);
   }, [adminMembers, staffMembers]);
 
   useEffect(() => {
@@ -586,17 +281,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         setIsLoadingStaff(true);
         setStaffError("");
 
-        console.log(
-          PROFILE_SERVICE,
-          process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
-          "uhh",
-          accessToken,
-        );
         const response = await fetch(`${PROFILE_SERVICE}/get_profiles`, {
           method: "POST",
           headers: {
             "x-api-version": "v3",
-            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
           },
           body: JSON.stringify({
             profile_type: process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
@@ -605,7 +294,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
 
         let reply = await response.json();
 
-        console.log(reply);
         if (reply.ok) {
           setStaffMembers(reply.data);
         } else throw new Error(reply.data);
@@ -630,7 +318,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   }, [accessToken, adminFetch]);
 
   useEffect(() => {
-    console.log("LOADING DETAiLS...", accessToken || "NONE??");
     if (!accessToken) return;
 
     let ignore = false;
@@ -649,7 +336,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         });
         let payload = await response.json();
 
-        console.log(payload, "detail");
         if (!payload.ok) {
           throw new Error(payload.message);
         }
@@ -717,11 +403,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               ...apiUsers.filter((user) => {
                 const original = userRecords.find((item) => {
                   const itemId =
-                    item._id ??
-                    item._id ??
-                    item.user_id ??
-                    item.uuid ??
-                    item.email;
+                    item._id ?? item.user_id ?? item.uuid ?? item.email;
                   return itemId === user._id;
                 });
                 const role = (
@@ -907,7 +589,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
         });
 
         const payload = await response.json();
-        console.log(payload);
 
         if (!ignore) {
           setServices((current) => [...(payload.data || []), ...current]);
@@ -996,10 +677,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return staffMembers;
     return staffMembers.filter((member) => {
       const positionName =
-        positions.find((position) => position._id === member.positionId)
-          ?.title ?? "";
+        positions.find(
+          (position) => position._id === (member.positionId ?? member.position),
+        )?.title ?? "";
       return (
-        member.fullname.toLowerCase().includes(query) ||
+        (member.fullname ?? member.name ?? "").toLowerCase().includes(query) ||
         member.email.toLowerCase().includes(query) ||
         positionName.toLowerCase().includes(query)
       );
@@ -1011,7 +693,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return adminMembers;
     return adminMembers.filter(
       (member) =>
-        member.name.toLowerCase().includes(query) ||
+        (member.fullname ?? member.name ?? "").toLowerCase().includes(query) ||
         member.email.toLowerCase().includes(query),
     );
   }, [adminMembers, searchQuery]);
@@ -1021,7 +703,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return skills;
     return skills.filter(
       (skill) =>
-        skill.title.toLowerCase().includes(query) ||
+        (skill.title ?? skill.name ?? "").toLowerCase().includes(query) ||
         skill.description.toLowerCase().includes(query),
     );
   }, [searchQuery, skills]);
@@ -1029,13 +711,12 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   const filteredServices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    // normalize and dedupe services by a stable key (_id, _id or fallback)
+    // normalize and dedupe services by a stable key (_id or fallback)
     const uniqueMap = new Map<string, (typeof services)[number]>();
     for (const s of services) {
       const key =
         (s as any)._id ??
-        (s as any)._id ??
-        `${(s as any).title ?? (s as any).name ?? "service"}-${(s as any).created ?? (s as any).createdAt ?? (s as any).created ?? "local"}`;
+        `${(s as any).title ?? (s as any).name ?? "service"}-${(s as any).created ?? (s as any).createdAt ?? "local"}`;
       if (!uniqueMap.has(key)) uniqueMap.set(key, s);
     }
     const uniqueServices = Array.from(uniqueMap.values());
@@ -1043,24 +724,26 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     if (!query) return uniqueServices;
 
     return uniqueServices.filter((service) => {
-      const skillNames =
+      const skillNames = (
         (service as any).skills ??
         []
-          .map(
-            (skillId: string) =>
-              skills.find((skill) => (skill as any)._id === skillId)?.title ??
-              "",
-          )
-          .join(" ");
-      const positionNames =
+      )
+        .map(
+          (skillId: string) =>
+            skills.find((skill) => (skill as any)._id === skillId)?.title ??
+            "",
+        )
+        .join(" ");
+      const positionNames = (
         (service as any).positions ??
         []
-          .map(
-            (positionId: string) =>
-              positions.find((position) => (position as any)._id === positionId)
-                ?.title ?? "",
-          )
-          .join(" ");
+      )
+        .map(
+          (positionId: string) =>
+            positions.find((position) => (position as any)._id === positionId)
+              ?.title ?? "",
+        )
+        .join(" ");
       const title = ((service as any).title ?? (service as any).name ?? "")
         .toString()
         .toLowerCase();
@@ -1117,6 +800,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     skills: skills.length,
     services: services.length,
     clients: clients.length,
+    company_overview: company_details.length,
+    platforms: platforms.length,
   }[activeSection];
 
   const openCreateModal = () => {
@@ -1140,7 +825,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
   };
 
   const saveStaff = async (payload: {
-    name: string;
+    fullname: string;
     email: string;
     positionId?: string;
   }) => {
@@ -1157,7 +842,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           headers: {
             "Content-Type": "application/json",
             "x-api-version": "v3",
-            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
           },
           body: JSON.stringify({
             profle_id: editingStaff._id,
@@ -1185,7 +870,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           headers: {
             "Content-Type": "application/json",
             "x-api-version": "v3",
-            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+            "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
           },
           body: JSON.stringify({
             profile_type: process.env.NEXT_PUBLIC_STAFF_PROFILE_TYPE,
@@ -1253,7 +938,11 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
-  const save_platform = async (payload) => {
+  const save_platform = async (payload: {
+    name: string;
+    url: string;
+    description: string;
+  }) => {
     try {
       set_is_saving_platform(true);
       set_platform_error("");
@@ -1351,7 +1040,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
-  const save_detail = async (payload) => {
+  const save_detail = async (payload: { name: string; description: string }) => {
     try {
       set_is_saving_detail(true);
       set_detail_error("");
@@ -1512,7 +1201,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
-  const open_edit_detail_modal = async (detail) => {
+  const open_edit_detail_modal = async (detail: any) => {
     try {
       set_is_loading_detail(true);
       set_detail_error("");
@@ -1530,7 +1219,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     }
   };
 
-  const open_edit_platform_modal = async (platform) => {
+  const open_edit_platform_modal = async (platform: any) => {
     try {
       set_is_loading_platforms(true);
       set_platform_error("");
@@ -1711,11 +1400,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       let bdy = {
         title: payload.title,
         description: payload.description,
-        skills: payload.skills
-          .map((skillId) => skills.find((skill) => skill._id === skillId)?._id)
-          .filter((skillName): skillName is string => Boolean(skillName)),
+        skills: (payload.skills ?? [])
+          .map(
+            (skillId: string) =>
+              skills.find((skill) => skill._id === skillId)?._id,
+          )
+          .filter((skillName: string | undefined): skillName is string =>
+            Boolean(skillName),
+          ),
       };
-      console.log(bdy);
       const response = await fetch(`${API_BASE_URL}/add_service`, {
         method: "POST",
         headers: {
@@ -1726,7 +1419,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       });
 
       const resp = await response.json();
-      console.log(resp);
 
       if (resp?.ok) {
         setServices((current) => [...current, resp.data]);
@@ -1986,17 +1678,20 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               {filteredStaff.map((member) => (
                 <tr key={member._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {member.fullname}
+                    {member.fullname ?? member.name}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {member.email}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {positions.find((p) => p._id === member.position)?.title ??
-                      "Unassigned"}
+                    {positions.find(
+                      (p) => p._id === (member.positionId ?? member.position),
+                    )?.title ?? "Unassigned"}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {new Date(member.created).toLocaleDateString()}
+                    {new Date(
+                      member.created ?? member.createdAt ?? "",
+                    ).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
@@ -2025,13 +1720,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               {filteredAdmins.map((member) => (
                 <tr key={member._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {member.fullname}
+                    {member.fullname ?? member.name}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {member.email}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {new Date(member.created).toLocaleDateString()}
+                    {new Date(
+                      member.created ?? member.createdAt ?? "",
+                    ).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
@@ -2093,13 +1790,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               {filteredSkills.map((skill) => (
                 <tr key={skill._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {skill.title}
+                    {skill.title ?? skill.name}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {skill.description}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {new Date(skill.created).toLocaleDateString()}
+                    {new Date(
+                      skill.created ?? skill.createdAt ?? "",
+                    ).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
@@ -2176,20 +1875,20 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
               {filteredServices.map((service) => (
                 <tr key={service._id}>
                   <td className={`${styles.td} ${styles.tdName}`}>
-                    {service.title}
+                    {service.title ?? service.name}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
                     {service.description}
                   </td>
                   <td className={styles.td}>
                     <div className={styles.pillsWrap}>
-                      {service.skills.length > 0 ? (
-                        service.skills.map((skillId) => {
+                      {(service.skills?.length ?? 0) > 0 ? (
+                        service.skills!.map((skillId) => {
                           const skill = skills.find((s) => s._id === skillId);
                           if (!skill) return null;
                           return (
                             <span key={skillId} className={styles.pill}>
-                              {skill.title}
+                              {skill.title ?? skill.name}
                             </span>
                           );
                         })
@@ -2200,8 +1899,8 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                   </td>
                   <td className={styles.td}>
                     <div className={styles.pillsWrap}>
-                      {service.positions?.length > 0 ? (
-                        service.positions.map((positionId) => {
+                      {(service.positions?.length ?? 0) > 0 ? (
+                        service.positions!.map((positionId) => {
                           const position = positions.find(
                             (p) => p._id === positionId,
                           );
@@ -2218,7 +1917,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     </div>
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {new Date(service.created).toLocaleDateString()}
+                    {new Date(
+                      service.created ?? service.createdAt ?? "",
+                    ).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <DeleteButton
@@ -2248,7 +1949,9 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                     {client.about || "None"}
                   </td>
                   <td className={`${styles.td} ${styles.tdMuted}`}>
-                    {new Date(client.created).toLocaleDateString()}
+                    {new Date(
+                      client.created ?? client.createdAt ?? "",
+                    ).toLocaleDateString()}
                   </td>
                   <td className={`${styles.td} ${styles.tdActions}`}>
                     <div className={styles.actionsRow}>
@@ -2302,7 +2005,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
                         if (!skill) return null;
                         return (
                           <span key={skillId} className={styles.pill}>
-                            {skill.title}
+                            {skill.title ?? skill.name}
                           </span>
                         );
                       })}
@@ -2331,8 +2034,10 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
       {openModal === "staff" && (
         <PersonModal
           initialEmail={editingStaff?.email ?? ""}
-          initialName={editingStaff?.fullname ?? ""}
-          initialPositionId={editingStaff?.position ?? ""}
+          initialName={editingStaff?.fullname ?? editingStaff?.name ?? ""}
+          initialPositionId={
+            editingStaff?.positionId ?? editingStaff?.position ?? ""
+          }
           isSaving={isSavingStaff}
           title={editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
           positions={positions}
@@ -2353,7 +2058,13 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           onSave={(payload) => {
             setAdminMembers((current) => [
               ...current,
-              { _id: crypto.randomUUID(), created: new Date(), ...payload },
+              {
+                _id: crypto.randomUUID(),
+                createdAt: new Date(),
+                email: payload.email,
+                fullname: payload.fullname,
+                name: payload.fullname,
+              },
             ]);
             setOpenModal(null);
           }}
@@ -2365,7 +2076,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           initialValues={
             editingSkill
               ? {
-                  name: editingSkill.name,
+                  name: editingSkill.name ?? editingSkill.title,
                   category: editingSkill.category,
                   description: editingSkill.description,
                   certificationIds: editingSkill.certificationIds ?? [],
@@ -2472,962 +2183,6 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function SidebarButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active ? `${styles.navItem} ${styles.navItemActive}` : styles.navItem
-      }
-    >
-      <Icon />
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function ManagementTable({
-  headers,
-  children,
-  emptyMessage,
-}: {
-  headers: string[];
-  children: React.ReactNode;
-  emptyMessage: string;
-}) {
-  const childCount = Array.isArray(children)
-    ? children.length
-    : children
-      ? 1
-      : 0;
-
-  return (
-    <div className={styles.tableCard}>
-      <div className={styles.tableScroll}>
-        <table className={styles.table}>
-          <thead className={styles.thead}>
-            <tr>
-              {headers.map((header) => (
-                <th key={header} className={styles.th}>
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className={styles.tbody}>
-            {childCount > 0 ? (
-              children
-            ) : (
-              <tr>
-                <td colSpan={headers.length} className={styles.emptyColspan}>
-                  {emptyMessage}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function DeleteButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-    >
-      <Trash2 />
-    </button>
-  );
-}
-
-function EditButton({
-  disabled = false,
-  onClick,
-}: {
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={styles.iconBtn}
-    >
-      <Pencil />
-    </button>
-  );
-}
-
-function PersonModal({
-  initialEmail = "",
-  initialName = "",
-  initialPositionId = "",
-  isSaving = false,
-  title,
-  positions,
-  onSave,
-  onClose,
-}: {
-  initialEmail?: string;
-  initialName?: string;
-  initialPositionId?: string;
-  isSaving?: boolean;
-  title: string;
-  positions?: PositionItem[];
-  onSave: (payload: {
-    name: string;
-    email: string;
-    positionId?: string;
-  }) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(initialName);
-  const [email, setEmail] = useState(initialEmail);
-  const [positionId, setPositionId] = useState(initialPositionId);
-
-  useEffect(() => {
-    setName(initialName);
-    setEmail(initialEmail);
-    setPositionId(initialPositionId);
-  }, [initialEmail, initialName, initialPositionId]);
-
-  return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({
-            fullname: name.trim(),
-            email: email.trim(),
-            positionId: positionId || undefined,
-          });
-        }}
-      >
-        <ModalField label="Name">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-            disabled={isSaving}
-          />
-        </ModalField>
-
-        <ModalField label="Email">
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className={styles.formInput}
-            required
-            disabled={isSaving}
-          />
-        </ModalField>
-
-        {positions && (
-          <ModalField label="Position">
-            <select
-              value={positionId}
-              onChange={(event) => setPositionId(event.target.value)}
-              className={styles.formSelect}
-              required
-              disabled={isSaving}
-            >
-              <option value="">
-                {positions.length > 0
-                  ? "No position assigned"
-                  : "Create a position first"}
-              </option>
-              {positions.map((position) => (
-                <option key={position._id} value={position._id}>
-                  {position.title}
-                </option>
-              ))}
-            </select>
-            {positions.length === 0 && (
-              <p className={styles.hintText}>
-                Positions created in `Position Management` will appear here
-                automatically.
-              </p>
-            )}
-          </ModalField>
-        )}
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : "Save"}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function PlatformModal({
-  initialDescription = "",
-  initialName = "",
-  initialUrl = "",
-  isSaving = false,
-  title,
-  nameLabel,
-  onSave,
-  onClose,
-  submitLabel = "Save",
-}: {
-  initialDescription?: string;
-  initialName?: string;
-  initialUrl?: string;
-  isSaving?: boolean;
-  title: string;
-  nameLabel: string;
-  onSave: (payload: { name: string; description: string }) => void;
-  onClose: () => void;
-  submitLabel?: string;
-}) {
-  const [name, setName] = useState(initialName);
-  const [url, set_url] = useState(initialUrl);
-  const [description, setDescription] = useState(initialDescription);
-
-  useEffect(() => {
-    setName(initialName);
-    setDescription(initialDescription);
-    set_url(initialUrl);
-  }, [initialDescription, initialName, initialUrl]);
-
-  return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({
-            name: name.trim(),
-            url: url.trim(),
-            description: description.trim(),
-          });
-        }}
-      >
-        <ModalField label={nameLabel}>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="URL">
-          <input
-            type="text"
-            value={url}
-            onChange={(event) => set_url(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : submitLabel}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-type SkillPayload = {
-  name: string;
-  category: string;
-  description: string;
-  certificationIds: string[];
-  staffMemberId: string[];
-  proficiencyLevel: string;
-};
-
-type Certification = {
-  id: string;
-  name: string;
-};
-
-type StaffMember = {
-  id: string;
-  full_name: string;
-};
-
-function SkillModal({
-  initialValues,
-  certifications,
-  staffMembers,
-  isSaving = false,
-  title,
-  onSave,
-  onClose,
-  submitLabel = "Save",
-}: {
-  initialValues?: Partial<SkillPayload>;
-  certifications: Certification[];
-  staffMembers: StaffMember[];
-  isSaving?: boolean;
-  title: string;
-  onSave: (payload: SkillPayload) => void;
-  onClose: () => void;
-  submitLabel?: string;
-}) {
-  const [name, setName] = useState(initialValues?.name ?? "");
-  const [category, setCategory] = useState(initialValues?.category ?? "");
-  const [description, setDescription] = useState(
-    initialValues?.description ?? "",
-  );
-
-  const [selectedCertifications, setSelectedCertifications] = useState<
-    string[]
-  >(initialValues?.certificationIds ?? []);
-
-  const [proficiencyLevel, setProficiencyLevel] = useState(
-    initialValues?.proficiencyLevel ?? "",
-  );
-
-  const [selectedStaffMembers, setSelectedStaffMembers] = useState<string[]>(
-    initialValues?.staffMemberIds ?? [],
-  );
-
-  const toggleStaffMember = (staffId: string) => {
-    setSelectedStaffMembers((current) =>
-      current.includes(staffId)
-        ? current.filter((id) => id !== staffId)
-        : [...current, staffId],
-    );
-  };
-
-  useEffect(() => {
-    setName(initialValues?.name ?? "");
-    setCategory(initialValues?.category ?? "");
-    setDescription(initialValues?.description ?? "");
-    setSelectedCertifications(initialValues?.certificationIds ?? []);
-    setSelectedStaffMembers(initialValues?.staffMemberIds ?? []);
-    setProficiencyLevel(initialValues?.proficiencyLevel ?? "");
-  }, [initialValues]);
-
-  const toggleCertification = (certificationId: string) => {
-    setSelectedCertifications((current) =>
-      current.includes(certificationId)
-        ? current.filter((id) => id !== certificationId)
-        : [...current, certificationId],
-    );
-  };
-
-  return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-
-          onSave({
-            name: name.trim(),
-            category,
-            description: description.trim(),
-            certificationIds: selectedCertifications,
-            staffMemberIds: selectedStaffMembers,
-            proficiencyLevel,
-          });
-        }}
-      >
-        <ModalField label="Skill Name">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Category">
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className={styles.formSelect}
-            required
-          >
-            <option value="">Select Category</option>
-            <option value="financial_management">Financial Management</option>
-            <option value="consulting">Consulting</option>
-            <option value="human_capital">Human Capital</option>
-            <option value="technology">Technology</option>
-            <option value="emergency_management">Emergency Management</option>
-          </select>
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Related Certifications">
-          <div className={styles.checkboxGroup}>
-            {certifications.map((certification) => (
-              <label key={certification.id} className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={selectedCertifications.includes(certification.id)}
-                  onChange={() => toggleCertification(certification.id)}
-                />
-                {certification.name}
-              </label>
-            ))}
-          </div>
-        </ModalField>
-
-        <ModalField label="Staff Members Possessing Skill">
-          <div className={styles.checkboxGroup}>
-            {staffMembers.map((staff) => (
-              <label key={staff.id} className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={selectedStaffMembers.includes(staff.id)}
-                  onChange={() => toggleStaffMember(staff.id)}
-                />
-                &nbsp;{staff.fullname}
-              </label>
-            ))}
-          </div>
-        </ModalField>
-
-        <ModalField label="Proficiency Level">
-          <select
-            value={proficiencyLevel}
-            onChange={(event) => setProficiencyLevel(event.target.value)}
-            className={styles.formSelect}
-            required
-          >
-            <option value="">Select Level</option>
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-            <option value="Expert">Expert</option>
-          </select>
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : submitLabel}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function RegistryModal({
-  initialDescription = "",
-  initialName = "",
-  isSaving = false,
-  title,
-  nameLabel,
-  onSave,
-  onClose,
-  submitLabel = "Save",
-}: {
-  initialDescription?: string;
-  initialName?: string;
-  isSaving?: boolean;
-  title: string;
-  nameLabel: string;
-  onSave: (payload: { name: string; description: string }) => void;
-  onClose: () => void;
-  submitLabel?: string;
-}) {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-
-  useEffect(() => {
-    setName(initialName);
-    setDescription(initialDescription);
-  }, [initialDescription, initialName]);
-
-  return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({ name: name.trim(), description: description.trim() });
-        }}
-      >
-        <ModalField label={nameLabel}>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : submitLabel}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function ClientModal({
-  initialAbout = "",
-  initialName = "",
-  isSaving = false,
-  title,
-  onSave,
-  onClose,
-}: {
-  initialAbout?: string;
-  initialName?: string;
-  isSaving?: boolean;
-  title: string;
-  onSave: (payload: Omit<ClientItem, "_id" | "createdAt">) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(initialName);
-  const [about, setAbout] = useState(initialAbout);
-
-  useEffect(() => {
-    setName(initialName);
-    setAbout(initialAbout);
-  }, [initialAbout, initialName]);
-
-  return (
-    <BaseModal title={title} onClose={onClose}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({ name: name.trim(), about: about.trim() });
-        }}
-      >
-        <ModalField label="Name">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="About">
-          <textarea
-            value={about}
-            onChange={(event) => setAbout(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : "Save"}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function ServiceModal({
-  title,
-  skills,
-  positions,
-  isSaving = false,
-  onSave,
-  onClose,
-}: {
-  title: string;
-  skills: SkillItem[];
-  positions: PositionItem[];
-  isSaving?: boolean;
-  onSave: (payload: Omit<ServiceItem, "_id" | "createdAt">) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
-  const [selectedPositionIds, setSelectedPositionIds] = useState<string[]>([]);
-
-  const toggleSkill = (skillId: string) => {
-    setSelectedSkillIds((current) =>
-      current.includes(skillId)
-        ? current.filter((item) => item !== skillId)
-        : [...current, skillId],
-    );
-  };
-
-  const togglePosition = (positionId: string) => {
-    setSelectedPositionIds((current) =>
-      current.includes(positionId)
-        ? current.filter((item) => item !== positionId)
-        : [...current, positionId],
-    );
-  };
-
-  return (
-    <BaseModal title={title} onClose={onClose} wide>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({
-            title: name.trim(),
-            description: description.trim(),
-            skills: selectedSkillIds,
-            positions: selectedPositionIds,
-          });
-        }}
-      >
-        <ModalField label="Title">
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Skills">
-          {skills.length > 0 ? (
-            <div className={styles.checkboxGrid}>
-              {skills.map((skill) => (
-                <label key={skill._id} className={styles.checkPill}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSkillIds.includes(skill._id)}
-                    onChange={() => toggleSkill(skill._id)}
-                  />
-                  <span>{skill.title}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyHint}>
-              No skills yet. Create skills first and they will appear here
-              automatically.
-            </p>
-          )}
-        </ModalField>
-
-        <ModalField label="Positions">
-          {positions.length > 0 ? (
-            <div className={styles.checkboxGrid}>
-              {positions.map((position) => (
-                <label key={position._id} className={styles.checkPill}>
-                  <input
-                    type="checkbox"
-                    checked={selectedPositionIds.includes(position._id)}
-                    onChange={() => togglePosition(position._id)}
-                  />
-                  <span>{position.title}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyHint}>
-              No positions yet. Create positions first and they will appear here
-              automatically.
-            </p>
-          )}
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : "Save"}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function PositionModal({
-  title,
-  skills,
-  initialTitle = "",
-  initialDescription = "",
-  initialResponsibilities = [""],
-  initialSkillIds = [],
-  isSaving = false,
-  onSave,
-  onClose,
-}: {
-  title?: string;
-  skills: SkillItem[];
-  initialTitle?: string;
-  initialDescription?: string;
-  initialResponsibilities?: string[];
-  initialSkillIds?: string[];
-  isSaving?: boolean;
-  onSave: (payload: Omit<PositionItem, "_id" | "createdAt">) => void;
-  onClose: () => void;
-}) {
-  const [positionTitle, setPositionTitle] = useState(initialTitle);
-  const [description, setDescription] = useState(initialDescription);
-  const [responsibilities, setResponsibilities] = useState<string[]>(
-    initialResponsibilities.length > 0 ? initialResponsibilities : [""],
-  );
-  const [selectedSkillIds, setSelectedSkillIds] =
-    useState<string[]>(initialSkillIds);
-
-  const updateResponsibility = (index: number, value: string) => {
-    setResponsibilities((current) =>
-      current.map((item, itemIndex) => (itemIndex === index ? value : item)),
-    );
-  };
-
-  const removeResponsibility = (index: number) => {
-    setResponsibilities((current) =>
-      current.length === 1
-        ? [""]
-        : current.filter((_, itemIndex) => itemIndex !== index),
-    );
-  };
-
-  const toggleSkill = (skillId: string) => {
-    setSelectedSkillIds((current) =>
-      current.includes(skillId)
-        ? current.filter((item) => item !== skillId)
-        : [...current, skillId],
-    );
-  };
-
-  return (
-    <BaseModal
-      title={title ?? "Add New Position"}
-      onClose={onClose}
-      maxWidthClass="max-w-[760px]"
-    >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave({
-            title: positionTitle.trim(),
-            description: description.trim(),
-            responsibilities: responsibilities
-              .map((item) => item.trim())
-              .filter(Boolean),
-            skillIds: selectedSkillIds,
-          });
-        }}
-      >
-        <ModalField label="Title">
-          <input
-            type="text"
-            value={positionTitle}
-            onChange={(event) => setPositionTitle(event.target.value)}
-            className={styles.formInput}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Description">
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={4}
-            className={styles.formTextarea}
-            required
-          />
-        </ModalField>
-
-        <ModalField label="Responsibilities">
-          <div>
-            {responsibilities.map((responsibility, index) => (
-              <div key={`responsibility-${index}`} className={styles.respRow}>
-                <input
-                  type="text"
-                  value={responsibility}
-                  onChange={(event) =>
-                    updateResponsibility(index, event.target.value)
-                  }
-                  placeholder={`Responsibility ${index + 1}`}
-                  className={styles.formInput}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeResponsibility(index)}
-                  className={styles.respRemove}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => setResponsibilities((current) => [...current, ""])}
-              className={styles.addRespBtn}
-            >
-              + Add responsibility
-            </button>
-          </div>
-        </ModalField>
-
-        <ModalField label="Skills">
-          {skills.length > 0 ? (
-            <div className={styles.checkboxGrid}>
-              {skills.map((skill) => (
-                <label key={skill._id} className={styles.checkPill}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSkillIds.includes(skill._id)}
-                    onChange={() => toggleSkill(skill._id)}
-                  />
-                  <span>{skill.title}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyHint}>
-              No skills yet. Create skills first and then link them to this
-              position.
-            </p>
-          )}
-        </ModalField>
-
-        <ModalActions
-          onClose={onClose}
-          submitDisabled={isSaving}
-          submitLabel={isSaving ? "Saving..." : "Save"}
-        />
-      </form>
-    </BaseModal>
-  );
-}
-
-function BaseModal({
-  title,
-  onClose,
-  children,
-  wide = false,
-  maxWidthClass,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-  wide?: boolean;
-  maxWidthClass?: string;
-}) {
-  return (
-    <div className={styles.modalOverlay}>
-      <div
-        className={
-          wide || maxWidthClass
-            ? `${styles.modal} ${styles.modalWide}`
-            : styles.modal
-        }
-      >
-        <div className={styles.modalHead}>
-          <h3>{title}</h3>
-          <button type="button" onClick={onClose} className={styles.modalClose}>
-            <X />
-          </button>
-        </div>
-        <div className={styles.modalBody}>{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={styles.formGroup}>
-      <label className={styles.formLabel}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function ModalActions({
-  onClose,
-  submitDisabled = false,
-  submitLabel = "Save",
-}: {
-  onClose: () => void;
-  submitDisabled?: boolean;
-  submitLabel?: string;
-}) {
-  return (
-    <div className={styles.formActions}>
-      <button type="button" onClick={onClose} className={styles.btnCancel}>
-        Cancel
-      </button>
-      <button
-        type="submit"
-        disabled={submitDisabled}
-        className={styles.btnSave}
-      >
-        {submitLabel}
-      </button>
     </div>
   );
 }
