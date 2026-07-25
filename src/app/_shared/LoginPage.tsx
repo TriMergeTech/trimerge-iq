@@ -12,12 +12,12 @@ import {
   Shield,
   User,
 } from "lucide-react";
-import { PROFILE_SERVICE } from "./adminAuth";
+import { PROFILE_SERVICE, ADMIN_API_BASE_URL } from "./adminAuth";
 import styles from "./LoginPage.module.css";
 
 interface LoginPageProps {
-  onLoginSuccess: () => void;
-  kind: string;
+  onLoginSuccess?: () => void;
+  kind?: string;
 }
 
 type ViewMode = "login" | "signup" | "verify" | "forgotPassword" | "resetSent";
@@ -91,17 +91,17 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
       "Using platform API key:",
       process.env.NEXT_PUBLIC_PROFILE_API_KEY,
     );
-    let response = await fetch(`${PROFILE_SERVICE}/signin`, {
+    let rawResponse = await fetch(`${PROFILE_SERVICE}/signin`, {
       method: "POST",
       headers: {
         "x-api-version": "v3",
-        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
 
-    response = await response.json();
+    const response = await rawResponse.json();
 
     if (!response.ok) {
       throw new Error(response?.message ?? "Login failed.");
@@ -129,7 +129,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
       setIsLoading(true);
       console.log("Attempting login with email:", email, password);
       await loginWithCredentials(email, password);
-      onLoginSuccess();
+      onLoginSuccess?.();
     } catch (loginError) {
       setError(
         loginError instanceof Error ? loginError.message : "Unable to sign in.",
@@ -247,7 +247,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
       }
 
       await loginWithCredentials(verifyEmail, verifyPassword);
-      onLoginSuccess();
+      onLoginSuccess?.();
     } catch (verifyError) {
       setError(
         verifyError instanceof Error

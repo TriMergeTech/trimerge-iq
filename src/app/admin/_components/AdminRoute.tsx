@@ -35,7 +35,7 @@ export default function AdminRoute() {
       method: "POST",
       headers: {
         "x-api-version": "v3",
-        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY,
+        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
         "Content-Type": "application/json",
         Authorization: `Bearer ${localStorage.getItem("trimerge_admin_access_token")}`,
       },

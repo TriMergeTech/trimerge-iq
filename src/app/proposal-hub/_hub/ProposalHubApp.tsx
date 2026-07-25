@@ -28,20 +28,10 @@ import ProposalForm from "./components/ProposalForm";
 import ProposalWorkspace from "./components/ProposalWorkspace";
 import ToolGenerator from "./components/ToolGenerator";
 import { post_request } from "./utils/services";
-
-interface Proposal {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  budget: string;
-  timeline: string;
-  status: "draft" | "submitted" | "approved" | "rejected";
-  createdAt: Date;
-}
+import type { Proposal } from "./types";
 
 export default function App() {
-  const [proposals, setProposals] = useState<Proposal[]>(null);
+  const [proposals, setProposals] = useState<Proposal[] | null>(null);
 
   let [page, set_page] = useState(1);
   const [view, setView] = useState<string>("list");
@@ -63,7 +53,7 @@ export default function App() {
       status: "draft",
       createdAt: new Date(),
     };
-    setProposals([newProposal, ...proposals]);
+    setProposals([newProposal, ...(proposals || [])]);
     setView("list");
   };
 
@@ -80,7 +70,7 @@ export default function App() {
   }, []);
 
   const handleViewProposal = (_id: string) => {
-    const proposal = proposals.find((p) => p._id === _id);
+    const proposal = proposals?.find((p) => p._id === _id);
     if (proposal) {
       setSelectedProposal(proposal);
       setView("detail");
@@ -88,7 +78,7 @@ export default function App() {
   };
 
   const handleDeleteProposal = async (_id: string) => {
-    setProposals((prev) => prev.filter((p) => p._id !== _id));
+    setProposals((prev) => (prev || []).filter((p) => p._id !== _id));
 
     await post_request("delete_proposal", {
       proposal: _id,
@@ -96,7 +86,7 @@ export default function App() {
   };
 
   const handleEditProposal = (_id: string) => {
-    const proposal = proposals.find((p) => p._id === _id);
+    const proposal = proposals?.find((p) => p._id === _id);
     if (proposal) {
       setSelectedProposal(proposal);
       setView("edit");
@@ -115,7 +105,7 @@ export default function App() {
   const apiBaseUrl = isLocalDev ? "/api" : "https://trimerge-iq.onrender.com";
   const toolEndpoint = `${apiBaseUrl}/tools/6a0f6fb93995d6cbe80d82e9`;
 
-  const draftProposals = null;
+  const draftProposals = null as Proposal[] | null;
   const filteredProposals = proposals;
 
   const formatDate = (date: Date) => {
@@ -132,11 +122,11 @@ export default function App() {
     return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? "s" : ""} ago`;
   };
 
-  const on_delete_section = (proposal) => {
+  const on_delete_section = (proposal?: string) => {
     setProposals((prev) => {
-      return prev.map((p) => {
+      return (prev || []).map((p) => {
         if (p._id === proposal) {
-          p.sections -= 1;
+          p.sections = (p.sections || 0) - 1;
         }
 
         return p;
@@ -445,7 +435,7 @@ export default function App() {
                                       "0 0 18px rgba(124,92,255,0.38)",
                                   },
                                 }}
-                                onClick={() => handleViewProposal(proposal._id)}
+                                onClick={() => handleViewProposal(proposal._id ?? "")}
                               >
                                 {proposal.title}
                                 {/* {proposal.status === "draft" &&
@@ -492,7 +482,7 @@ export default function App() {
                                 py: 2.5,
                               }}
                             >
-                              {formatDate(new Date(proposal.created))}
+                              {formatDate(new Date(proposal.created ?? ""))}
                             </TableCell>
                             <TableCell
                               align="right"
@@ -643,12 +633,13 @@ export default function App() {
                 ...proposalDraft,
               };
               setProposals((prev) => {
-                let exists = prev.find((pr) => pr._id === newProposal._id);
+                let list = prev || [];
+                let exists = list.find((pr) => pr._id === newProposal._id);
                 if (exists)
-                  return prev.map((p) =>
+                  return list.map((p) =>
                     p._id === newProposal._id ? newProposal : p,
                   );
-                return [newProposal, ...prev];
+                return [newProposal, ...list];
               });
               setSelectedProposal(newProposal);
               setView("detail");
@@ -660,7 +651,7 @@ export default function App() {
           <ToolGenerator
             endpoint={toolEndpoint}
             on_generated={(proposal) => {
-              setProposals((current) => [proposal, ...current]);
+              setProposals((current) => [proposal, ...(current || [])]);
             }}
             on_view_proposal={(proposal) => {
               setView("detail");
@@ -741,8 +732,8 @@ export default function App() {
               initialData={selectedProposal}
               onSubmit={(data) => {
                 setProposals(
-                  proposals.map((p) =>
-                    p.id === selectedProposal.id
+                  (proposals || []).map((p) =>
+                    p.id === selectedProposal?.id
                       ? { ...p, ...data, createdAt: new Date() }
                       : p,
                   ),
@@ -763,7 +754,7 @@ export default function App() {
             onDeleteSection={on_delete_section}
             onSave={(updatedProposal) => {
               setProposals((current) =>
-                current.map((proposal) =>
+                (current || []).map((proposal) =>
                   proposal._id === updatedProposal._id
                     ? updatedProposal
                     : proposal,

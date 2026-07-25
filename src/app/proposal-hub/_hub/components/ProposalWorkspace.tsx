@@ -47,36 +47,13 @@ import {
 import "./proposal-workspace.css";
 import { Box } from "@mui/material";
 import { post_request, TRIMERGE_BACKEND } from "../utils/services";
-
-type ProposalStatus =
-  | "draft"
-  | "submitted"
-  | "in_review"
-  | "changes_requested"
-  | "approved"
-  | "rejected";
-
-interface Proposal {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  budget: string;
-  timeline: string;
-  status: ProposalStatus;
-  createdAt: Date;
-}
-
-interface Section {
-  id: string;
-  title: string;
-  body: string;
-}
+import type { Proposal, ProposalStatus, Section } from "../types";
 
 interface ProposalWorkspaceProps {
-  proposal: Proposal;
+  proposal: Proposal | null;
   onBack: () => void;
   onSave: (proposal: Proposal) => void;
+  onDeleteSection: (proposalId?: string) => void;
   onSubmitForReview?: (proposal: Proposal) => void;
   isNew?: boolean;
 }
@@ -95,7 +72,7 @@ export default function ProposalWorkspace({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [adding_section, set_adding_section] = useState(false);
   const [proposal_id, set_proposal_id] = useState(proposal?._id);
-  const [tool_data, set_tool_data] = useState(null);
+  const [tool_data, set_tool_data] = useState<any>(null);
   const [saving_proposal_data, set_saving_proposal_data] = useState(false);
   const { feedbacks, pushFeedback, removeFeedback } = useFeedback();
 
@@ -184,7 +161,7 @@ export default function ProposalWorkspace({
       }
 
       set_tool_data(res);
-      let propss = {};
+      let propss: Record<string, string> = {};
       for (let p in res.arguments) {
         let arg = res.arguments[p];
 
@@ -197,8 +174,8 @@ export default function ProposalWorkspace({
     new_proposal();
   }, []);
 
-  const clean_proposal = (proposal) => {
-    let pp = { ...proposal };
+  const clean_proposal = (proposal: Proposal | null) => {
+    let pp: Proposal = { ...proposal };
 
     delete pp._id;
     delete pp.created;
@@ -229,7 +206,7 @@ export default function ProposalWorkspace({
   const [savedAt, setSavedAt] = useState(
     isNew ? "Unsaved draft" : "Autosaved 2 min ago",
   );
-  const [sections, setSections] = useState<Section[]>(null);
+  const [sections, setSections] = useState<Section[] | null>(null);
 
   useEffect(() => {
     let get_sections = async () => {
@@ -262,14 +239,16 @@ export default function ProposalWorkspace({
       _id: sec.data._id,
       created: sec.data.created,
     };
-    setSections((current) => [...current, sec]);
+    setSections((current) => [...(current || []), sec]);
 
-    let sections = (proposal.sections || 0) + 1;
+    let sections = (proposal?.sections || 0) + 1;
     onSave({ ...proposal, sections });
   };
 
   const deleteSection = async (id: string) => {
-    setSections((current) => current.filter((section) => section._id !== id));
+    setSections((current) =>
+      (current || []).filter((section) => section._id !== id),
+    );
 
     await post_request("delete_section", {
       section: id,
@@ -281,25 +260,28 @@ export default function ProposalWorkspace({
 
   const moveSection = (id: string) => {
     setSections((current) => {
-      const index = current.findIndex((section) => section._id === id);
-      if (index < 0 || current.length < 2) return current;
-      const next = [...current];
+      const list = current || [];
+      const index = list.findIndex((section) => section._id === id);
+      if (index < 0 || list.length < 2) return list;
+      const next = [...list];
       const [item] = next.splice(index, 1);
-      next.splice(index === current.length - 1 ? 0 : index + 1, 0, item);
+      next.splice(index === list.length - 1 ? 0 : index + 1, 0, item);
       return next;
     });
   };
 
   const buildProposalPayload = (
-    status: ProposalStatus = proposal.status,
-  ): Proposal => {};
+    status: ProposalStatus = proposal?.status || "draft",
+  ): Proposal => {
+    return { ...proposal, status };
+  };
 
   const saveDraft = () => {
     onSave(buildProposalPayload("draft"));
     setSavedAt("Draft saved just now");
   };
 
-  const validate_proposal_data = (proposalData) => {
+  const validate_proposal_data = (proposalData: Record<string, any>) => {
     // If no tool metadata is available, do a minimal check
     if (!tool_data || !tool_data.arguments) {
       // ensure at least one field exists
@@ -411,7 +393,7 @@ export default function ProposalWorkspace({
       res = await post_request("add_proposal", { proposal: proposal_ });
       proposal = res.data;
 
-      set_proposal_id(proposal._id);
+      set_proposal_id(proposal?._id);
     } else {
       res = await post_request("update_proposal", { proposal: proposal_ });
     }
@@ -487,7 +469,7 @@ export default function ProposalWorkspace({
 
     const nextBody = editor.innerHTML;
     setSections((current) =>
-      current.map((item) =>
+      (current || []).map((item) =>
         item.id === sectionId
           ? item.body === nextBody
             ? item
@@ -665,12 +647,12 @@ export default function ProposalWorkspace({
 
     const payload = sections?.filter((s) => dirtySectionsRef.current[s._id]);
 
-    if (payload.length === 0) return;
+    if (!payload || payload.length === 0) return;
 
     set_syncing_dirty(true);
     const res = await post_request("update_sections", {
       sections: payload,
-      proposal_id: proposal._id,
+      proposal_id: proposal?._id,
     });
     set_syncing_dirty(false);
     if (res.ok) {
@@ -701,21 +683,21 @@ export default function ProposalWorkspace({
 
       set_saving_bulk(true);
       let res = await post_request("add_bulk_sections", {
-        proposal: proposal._id,
+        proposal: proposal?._id,
         sections,
       });
 
       if (res.ok) {
         pushFeedback(res.message, "success");
-        setSections((prev) => [...prev, ...res.data.sections]);
-        let secs = (proposal.sections || 0) + res.data.length;
+        setSections((prev) => [...(prev || []), ...res.data.sections]);
+        let secs = (proposal?.sections || 0) + res.data.length;
         onSave({ ...proposal, sections: secs });
       } else {
         throw new Error(res.message);
       }
     } catch (err) {
       console.error(err);
-      pushFeedback(err.message, "error");
+      pushFeedback(err instanceof Error ? err.message : "Something went wrong", "error");
     }
     set_saving_bulk(false);
   };
@@ -901,7 +883,7 @@ export default function ProposalWorkspace({
                         const value = event.target.value;
 
                         setSections((current) =>
-                          current.map((item) =>
+                          (current || []).map((item) =>
                             item._id === section._id
                               ? { ...item, title: value }
                               : item,
@@ -1139,7 +1121,7 @@ export default function ProposalWorkspace({
                       const nextBody = event.currentTarget.innerHTML;
 
                       setSections((current) =>
-                        current.map((item) =>
+                        (current || []).map((item) =>
                           item._id === section._id
                             ? { ...item, body: nextBody }
                             : item,

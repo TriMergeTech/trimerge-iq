@@ -105,7 +105,7 @@ export default function Sidebar({ activeView, onNavigate, draftCount = 0, review
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                     <span>{item.label}</span>
-                    {'count' in item && item.count > 0 && (
+                    {'count' in item && (item.count ?? 0) > 0 && (
                       <Box
                         component="span"
                         sx={{

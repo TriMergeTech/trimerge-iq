@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight, Download, FileText, Table2 } from "lucide-react";
 import { BACKEND } from "../utils/services";
+import type { FeedbackType } from "./feedback/types";
 
 interface ProposalExportDropdownProps {
   proposalId?: string;
-  pushFeedback: (message: string, type?: string) => void;
+  pushFeedback: (message: string, type?: FeedbackType, duration?: number) => void;
   post_request: (endpoint: string, body?: any) => Promise<any>;
 }
 
@@ -43,7 +44,7 @@ export default function ProposalExportDropdown({
     setExporting(format);
 
     try {
-      let res = await fetch(`${BACKEND}/export_to_document`, {
+      const response = await fetch(`${BACKEND}/export_to_document`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,7 +55,7 @@ export default function ProposalExportDropdown({
         }),
       });
 
-      res = await res.json();
+      const res = await response.json();
 
       if (!res.ok) {
         pushFeedback(res.message || `Failed to export ${format}`, "error");
