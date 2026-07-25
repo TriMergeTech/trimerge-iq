@@ -21,13 +21,13 @@ import {
   readStoredAdminPeople,
   writeStoredAdminPeople,
   type StoredAdminPerson,
-} from "./adminRegistryState";
+} from "../../_shared/adminRegistryState";
 import {
   ADMIN_API_BASE_URL,
   API_BASE_URL,
   authenticatedAdminFetch,
   PROFILE_SERVICE,
-} from "./adminAuth";
+} from "../../_shared/adminAuth";
 import styles from "./AdminPage.module.css";
 
 type AdminSection =

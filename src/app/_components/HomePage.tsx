@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import styles from "./HomePage.module.css";
-import Navbar from "./Navbar";
+import Navbar from "../_shared/Navbar";
 
 const services = [
   {

@@ -1,6 +1,6 @@
 import type { ChatEntityId, Conversation, Message, ProjectFormOption, UploadedFile } from "./chatPageTypes";
-import { readStoredAdminPeople } from "./adminRegistryState";
-import { authenticatedAdminFetch } from "./adminAuth";
+import { readStoredAdminPeople } from "../../_shared/adminRegistryState";
+import { authenticatedAdminFetch } from "../../_shared/adminAuth";
 
 const DEFAULT_CHAT_API_BASE_URL = "https://trimerge-microserver-v3.vercel.app/v2";
 const DEFAULT_PROJECTS_API_BASE_URL = "https://trimerge-iq.onrender.com";

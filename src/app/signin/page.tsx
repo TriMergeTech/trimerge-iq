@@ -1,7 +1,7 @@
 "use client";
 
-import LoginPage from "../components/LoginPage";
-import Navbar from "../components/Navbar";
+import LoginPage from "../_shared/LoginPage";
+import Navbar from "../_shared/Navbar";
 
 const Signin = () => {
   return (

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminPage from "./AdminPage";
-import LoginPage from "./LoginPage";
-import Navbar from "./Navbar";
-import { PROFILE_SERVICE } from "./adminAuth";
+import LoginPage from "../../_shared/LoginPage";
+import Navbar from "../../_shared/Navbar";
+import { PROFILE_SERVICE } from "../../_shared/adminAuth";
 
 export default function AdminRoute() {
   const router = useRouter();

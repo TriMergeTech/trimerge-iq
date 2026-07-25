@@ -1,12 +1,12 @@
 "use client";
 
-import SearchPage from "../components/SearchPage";
+import SearchPage from "./_components/SearchPage";
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import LoginPage from "../components/LoginPage";
-import Navbar from "../components/Navbar";
-import { PROFILE_SERVICE } from "../components/adminAuth";
+import LoginPage from "../_shared/LoginPage";
+import Navbar from "../_shared/Navbar";
+import { PROFILE_SERVICE } from "../_shared/adminAuth";
 
 export default function Route_sign() {
   const router = useRouter();

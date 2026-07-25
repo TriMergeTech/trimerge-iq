@@ -8,7 +8,7 @@ import styles from "./ChatPage.module.css";
 import {
   readStoredAdminPeople,
   writeStoredAdminPeople,
-} from "./adminRegistryState";
+} from "../../_shared/adminRegistryState";
 import { createClientOption, createShareLink, fetchConversations, fetchMessages, fetchProjectFormOptions, fetchProjects, getChatProfile, renameConversation, updateProject as updateApiProject } from "./chatApi";
 import { applyConversationOverrides, persistConversationOverride, readStoredProjectNames, readStoredProjects, writeStoredProjects } from "./chatLocalState";
 import ConversationMenuItem from "./ConversationMenuItem";
