@@ -2,6 +2,10 @@ export interface UploadedFile {
   name: string;
   size: number;
   type: string;
+  file?: File;
+  extractedRfpData?: Record<string, unknown>;
+  extractionStatus?: "pending" | "ready" | "error";
+  extractionError?: string;
 }
 
 export type ChatEntityId = number | string;
@@ -12,6 +16,7 @@ export interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   files?: UploadedFile[];
+  pendingTool?: string | null;
 }
 
 export interface Project {
@@ -44,6 +49,7 @@ export interface Conversation {
   recentMessage?: string;
   pinned?: boolean;
   archived?: boolean;
+  pendingTool?: string | null;
 }
 
 export const serviceOptions = [

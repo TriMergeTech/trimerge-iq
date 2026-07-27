@@ -34,6 +34,8 @@ export default function ChatComposer({
   setIsAttachmentMenuOpen,
 }: ChatComposerProps) {
   const canSubmit = (inputMessage.trim().length > 0 || attachedFiles.length > 0) && !isTyping;
+  const hasPendingRfp = attachedFiles.some((file) => file.extractionStatus === "pending");
+  const hasErroredRfp = attachedFiles.some((file) => file.extractionStatus === "error");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,7 +51,7 @@ export default function ChatComposer({
         type="file"
         multiple
         className="hidden"
-        accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.ppt,.pptx"
+        accept=".pdf"
         onChange={onFileSelect}
       />
       <input
@@ -75,8 +77,8 @@ export default function ChatComposer({
               />
               <AttachMenuItem
                 icon={<FileText className="h-5 w-5" />}
-                label="Upload files"
-                caption="Attach documents and spreadsheets"
+                label="Upload an RFP"
+                caption="Attach a PDF opportunity document"
                 onClick={() => {
                   fileInputRef.current?.click();
                   closeAttachmentMenu();
@@ -102,6 +104,18 @@ export default function ChatComposer({
             <Plus className={`${styles.attachIcon} ${isAttachmentMenuOpen ? styles.attachIconOpen : ""}`} />
           </button>
       </div>
+
+      {attachedFiles.length > 0 && (
+        <span className={`${styles.attachmentBadge} ${hasErroredRfp ? styles.attachmentBadgeError : ""}`}>
+          {hasErroredRfp
+            ? "RFP error"
+            : hasPendingRfp
+              ? "Extracting RFP"
+              : attachedFiles.length === 1
+                ? "RFP ready"
+                : `${attachedFiles.length} RFPs ready`}
+        </span>
+      )}
 
       <input
         type="text"

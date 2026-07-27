@@ -118,6 +118,25 @@
   color: rgba(216, 219, 227, 0.42);
 }
 
+.attachmentBadge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 217, 138, 0.28);
+  background: rgba(240, 217, 138, 0.09);
+  color: #f0d98a;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.attachmentBadgeError {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.1);
+  color: #fecaca;
+}
+
 .input {
   flex: 1;
   border: none;

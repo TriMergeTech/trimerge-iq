@@ -9,7 +9,7 @@ import {
   readStoredAdminPeople,
   writeStoredAdminPeople,
 } from "../../_shared/adminRegistryState";
-import { createClientOption, createShareLink, fetchConversations, fetchMessages, fetchProjectFormOptions, fetchProjects, getChatProfile, renameConversation, updateProject as updateApiProject } from "./chatApi";
+import { createClientOption, createShareLink, extractRfpFromFile, fetchConversations, fetchMessages, fetchProjectFormOptions, fetchProjects, getChatProfile, renameConversation, updateProject as updateApiProject } from "./chatApi";
 import { applyConversationOverrides, persistConversationOverride, readStoredProjectNames, readStoredProjects, writeStoredProjects } from "./chatLocalState";
 import ConversationMenuItem from "./ConversationMenuItem";
 import ConversationView from "./ConversationView";
@@ -551,7 +551,7 @@ export default function ChatPage() {
       setLastChatError("");
 
       try {
-        const messages = await fetchMessages(activeConversationId);
+        const { messages, pendingTool } = await fetchMessages(activeConversationId);
         if (isCancelled) return;
 
         setConversations((current) =>
@@ -561,6 +561,7 @@ export default function ChatPage() {
                   ...conversation,
                   updatedAt: messages[messages.length - 1]?.timestamp ?? conversation.updatedAt,
                   messages,
+                  pendingTool: pendingTool === undefined ? conversation.pendingTool : pendingTool,
                 }
               : conversation,
           ),
@@ -613,8 +614,47 @@ export default function ChatPage() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-    setAttachedFiles((current) => [...current, ...Array.from(files).map((file) => ({ name: file.name, size: file.size, type: file.type }))]);
+    const selectedFiles = Array.from(files).map((file) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      file,
+      extractionStatus: file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "pending" as const : undefined,
+    }));
+
+    setAttachedFiles((current) => [
+      ...current,
+      ...selectedFiles,
+    ]);
     event.target.value = "";
+
+    selectedFiles.forEach((selectedFile) => {
+      if (!selectedFile.file || selectedFile.extractionStatus !== "pending") return;
+
+      void extractRfpFromFile(selectedFile.file)
+        .then((extractedRfpData) => {
+          setAttachedFiles((current) =>
+            current.map((file) =>
+              file.name === selectedFile.name && file.size === selectedFile.size
+                ? { ...file, extractedRfpData, extractionStatus: "ready" as const, extractionError: undefined }
+                : file,
+            ),
+          );
+        })
+        .catch((error) => {
+          setAttachedFiles((current) =>
+            current.map((file) =>
+              file.name === selectedFile.name && file.size === selectedFile.size
+                ? {
+                    ...file,
+                    extractionStatus: "error" as const,
+                    extractionError: error instanceof Error ? error.message : "RFP extraction failed.",
+                  }
+                : file,
+            ),
+          );
+        });
+    });
   };
 
   const {
@@ -963,9 +1003,20 @@ export default function ChatPage() {
               <div className="px-6 pb-3 lg:px-12">
                 <div className="mx-auto flex max-w-[1160px] flex-wrap gap-2">
                   {attachedFiles.map((file) => (
-                    <div key={file.name} className="flex items-center gap-2 rounded-2xl border border-[#7c5cff]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
-                      {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                      <span className="max-w-[160px] truncate text-sm">{file.name}</span>
+                    <div key={file.name} className="flex items-center gap-3 rounded-2xl border border-[#7c5cff]/22 bg-[#101827]/80 px-3 py-2 text-white/88">
+                      {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4 shrink-0" /> : <FileText className="h-4 w-4 shrink-0" />}
+                      <span className="min-w-0">
+                        <span className="block max-w-[220px] truncate text-sm font-medium">{file.name}</span>
+                        {file.extractionStatus === "pending" && (
+                          <span className="block text-xs text-[#f0d98a]/75">Extracting RFP...</span>
+                        )}
+                        {file.extractionStatus === "ready" && (
+                          <span className="block text-xs text-emerald-200/80">RFP ready.</span>
+                        )}
+                        {file.extractionStatus === "error" && (
+                          <span className="block text-xs text-red-200/80">{file.extractionError ?? "RFP extraction failed."}</span>
+                        )}
+                      </span>
                       <button type="button" onClick={() => setAttachedFiles((current) => current.filter((item) => item.name !== file.name))} className="interactive-button rounded-full p-1 hover:bg-[#7c5cff]/12"><X className="h-3 w-3" /></button>
                     </div>
                   ))}

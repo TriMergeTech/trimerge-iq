@@ -29,7 +29,7 @@ Local setup:
 
 ```bash
 # already included locally in .env.local
-NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL=https://trimerge-microserver-v3.vercel.app/v2
+NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL=https://microserver-agency-v2.trimergeiq.com/v2
 NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL=https://trimerge-iq.onrender.com
 ```
 

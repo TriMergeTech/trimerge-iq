@@ -1,8 +1,9 @@
 import type { ChatEntityId, Conversation, Message, ProjectFormOption, UploadedFile } from "./chatPageTypes";
 import { readStoredAdminPeople } from "../../_shared/adminRegistryState";
 import { authenticatedAdminFetch } from "../../_shared/adminAuth";
+import { BACKEND as PROPOSAL_HUB_BACKEND } from "../../proposal-hub/_hub/utils/services";
 
-const DEFAULT_CHAT_API_BASE_URL = "https://trimerge-microserver-v3.vercel.app/v2";
+const DEFAULT_CHAT_API_BASE_URL = "https://microserver-agency-v2.trimergeiq.com/v2";
 const DEFAULT_PROJECTS_API_BASE_URL = "https://trimerge-iq.onrender.com";
 const CHAT_PROFILE_STORAGE_KEY = "trimerge_chat_profile";
 const CHAT_MESSAGE_SENDER_STORAGE_KEY = "trimerge_chat_message_senders";
@@ -22,7 +23,16 @@ interface ApiConversationRecord {
 interface ApiMessageRecord {
   id?: ChatEntityId;
   conversation?: ChatEntityId;
+  _id?: ChatEntityId;
+  error?: boolean;
+  message?: string;
+  details?: string;
+  agent?: boolean;
+  role?: string;
+  sender?: string;
+  skill?: string;
   tool?: string;
+  pending_tool?: string | null;
   text?: string;
   attachment?: UploadedFile[];
   created_at?: string;
@@ -79,6 +89,12 @@ interface ApiErrorPayload {
   errors?: string[] | Record<string, string | string[]>;
 }
 
+interface ProposalExtractResponse {
+  ok?: boolean;
+  data?: Record<string, unknown>;
+  message?: string;
+}
+
 function getChatApiBaseUrl() {
   return process.env.NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL?.trim() || DEFAULT_CHAT_API_BASE_URL;
 }
@@ -93,6 +109,15 @@ function buildChatApiUrl(path: string) {
 
 function buildProjectsApiUrl(path: string) {
   return `${getProjectsApiBaseUrl().replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+function serializeAttachment(file: UploadedFile) {
+  return {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    ...(file.extractedRfpData ? { extractedRfpData: file.extractedRfpData } : {}),
+  };
 }
 
 function getAccessToken() {
@@ -123,7 +148,15 @@ async function postJson<T>(path: string, body: Record<string, unknown>) {
   const payload = await parseJsonSafely<T>(response);
 
   if (!response.ok) {
-    throw new Error(`Chat API request failed (${response.status}).`);
+    const errorPayload = payload as ApiErrorPayload | null;
+    const errorDetails =
+      typeof errorPayload?.message === "string"
+        ? errorPayload.message
+        : typeof errorPayload?.error === "string"
+          ? errorPayload.error
+          : "";
+
+    throw new Error(`Chat API request failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`);
   }
 
   return payload;
@@ -239,6 +272,14 @@ function getSenderMapKey(conversationId: ChatEntityId, messageId: ChatEntityId) 
   return `${conversationId}:${messageId}`;
 }
 
+function isUuid(value: ChatEntityId | undefined) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function isMongoObjectId(value: ChatEntityId | undefined) {
+  return typeof value === "string" && /^[0-9a-f]{24}$/i.test(value);
+}
+
 export function rememberMessageSender(conversationId: ChatEntityId, messageId: ChatEntityId, sender: Message["sender"]) {
   const senderMap = readSenderMap();
   senderMap[getSenderMapKey(conversationId, messageId)] = sender;
@@ -247,12 +288,25 @@ export function rememberMessageSender(conversationId: ChatEntityId, messageId: C
 
 function inferMessageSender(
   conversationId: ChatEntityId,
-  messageId: ChatEntityId,
+  messageId: ChatEntityId | undefined,
   messageIndex: number,
   totalMessages: number,
+  record: ApiMessageRecord,
 ): Message["sender"] {
-  const storedSender = readSenderMap()[getSenderMapKey(conversationId, messageId)];
-  if (storedSender) return storedSender;
+  if (record.agent === true) return "ai";
+  if (record.agent === false) return "user";
+
+  const role = (record.role ?? record.sender ?? "").trim().toLowerCase();
+  if (["assistant", "ai", "agent"].includes(role)) return "ai";
+  if (["user", "human"].includes(role)) return "user";
+
+  if (isUuid(messageId)) return "user";
+  if (isMongoObjectId(messageId)) return "ai";
+
+  if (messageId !== undefined) {
+    const storedSender = readSenderMap()[getSenderMapKey(conversationId, messageId)];
+    if (storedSender) return storedSender;
+  }
 
   if (totalMessages === 1) return "user";
   return messageIndex % 2 === 0 ? "user" : "ai";
@@ -401,12 +455,25 @@ export function mapMessagesFromApi(conversationId: ChatEntityId, records: ApiMes
   const safeRecords = records ?? [];
 
   return safeRecords.map((record, index) => ({
-    id: record.id ?? Date.now() + index,
+    id: record.id ?? record._id ?? Date.now() + index,
     content: record.text?.trim() || "",
-    sender: inferMessageSender(conversationId, record.id ?? Date.now() + index, index, safeRecords.length),
+    sender: inferMessageSender(conversationId, record.id ?? record._id, index, safeRecords.length, record),
     timestamp: record.created_at ? new Date(record.created_at) : new Date(),
     files: Array.isArray(record.attachment) ? record.attachment : undefined,
+    pendingTool: record.pending_tool,
   }));
+}
+
+function getPendingToolFromApiMessages(records: ApiMessageRecord[] | undefined) {
+  const safeRecords = records ?? [];
+
+  for (let index = safeRecords.length - 1; index >= 0; index -= 1) {
+    if ("pending_tool" in safeRecords[index]) {
+      return safeRecords[index].pending_tool ?? null;
+    }
+  }
+
+  return undefined;
 }
 
 export async function fetchConversations(profile: string, project?: string | null, page = 1, limit = 100, includeArchived = false) {
@@ -441,17 +508,44 @@ export async function createConversation(input: {
 export async function createMessage(input: {
   conversation: ChatEntityId;
   text: string;
-  tool?: string;
+  skill?: string;
   attachment?: UploadedFile[];
+  user?: string;
+  pending_tool?: string | null;
 }) {
+  const { skill, ...messageInput } = input;
   const payload = await postJson<ApiMessageRecord>("/new_message", {
-    tool: "chat",
-    attachment: [],
-    ...input,
+    ...messageInput,
+    attachment: (input.attachment ?? []).map(serializeAttachment),
+    ...(skill?.trim() ? { skill: skill.trim() } : {}),
   });
 
-  if (payload?.id) rememberMessageSender(input.conversation, payload.id, "user");
+  if (payload?.error) {
+    throw new Error(payload.details ? `${payload.message ?? "Chat failed"}: ${payload.details}` : payload.message ?? "Chat failed.");
+  }
+
+  const responseMessageId = payload?.id ?? payload?._id;
+  if (responseMessageId) {
+    rememberMessageSender(input.conversation, responseMessageId, payload?.agent === false ? "user" : "ai");
+  }
   return payload;
+}
+
+export async function extractRfpFromFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+console.log(file)
+  const response = await fetch(`${PROPOSAL_HUB_BACKEND}/proposal_extract_rfp`, {
+    method: "POST",
+    body: formData,
+  });
+  const payload = await parseJsonSafely<ProposalExtractResponse>(response);
+console.log(payload)
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(payload?.message ?? `RFP extraction failed (${response.status}).`);
+  }
+
+  return payload?.data ?? {};
 }
 
 export async function fetchMessages(conversationId: ChatEntityId, page = 1, limit = 100) {
@@ -461,7 +555,10 @@ export async function fetchMessages(conversationId: ChatEntityId, page = 1, limi
     limit,
   });
 
-  return mapMessagesFromApi(conversationId, payload?.messages);
+  return {
+    messages: mapMessagesFromApi(conversationId, payload?.messages),
+    pendingTool: getPendingToolFromApiMessages(payload?.messages),
+  };
 }
 
 export async function createShareLink(conversationId: ChatEntityId) {
@@ -598,7 +695,7 @@ export async function deleteProject(projectId: ChatEntityId) {
 }
 
 export async function renameConversation(conversationId: ChatEntityId, title: string) {
-  return postJson<unknown>("/rename_project", {
+  return postJson<unknown>("/rename_conversation", {
     conversation: conversationId,
     title,
   });

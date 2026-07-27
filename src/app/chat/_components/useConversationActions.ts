@@ -6,10 +6,10 @@ import {
   createMessage,
   createShareLink,
   deleteConversation,
+  extractRfpFromFile,
   fetchMessages,
   getChatProfile,
   pinConversation,
-  rememberMessageSender,
   renameConversation,
 } from "./chatApi";
 import { persistConversationOverride, rememberStoredProjectName } from "./chatLocalState";
@@ -199,16 +199,74 @@ export function useConversationActions({
     setIsWorkspaceMenuOpen(false);
   };
 
+  const isRfpFile = (file: UploadedFile) =>
+    Boolean(file.file) && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"));
+
+  const IMPORTANT_RFP_FIELDS = [
+    "proposal_id",
+    "client_name",
+    "proposal_budget",
+    "requested_timeline",
+    "services",
+    "project_scope",
+    "scope",
+    "requirements",
+    "deliverables",
+    "submission_deadline",
+    "evaluation_criteria",
+  ];
+  const MAX_RFP_FIELD_LENGTH = 900;
+  const MAX_RFP_CONTEXT_LENGTH = 7000;
+
+  const truncateText = (value: string, maxLength: number) =>
+    value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
+
+  const stringifyExtractedValue = (value: unknown) => {
+    if (typeof value === "string") return value;
+    return JSON.stringify(value);
+  };
+
+  const formatExtractedRfpData = (data: Record<string, unknown>) => {
+    const entries = Object.entries(data);
+    const importantEntries = IMPORTANT_RFP_FIELDS
+      .map((field) => entries.find(([key]) => key.toLowerCase() === field))
+      .filter((entry): entry is [string, unknown] => Boolean(entry));
+    const fallbackEntries = importantEntries.length > 0 ? importantEntries : entries.slice(0, 12);
+
+    return fallbackEntries
+      .map(([key, value]) => {
+        const formattedValue = truncateText(stringifyExtractedValue(value), MAX_RFP_FIELD_LENGTH);
+        return `${key}: ${formattedValue}`;
+      })
+      .join("\n");
+  };
+
+  const formatExtractedRfpContext = (rfpFiles: UploadedFile[]) => {
+    const extractedFiles = rfpFiles.filter((file) => file.extractedRfpData);
+    if (extractedFiles.length === 0) return "";
+
+    const context = extractedFiles
+      .map((file) => {
+        const extractedData = formatExtractedRfpData(file.extractedRfpData ?? {});
+        return `Uploaded RFP: ${file.name}\nExtracted RFP data:\n${extractedData}`;
+      })
+      .join("\n\n");
+
+    return truncateText(context, MAX_RFP_CONTEXT_LENGTH);
+  };
+
   const sendMessage = async (prompt?: string) => {
     const content = (prompt ?? inputMessage).trim();
     if (!content && attachedFiles.length === 0) return;
 
+    const hasRfpAttachment = attachedFiles.some(isRfpFile);
     const fallbackConversationId = activeConversationId ?? Date.now();
-    const newTitle = content ? content.slice(0, 38) + (content.length > 38 ? "..." : "") : "Shared files";
+    const fallbackMessageContent = hasRfpAttachment ? "Uploaded RFP" : "Shared files";
+    const newTitle = content ? content.slice(0, 38) + (content.length > 38 ? "..." : "") : fallbackMessageContent;
     const timestamp = new Date();
     const userMessage = {
       id: Date.now(),
-      content: content || "Shared files",
+      content: content || fallbackMessageContent,
       sender: "user" as const,
       timestamp,
       files: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
@@ -257,6 +315,21 @@ export function useConversationActions({
 
     try {
       const profile = getChatProfile();
+      const filesWithExtractedRfpData = await Promise.all(
+        (userMessage.files ?? []).map(async (file) => {
+          if (!isRfpFile(file) || !file.file) return file;
+          if (file.extractedRfpData) return file;
+          return {
+            ...file,
+            extractedRfpData: await extractRfpFromFile(file.file),
+            extractionStatus: "ready" as const,
+          };
+        }),
+      );
+      const extractedRfpContext = formatExtractedRfpContext(filesWithExtractedRfpData);
+      const messageText = extractedRfpContext
+        ? `${content || "Please create a proposal from the uploaded RFP."}\n\n${extractedRfpContext}`
+        : userMessage.content;
       const resolvedConversation =
         activeConversationId === null
           ? await createConversation({
@@ -308,15 +381,16 @@ export function useConversationActions({
 
       const createdMessage = await createMessage({
         conversation: conversationId,
-        text: userMessage.content,
-        attachment: userMessage.files ?? [],
+        text: messageText,
+        attachment: filesWithExtractedRfpData,
+        user: profile,
+        ...(resolvedConversation.pendingTool ? { pending_tool: resolvedConversation.pendingTool } : {}),
       });
 
-      if (createdMessage?.id) {
-        rememberMessageSender(conversationId, createdMessage.id, "user");
-      }
+      const nextPendingTool = createdMessage?.pending_tool ?? null;
 
-      const remoteMessages = await fetchMessages(conversationId);
+      const { messages: remoteMessages, pendingTool: fetchedPendingTool } = await fetchMessages(conversationId);
+      const resolvedPendingTool = fetchedPendingTool === undefined ? nextPendingTool : fetchedPendingTool;
 
       setConversations((current) =>
         current
@@ -327,6 +401,7 @@ export function useConversationActions({
                   updatedAt: new Date(),
                   recentMessage: userMessage.content,
                   messages: remoteMessages.length > 0 ? remoteMessages : conversation.messages,
+                  pendingTool: resolvedPendingTool,
                 }
               : conversation,
           )

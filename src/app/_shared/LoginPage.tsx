@@ -26,12 +26,15 @@ type SignupProfile = "staff" | "client";
 interface AuthResponsePayload {
   access_token?: string;
   refresh_token?: string;
-  message?: string;
-  data?: {
+  ok?: boolean;
+  token?: string;
+  data?: string | {
     access_token?: string;
     refresh_token?: string;
     message?: string;
+    token?: string;
   };
+  message?: string;
 }
 
 async function parseJsonSafely(
@@ -52,6 +55,12 @@ function storeSession(profile: string, accessToken: string) {
   localStorage.setItem("trimerge_admin_access_token", accessToken);
 
   window.location.reload();
+}
+
+function getPayloadMessage(payload: AuthResponsePayload | null) {
+  if (payload?.message) return payload.message;
+  if (payload?.data && typeof payload.data === "object") return payload.data.message;
+  return undefined;
 }
 
 export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
@@ -78,7 +87,11 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
     nextEmail: string,
     nextPassword: string,
   ) => {
-    console.log("Logging in with credentials:", nextEmail, nextPassword);
+    const profileApiKey = process.env.NEXT_PUBLIC_PROFILE_API_KEY?.trim();
+    if (!profileApiKey) {
+      throw new Error("Missing NEXT_PUBLIC_PROFILE_API_KEY in .env.local. Add it and restart npm run dev.");
+    }
+
     let payload = {
       profile_type:
         kind === "staff"
@@ -86,28 +99,33 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
           : process.env.NEXT_PUBLIC_ADMIN_PROFILE_TYPE,
       credentials: { email: nextEmail.trim(), password: nextPassword },
     };
-    console.log("Login payload:", payload);
-    console.log(
-      "Using platform API key:",
-      process.env.NEXT_PUBLIC_PROFILE_API_KEY,
-    );
     let rawResponse = await fetch(`${PROFILE_SERVICE}/signin`, {
       method: "POST",
       headers: {
         "x-api-version": "v3",
-        "x-api-key": process.env.NEXT_PUBLIC_PROFILE_API_KEY ?? "",
+        "x-api-key": profileApiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
 
-    const response = await rawResponse.json();
+    const response = await parseJsonSafely(rawResponse);
 
-    if (!response.ok) {
-      throw new Error(response?.message ?? "Login failed.");
+    if (!rawResponse.ok || response?.ok === false) {
+      throw new Error(getPayloadMessage(response) ?? `Login failed (${rawResponse.status}).`);
     }
 
-    storeSession(response.data, response.token);
+    const accessToken =
+      response?.token ??
+      response?.access_token ??
+      (typeof response?.data === "object" ? response.data.token ?? response.data.access_token : undefined);
+    const profile = typeof response?.data === "string" ? response.data : kind ?? "admin";
+
+    if (!accessToken) {
+      throw new Error("Login succeeded, but no access token was returned.");
+    }
+
+    storeSession(profile, accessToken);
   };
 
   const handleLoginSubmit = async (event: React.FormEvent) => {
@@ -127,7 +145,6 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
 
     try {
       setIsLoading(true);
-      console.log("Attempting login with email:", email, password);
       await loginWithCredentials(email, password);
       onLoginSuccess?.();
     } catch (loginError) {
@@ -183,9 +200,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
         }
 
         throw new Error(
-          payload?.message ??
-            payload?.data?.message ??
-            `Signup failed (${response.status}).`,
+          getPayloadMessage(payload) ?? `Signup failed (${response.status}).`,
         );
       }
 
@@ -240,9 +255,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
 
       if (!response.ok) {
         throw new Error(
-          payload?.message ??
-            payload?.data?.message ??
-            `Verification failed (${response.status}).`,
+          getPayloadMessage(payload) ?? `Verification failed (${response.status}).`,
         );
       }
 
@@ -289,9 +302,7 @@ export default function LoginPage({ onLoginSuccess, kind }: LoginPageProps) {
 
       if (!response.ok) {
         throw new Error(
-          payload?.message ??
-            payload?.data?.message ??
-            `Request failed (${response.status}).`,
+          getPayloadMessage(payload) ?? `Request failed (${response.status}).`,
         );
       }
 
