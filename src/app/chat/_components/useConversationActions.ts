@@ -7,12 +7,15 @@ import {
   createShareLink,
   deleteConversation,
   extractRfpFromFile,
+  fetchProposalGenerationStatus,
   fetchMessages,
   getChatProfile,
   pinConversation,
   renameConversation,
+  startProposalGeneration,
 } from "./chatApi";
-import { persistConversationOverride, rememberStoredProjectName } from "./chatLocalState";
+import { persistConversationOverride, rememberGeneratedProposalMessage, rememberStoredProjectName } from "./chatLocalState";
+import { getProposalHubUrl, rememberGeneratedProposal } from "../../proposal-hub/_hub/utils/generatedProposalStorage";
 import type { ChatEntityId, Conversation, UploadedFile } from "./chatPageTypes";
 
 interface UseConversationActionsProps {
@@ -255,6 +258,153 @@ export function useConversationActions({
     return truncateText(context, MAX_RFP_CONTEXT_LENGTH);
   };
 
+  const getMergedExtractedRfpData = (rfpFiles: UploadedFile[]) =>
+    rfpFiles.reduce<Record<string, unknown>>((mergedData, file) => {
+      if (!file.extractedRfpData) return mergedData;
+      return {
+        ...mergedData,
+        ...file.extractedRfpData,
+      };
+    }, {});
+
+  const shouldGenerateProposalFromRfp = (text: string, rfpFiles: UploadedFile[], pendingTool?: string | null) => {
+    if (rfpFiles.length === 0) return false;
+    if (pendingTool) return true;
+
+    const normalizedText = text.toLowerCase();
+    return (
+      normalizedText.includes("proposal") &&
+      /\b(create|generate|make|build|draft|prepare|write)\b/.test(normalizedText)
+    );
+  };
+
+  const updateProposalGenerationMessage = (
+    conversationId: ChatEntityId,
+    messageId: ChatEntityId,
+    content: string,
+    generatedProposal: NonNullable<Conversation["messages"][number]["generatedProposal"]>,
+  ) => {
+    const nextMessage = {
+      id: messageId,
+      content,
+      sender: "ai" as const,
+      timestamp: new Date(),
+      generatedProposal,
+    };
+
+    rememberGeneratedProposalMessage(conversationId, nextMessage);
+    updateConversation(conversationId, (conversation) => ({
+      ...conversation,
+      updatedAt: new Date(),
+      messages: conversation.messages.map((message) =>
+        message.id === messageId
+          ? nextMessage
+          : message,
+      ),
+    }));
+  };
+
+  const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+  const runProposalGeneration = async (
+    conversationId: ChatEntityId,
+    filesWithExtractedRfpData: UploadedFile[],
+    promptText: string,
+  ) => {
+    const proposalMetadata = {
+      ...getMergedExtractedRfpData(filesWithExtractedRfpData),
+      chat_request: promptText || "Create a proposal from the uploaded RFP.",
+    };
+    const progressMessageId = `proposal-generation-${Date.now()}`;
+
+    updateConversation(conversationId, (conversation) => ({
+      ...conversation,
+      updatedAt: new Date(),
+      messages: [
+        ...conversation.messages,
+        {
+          id: progressMessageId,
+          content: "Starting proposal generation from the uploaded RFP...",
+          sender: "ai" as const,
+          timestamp: new Date(),
+          generatedProposal: {
+            status: "queued",
+            progress: 5,
+            title: "Proposal generation",
+          },
+        },
+      ],
+    }));
+    rememberGeneratedProposalMessage(conversationId, {
+      id: progressMessageId,
+      content: "Starting proposal generation from the uploaded RFP...",
+      sender: "ai",
+      timestamp: new Date(),
+      generatedProposal: {
+        status: "queued",
+        progress: 5,
+        title: "Proposal generation",
+      },
+    });
+
+    const callbackId = await startProposalGeneration(proposalMetadata);
+    sessionStorage.setItem("proposal_callback_id", callbackId);
+
+    updateProposalGenerationMessage(conversationId, progressMessageId, "Proposal generation started. I will update this card as sections are processed.", {
+      callbackId,
+      progress: 10,
+      status: "running",
+      title: "Proposal generation",
+    });
+
+    for (let attempt = 0; attempt < 180; attempt += 1) {
+      await wait(2000);
+      const status = await fetchProposalGenerationStatus(callbackId);
+      const progress = typeof status.progress === "number" ? status.progress : undefined;
+      const statusMessage = status.message || "Generating proposal...";
+
+      if (status.status === "completed" && status.proposal) {
+        rememberGeneratedProposal(status.proposal);
+        const proposalId = status.proposal._id ?? status.proposal.id ?? "";
+        const proposalTitle = status.proposal.opportunity_title ?? status.proposal.title ?? "Generated proposal";
+
+        updateProposalGenerationMessage(conversationId, progressMessageId, "Your proposal is ready in Proposal Hub.", {
+          callbackId,
+          id: proposalId,
+          progress: 100,
+          status: "completed",
+          title: proposalTitle,
+          url: getProposalHubUrl(status.proposal),
+        });
+        return;
+      }
+
+      if (status.status === "failed") {
+        updateProposalGenerationMessage(conversationId, progressMessageId, statusMessage || "Proposal generation failed.", {
+          callbackId,
+          progress,
+          status: "failed",
+          title: "Proposal generation",
+        });
+        return;
+      }
+
+      updateProposalGenerationMessage(conversationId, progressMessageId, statusMessage, {
+        callbackId,
+        progress,
+        status: status.status ?? "running",
+        title: "Proposal generation",
+      });
+    }
+
+    updateProposalGenerationMessage(conversationId, progressMessageId, "Proposal generation is still running. Check Proposal Hub shortly.", {
+      callbackId,
+      progress: 95,
+      status: "running",
+      title: "Proposal generation",
+    });
+  };
+
   const sendMessage = async (prompt?: string) => {
     const content = (prompt ?? inputMessage).trim();
     if (!content && attachedFiles.length === 0) return;
@@ -327,6 +477,9 @@ export function useConversationActions({
         }),
       );
       const extractedRfpContext = formatExtractedRfpContext(filesWithExtractedRfpData);
+      if (extractedRfpContext) {
+        console.log("Hidden RFP context sent to chat backend:", extractedRfpContext);
+      }
       const messageText = extractedRfpContext
         ? `${content || "Please create a proposal from the uploaded RFP."}\n\n${extractedRfpContext}`
         : userMessage.content;
@@ -346,6 +499,11 @@ export function useConversationActions({
       }
 
       const conversationId = resolvedConversation.id;
+      const shouldGenerateProposal = shouldGenerateProposalFromRfp(
+        content,
+        filesWithExtractedRfpData.filter((file) => Boolean(file.extractedRfpData)),
+        resolvedConversation.pendingTool,
+      );
 
       setConversations((current) => {
         let foundFallbackConversation = false;
@@ -407,6 +565,10 @@ export function useConversationActions({
           )
           .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
       );
+
+      if (shouldGenerateProposal) {
+        await runProposalGeneration(conversationId, filesWithExtractedRfpData, content);
+      }
     } catch (error) {
       setLastChatError(error instanceof Error ? error.message : "Unable to send the message right now.");
     } finally {

@@ -289,7 +289,7 @@
   z-index: 1;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(13, 18, 64, 0.95);
-  padding: 20px 32px 32px;
+  padding: 20px 32px max(32px, env(safe-area-inset-bottom));
   backdrop-filter: blur(8px);
 }
 
@@ -300,5 +300,9 @@
 
   .sidebar {
     display: none;
+  }
+
+  .activeComposerFooter {
+    padding: 16px 16px max(24px, env(safe-area-inset-bottom));
   }
 }

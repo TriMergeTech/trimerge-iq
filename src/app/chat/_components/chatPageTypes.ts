@@ -17,6 +17,14 @@ export interface Message {
   timestamp: Date;
   files?: UploadedFile[];
   pendingTool?: string | null;
+  generatedProposal?: {
+    callbackId?: string;
+    id?: string;
+    progress?: number;
+    status?: "queued" | "running" | "completed" | "failed" | string;
+    title?: string;
+    url?: string;
+  };
 }
 
 export interface Project {

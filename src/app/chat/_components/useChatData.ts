@@ -8,6 +8,7 @@ import {
 } from "./chatApi";
 import {
   applyConversationOverrides,
+  mergeGeneratedProposalMessages,
   readStoredProjectNames,
   readStoredProjects,
   writeStoredProjects,
@@ -213,6 +214,7 @@ export function useChatData({
 
       try {
         const { messages, pendingTool } = await fetchMessages(activeConversationId);
+        const mergedMessages = mergeGeneratedProposalMessages(activeConversationId, messages);
         if (isCancelled) return;
 
         setConversations((current) =>
@@ -220,8 +222,8 @@ export function useChatData({
             conversation.id === activeConversationId
               ? {
                   ...conversation,
-                  updatedAt: messages[messages.length - 1]?.timestamp ?? conversation.updatedAt,
-                  messages,
+                  updatedAt: mergedMessages[mergedMessages.length - 1]?.timestamp ?? conversation.updatedAt,
+                  messages: mergedMessages,
                   pendingTool: pendingTool === undefined ? conversation.pendingTool : pendingTool,
                 }
               : conversation,

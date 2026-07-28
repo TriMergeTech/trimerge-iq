@@ -1,6 +1,7 @@
-import type { ChatEntityId, Conversation, Project } from "./chatPageTypes";
+import type { ChatEntityId, Conversation, Message, Project } from "./chatPageTypes";
 
 const CHAT_CONVERSATION_OVERRIDES_KEY = "trimerge_chat_conversation_overrides";
+const CHAT_GENERATED_PROPOSAL_MESSAGES_KEY = "trimerge_chat_generated_proposal_messages";
 const CHAT_PROJECT_NAMES_STORAGE_KEY = "trimerge_chat_project_names";
 const CHAT_PROJECTS_STORAGE_KEY = "trimerge_chat_projects";
 
@@ -59,6 +60,57 @@ export function applyConversationOverrides(conversations: Conversation[]) {
         pinned: override.pinned ?? conversation.pinned,
       };
     });
+}
+
+function readGeneratedProposalMessagesByConversation() {
+  if (typeof window === "undefined") return {} as Record<string, Message[]>;
+
+  const rawValue = localStorage.getItem(CHAT_GENERATED_PROPOSAL_MESSAGES_KEY);
+  if (!rawValue) return {} as Record<string, Message[]>;
+
+  try {
+    const records = JSON.parse(rawValue) as Record<string, Array<Omit<Message, "timestamp"> & { timestamp?: string }>>;
+
+    return Object.fromEntries(
+      Object.entries(records).map(([conversationId, messages]) => [
+        conversationId,
+        messages.map((message) => ({
+          ...message,
+          timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
+        })),
+      ]),
+    );
+  } catch {
+    return {} as Record<string, Message[]>;
+  }
+}
+
+function writeGeneratedProposalMessagesByConversation(messagesByConversation: Record<string, Message[]>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CHAT_GENERATED_PROPOSAL_MESSAGES_KEY, JSON.stringify(messagesByConversation));
+}
+
+export function rememberGeneratedProposalMessage(conversationId: ChatEntityId, message: Message) {
+  const messagesByConversation = readGeneratedProposalMessagesByConversation();
+  const conversationKey = String(conversationId);
+  const existingMessages = messagesByConversation[conversationKey] ?? [];
+
+  messagesByConversation[conversationKey] = [
+    message,
+    ...existingMessages.filter((storedMessage) => storedMessage.id !== message.id),
+  ].slice(0, 20);
+
+  writeGeneratedProposalMessagesByConversation(messagesByConversation);
+}
+
+export function mergeGeneratedProposalMessages(conversationId: ChatEntityId, messages: Message[]) {
+  const localMessages = readGeneratedProposalMessagesByConversation()[String(conversationId)] ?? [];
+  if (localMessages.length === 0) return messages;
+
+  const messageIds = new Set(messages.map((message) => String(message.id)));
+  const missingLocalMessages = localMessages.filter((message) => !messageIds.has(String(message.id)));
+
+  return [...messages, ...missingLocalMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
 
 export function readStoredProjects() {

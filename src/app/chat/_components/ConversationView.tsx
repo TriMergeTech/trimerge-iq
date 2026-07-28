@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { Archive as ArchiveIcon, Eraser, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { Archive as ArchiveIcon, Eraser, ExternalLink, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 
 import ConversationMenuItem from "./ConversationMenuItem";
 import type { ChatEntityId, Conversation } from "./chatPageTypes";
@@ -117,6 +117,41 @@ export default function ConversationView({
                 {message.timestamp.toLocaleTimeString()}
               </div>
               <div className="text-[15px] leading-8">{message.content}</div>
+              {message.generatedProposal && (
+                <div className="mt-5 rounded-2xl border border-[#d4af37]/24 bg-[#101827]/72 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#f6edd0]">
+                        {message.generatedProposal.title ?? "Generated proposal"}
+                      </p>
+                      <p className="mt-1 text-xs text-white/52">
+                        {message.generatedProposal.status === "completed"
+                          ? "Ready in Proposal Hub"
+                          : message.generatedProposal.status === "failed"
+                            ? "Generation failed"
+                            : "Generating in Proposal Hub"}
+                      </p>
+                    </div>
+                    {message.generatedProposal.url && message.generatedProposal.status === "completed" && (
+                      <a
+                        href={message.generatedProposal.url}
+                        className="interactive-button inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#d4af37]/28 bg-[#d4af37]/12 px-3 py-2 text-xs font-semibold text-[#f6edd0] hover:bg-[#d4af37]/18"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open
+                      </a>
+                    )}
+                  </div>
+                  {message.generatedProposal.status !== "completed" && message.generatedProposal.status !== "failed" && (
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-[#d4af37] transition-all"
+                        style={{ width: `${Math.max(5, Math.min(100, message.generatedProposal.progress ?? 10))}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               {message.files && message.files.length > 0 && (
                 <div className="mt-5 space-y-2">
                   {message.files.map((file) => (

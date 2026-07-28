@@ -2,6 +2,7 @@ import type { ChatEntityId, Conversation, Message, ProjectFormOption, UploadedFi
 import { readStoredAdminPeople } from "../../_shared/adminRegistryState";
 import { authenticatedAdminFetch } from "../../_shared/adminAuth";
 import { BACKEND as PROPOSAL_HUB_BACKEND } from "../../proposal-hub/_hub/utils/services";
+import type { Proposal } from "../../proposal-hub/_hub/types";
 
 const DEFAULT_CHAT_API_BASE_URL = "https://microserver-agency-v2.trimergeiq.com/v2";
 const DEFAULT_PROJECTS_API_BASE_URL = "https://trimerge-iq.onrender.com";
@@ -92,6 +93,28 @@ interface ApiErrorPayload {
 interface ProposalExtractResponse {
   ok?: boolean;
   data?: Record<string, unknown>;
+  message?: string;
+}
+
+interface ProposalGenerationStartResponse {
+  ok?: boolean;
+  data?: {
+    callbackId?: string;
+  };
+  message?: string;
+}
+
+export interface ProposalGenerationStatus {
+  status?: "queued" | "running" | "completed" | "failed" | string;
+  progress?: number;
+  message?: string;
+  proposal?: Proposal;
+  [key: string]: unknown;
+}
+
+interface ProposalGenerationStatusResponse {
+  ok?: boolean;
+  data?: ProposalGenerationStatus;
   message?: string;
 }
 
@@ -451,17 +474,37 @@ function buildProjectPayload(input: {
   };
 }
 
+function stripHiddenRfpContext(text: string) {
+  const markers = [
+    "\n\nUploaded RFP:",
+    "\nUploaded RFP:",
+    "Uploaded RFP:",
+  ];
+
+  for (const marker of markers) {
+    const markerIndex = text.indexOf(marker);
+    if (markerIndex > 0) return text.slice(0, markerIndex).trim();
+  }
+
+  return text.trim();
+}
+
 export function mapMessagesFromApi(conversationId: ChatEntityId, records: ApiMessageRecord[] | undefined): Message[] {
   const safeRecords = records ?? [];
 
-  return safeRecords.map((record, index) => ({
-    id: record.id ?? record._id ?? Date.now() + index,
-    content: record.text?.trim() || "",
-    sender: inferMessageSender(conversationId, record.id ?? record._id, index, safeRecords.length, record),
-    timestamp: record.created_at ? new Date(record.created_at) : new Date(),
-    files: Array.isArray(record.attachment) ? record.attachment : undefined,
-    pendingTool: record.pending_tool,
-  }));
+  return safeRecords.map((record, index) => {
+    const sender = inferMessageSender(conversationId, record.id ?? record._id, index, safeRecords.length, record);
+    const rawContent = record.text?.trim() || "";
+
+    return {
+      id: record.id ?? record._id ?? Date.now() + index,
+      content: sender === "user" ? stripHiddenRfpContext(rawContent) : rawContent,
+      sender,
+      timestamp: record.created_at ? new Date(record.created_at) : new Date(),
+      files: Array.isArray(record.attachment) ? record.attachment : undefined,
+      pendingTool: record.pending_tool,
+    };
+  });
 }
 
 function getPendingToolFromApiMessages(records: ApiMessageRecord[] | undefined) {
@@ -534,18 +577,75 @@ export async function createMessage(input: {
 export async function extractRfpFromFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
-console.log(file)
+
   const response = await fetch(`${PROPOSAL_HUB_BACKEND}/proposal_extract_rfp`, {
     method: "POST",
     body: formData,
   });
   const payload = await parseJsonSafely<ProposalExtractResponse>(response);
-console.log(payload)
+
   if (!response.ok || payload?.ok === false) {
     throw new Error(payload?.message ?? `RFP extraction failed (${response.status}).`);
   }
 
   return payload?.data ?? {};
+}
+
+export async function startProposalGeneration(proposalMetadata: Record<string, unknown>) {
+  const payload = {
+    proposal_metadata: proposalMetadata,
+    org_context: {
+      company_name: "TriMerge Consulting Group, P.A.",
+      certifications: ["8(a)", "WOSB", "EDWOSB", "CPA Firm"],
+      experience_years: 22,
+      skills: [
+        "federal program management",
+        "financial compliance",
+        "healthcare claims analysis",
+        "coding validation oversight",
+        "risk and audit remediation",
+      ],
+      teaming_partners: [
+        "Anchor Group NA Corp",
+        "Certified Coding Partner (CPC/CCS/RHIA)",
+      ],
+    },
+  };
+
+  const response = await fetch(`${PROPOSAL_HUB_BACKEND}/generate_proposal`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const result = await parseJsonSafely<ProposalGenerationStartResponse>(response);
+
+  if (!response.ok || !result?.ok || !result.data?.callbackId) {
+    throw new Error(result?.message ?? `Proposal generation failed to start (${response.status}).`);
+  }
+
+  return result.data.callbackId;
+}
+
+export async function fetchProposalGenerationStatus(callbackId: string) {
+  const response = await fetch(`${PROPOSAL_HUB_BACKEND}/get_callback_status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      id: callbackId,
+    }),
+  });
+  const result = await parseJsonSafely<ProposalGenerationStatusResponse>(response);
+
+  if (!response.ok || !result?.ok || !result.data) {
+    throw new Error(result?.message ?? `Unable to fetch proposal status (${response.status}).`);
+  }
+
+  return result.data;
 }
 
 export async function fetchMessages(conversationId: ChatEntityId, page = 1, limit = 100) {
