@@ -37,6 +37,22 @@ export interface ProjectFormOption {
   label: string;
 }
 
+export interface ChatShareDialogState {
+  description: string;
+  isLoading?: boolean;
+  title: string;
+  value: string;
+}
+
+export interface ChatRenameDialogState {
+  error?: string;
+  id: ChatEntityId;
+  isSaving?: boolean;
+  kind: "conversation" | "project";
+  originalName: string;
+  value: string;
+}
+
 export interface Conversation {
   id: ChatEntityId;
   title: string;
