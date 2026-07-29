@@ -2,11 +2,19 @@
 
 import {
   Building2,
+  BookOpen,
   Briefcase,
+  ClipboardList,
+  FileStack,
+  FileText,
+  Handshake,
+  Lightbulb,
   LogOut,
   Plus,
   Search,
+  Settings,
   Shield,
+  Target,
   User,
   UserCog,
   Users,
@@ -43,6 +51,51 @@ const SECTION_META: Record<
     icon: Wrench,
     addLabel: "Add New",
   },
+  projects: {
+    label: "Projects Management",
+    icon: ClipboardList,
+    addLabel: "Mockup Only",
+  },
+  contracts: {
+    label: "Contracts Management",
+    icon: FileStack,
+    addLabel: "Mockup Only",
+  },
+  corporate_experience: {
+    label: "Corporate Experience",
+    icon: Briefcase,
+    addLabel: "Mockup Only",
+  },
+  opportunities: {
+    label: "Opportunity & Capture",
+    icon: Target,
+    addLabel: "Mockup Only",
+  },
+  partners: {
+    label: "Partner Management",
+    icon: Handshake,
+    addLabel: "Mockup Only",
+  },
+  proposals: {
+    label: "Proposal Management",
+    icon: FileText,
+    addLabel: "Mockup Only",
+  },
+  business_operations: {
+    label: "Business Operations",
+    icon: Settings,
+    addLabel: "Mockup Only",
+  },
+  lessons_learned: {
+    label: "Lessons Learned",
+    icon: Lightbulb,
+    addLabel: "Mockup Only",
+  },
+  methodologies: {
+    label: "Methodologies",
+    icon: BookOpen,
+    addLabel: "Mockup Only",
+  },
   position: { label: "Position Management", icon: User, addLabel: "Add New" },
   staff: { label: "Staff Management", icon: Users, addLabel: "Add New" },
   services: {
@@ -61,6 +114,17 @@ const SECTION_META: Record<
 export default function AdminPage({ onLogout }: AdminPageProps) {
   const admin = useAdminPageController();
   const activeSectionMeta = SECTION_META[admin.activeSection];
+  const isMockOnlySection = [
+    "projects",
+    "contracts",
+    "corporate_experience",
+    "opportunities",
+    "partners",
+    "proposals",
+    "business_operations",
+    "lessons_learned",
+    "methodologies",
+  ].includes(admin.activeSection);
 
   return (
     <div className={styles.shell}>
@@ -120,13 +184,15 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
             <button
               type="button"
               onClick={admin.openCreateModal}
-              disabled={admin.activeSection === "admin"}
+              disabled={admin.activeSection === "admin" || isMockOnlySection}
               className={styles.addBtn}
             >
               <Plus />
               <span>
                 {admin.activeSection === "admin"
                   ? "View Only"
+                  : isMockOnlySection
+                    ? "Mockup Only"
                   : activeSectionMeta.addLabel}
               </span>
             </button>
@@ -182,6 +248,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           removeService={admin.removeService}
           removeSkill={admin.removeSkill}
           removeStaff={admin.removeStaff}
+          searchQuery={admin.searchQuery}
           serviceError={admin.serviceError}
           skillError={admin.skillError}
           skills={admin.skills}

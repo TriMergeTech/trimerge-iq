@@ -12,6 +12,7 @@ import {
   PROFILE_SERVICE,
 } from "../../_shared/adminAuth";
 import { type Certification } from "./AdminModals";
+import { mockAdminModules } from "./adminMockModules";
 import {
   uniqueById,
   mapUserFromApi,
@@ -418,9 +419,34 @@ export function useAdminPageController() {
     clients: clients.length,
     company_overview: company_details.length,
     platforms: platforms.length,
+    projects: mockAdminModules.projects?.rows.length ?? 0,
+    contracts: mockAdminModules.contracts?.rows.length ?? 0,
+    corporate_experience: mockAdminModules.corporate_experience?.rows.length ?? 0,
+    opportunities: mockAdminModules.opportunities?.rows.length ?? 0,
+    partners: mockAdminModules.partners?.rows.length ?? 0,
+    proposals: mockAdminModules.proposals?.rows.length ?? 0,
+    business_operations: mockAdminModules.business_operations?.rows.length ?? 0,
+    lessons_learned: mockAdminModules.lessons_learned?.rows.length ?? 0,
+    methodologies: mockAdminModules.methodologies?.rows.length ?? 0,
   }[activeSection];
 
   const openCreateModal = () => {
+    if (
+      [
+        "projects",
+        "contracts",
+        "corporate_experience",
+        "opportunities",
+        "partners",
+        "proposals",
+        "business_operations",
+        "lessons_learned",
+        "methodologies",
+      ].includes(activeSection)
+    ) {
+      return;
+    }
+
     if (activeSection === "staff") {
       setEditingStaff(null);
       setStaffError("");

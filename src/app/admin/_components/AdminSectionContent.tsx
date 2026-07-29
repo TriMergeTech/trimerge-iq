@@ -1,4 +1,5 @@
 import { ManagementTable, DeleteButton, EditButton } from "./AdminPrimitives";
+import AdminMockModulePanel from "./AdminMockModulePanel";
 import styles from "./AdminPage.module.css";
 import type {
   AdminSection,
@@ -47,6 +48,7 @@ interface AdminSectionContentProps {
   removeService: (serviceId: string) => void;
   removeSkill: (skillId: string) => void;
   removeStaff: (staffId: string) => void;
+  searchQuery: string;
   serviceError: string;
   skillError: string;
   skills: SkillItem[];
@@ -93,6 +95,7 @@ export default function AdminSectionContent({
   removeService,
   removeSkill,
   removeStaff,
+  searchQuery,
   serviceError,
   skillError,
   skills,
@@ -125,6 +128,25 @@ export default function AdminSectionContent({
       )}
       {activeSection === "platforms" && toolsError && (
         <div className={styles.infoBanner}>{toolsError}</div>
+      )}
+
+      <AdminMockModulePanel activeSection={activeSection} searchQuery={searchQuery} />
+
+      {[
+        "projects",
+        "contracts",
+        "corporate_experience",
+        "opportunities",
+        "partners",
+        "proposals",
+        "business_operations",
+        "lessons_learned",
+        "methodologies",
+      ].includes(activeSection) && (
+        <div className={styles.infoBanner}>
+          This is a frontend mockup page for supervisor review. These records are not connected to backend create,
+          edit, or delete endpoints yet.
+        </div>
       )}
 
       {activeSection === "staff" && (
