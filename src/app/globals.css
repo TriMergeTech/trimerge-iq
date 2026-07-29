@@ -17,11 +17,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
   background: #f8fafc;
   color: #0f172a;
   font-family:

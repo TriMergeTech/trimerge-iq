@@ -1,7 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap");
 
 .composer {
+  width: min(100%, 900px);
   max-width: 900px;
+  min-width: 0;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -21,6 +23,7 @@
 
 .attachMenuWrap {
   position: relative;
+  flex-shrink: 0;
 }
 
 .attach {
@@ -120,6 +123,9 @@
 
 .attachmentBadge {
   flex-shrink: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-radius: 999px;
   border: 1px solid rgba(240, 217, 138, 0.28);
   background: rgba(240, 217, 138, 0.09);
@@ -139,6 +145,7 @@
 
 .input {
   flex: 1;
+  min-width: 80px;
   border: none;
   outline: none;
   background: transparent;
@@ -178,6 +185,7 @@
   cursor: not-allowed;
   background: rgba(255, 255, 255, 0.07);
   color: rgba(255, 255, 255, 0.32);
+  opacity: 0.62;
   box-shadow: none;
   transform: none;
 }
@@ -196,5 +204,27 @@
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .composer {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .attachmentBadge {
+    max-width: 116px;
+    padding: 6px 8px;
+  }
+
+  .input {
+    font-size: 15px;
+    min-width: 0;
+  }
+
+  .send {
+    width: 40px;
+    height: 40px;
   }
 }

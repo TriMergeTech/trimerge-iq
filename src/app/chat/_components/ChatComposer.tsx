@@ -33,12 +33,22 @@ export default function ChatComposer({
   onSubmit,
   setIsAttachmentMenuOpen,
 }: ChatComposerProps) {
-  const canSubmit = (inputMessage.trim().length > 0 || attachedFiles.length > 0) && !isTyping;
   const hasPendingRfp = attachedFiles.some((file) => file.extractionStatus === "pending");
   const hasErroredRfp = attachedFiles.some((file) => file.extractionStatus === "error");
+  const hasUnprocessedRfp = hasPendingRfp || hasErroredRfp;
+  const canSubmit =
+    (inputMessage.trim().length > 0 || attachedFiles.length > 0) &&
+    !isTyping &&
+    !hasUnprocessedRfp;
+  const sendButtonLabel = hasPendingRfp
+    ? "Wait for RFP extraction to finish"
+    : hasErroredRfp
+      ? "Remove failed RFP before sending"
+      : "Send message";
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canSubmit) return;
     onSubmit();
   };
 
@@ -124,7 +134,13 @@ export default function ChatComposer({
         placeholder="Ask anything"
         className={styles.input}
       />
-      <button type="submit" disabled={!canSubmit} className={styles.send}>
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className={styles.send}
+        aria-label={sendButtonLabel}
+        title={sendButtonLabel}
+      >
         <Send className="h-5 w-5" />
       </button>
     </form>
