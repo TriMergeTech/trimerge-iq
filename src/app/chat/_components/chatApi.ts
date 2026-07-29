@@ -2,6 +2,7 @@ import type {
   ChatEntityId,
   Conversation,
   Message,
+  Project,
   ProjectFormOption,
   UploadedFile,
 } from "./chatPageTypes";
