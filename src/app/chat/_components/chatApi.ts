@@ -823,14 +823,14 @@ export async function createShareLink(conversationId: ChatEntityId) {
   return apiShareLink;
 }
 
-export async function fetchProjects() {
+export async function fetchProjects(): Promise<Project[]> {
   return [];
 }
 
-export async function fetchProject(projectId: ChatEntityId) {
-  const payload = await projectsApiRequest<unknown>(`/projects/${projectId}`);
-  const project = extractProjectRecords(payload)[0];
-  return project ? mapProjectFromApi(project) : null;
+export async function fetchProject(
+  projectId: ChatEntityId,
+): Promise<Project | null> {
+  return null;
 }
 
 export async function fetchProjectFormOptions() {
