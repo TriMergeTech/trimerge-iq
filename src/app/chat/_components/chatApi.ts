@@ -203,6 +203,8 @@ async function postJson<T>(path: string, body: Record<string, unknown>) {
 }
 
 async function projectsApiRequest<T>(path: string, init: RequestInit = {}) {
+  return [];
+
   const accessToken = getAccessToken();
   if (!accessToken) {
     throw new Error("Sign in before managing projects.");
@@ -824,10 +826,7 @@ export async function createShareLink(conversationId: ChatEntityId) {
 }
 
 export async function fetchProjects() {
-  if (!getAccessToken()) return [];
-
-  const payload = await projectsApiRequest<unknown>("/projects");
-  return extractProjectRecords(payload).map(mapProjectFromApi);
+  return [];
 }
 
 export async function fetchProject(projectId: ChatEntityId) {
