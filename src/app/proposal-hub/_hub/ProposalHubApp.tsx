@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -22,29 +23,26 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
-import { Plus, FileText, Search, Download, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Search, Download, Edit, Trash2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import ProposalForm from "./components/ProposalForm";
 import ProposalWorkspace from "./components/ProposalWorkspace";
 import ToolGenerator from "./components/ToolGenerator";
+import {
+  readStoredGeneratedProposals,
+  readStoredGeneratedProposal,
+  rememberGeneratedProposal,
+} from "./utils/generatedProposalStorage";
 import { post_request } from "./utils/services";
-
-interface Proposal {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  budget: string;
-  timeline: string;
-  status: "draft" | "submitted" | "approved" | "rejected";
-  createdAt: Date;
-}
+import type { Proposal } from "./types";
 
 export default function App() {
-  const [proposals, setProposals] = useState<Proposal[]>(null);
+  const router = useRouter();
+  const [proposals, setProposals] = useState<Proposal[] | null>(null);
 
   let [page, set_page] = useState(1);
   const [view, setView] = useState<string>("list");
+  const [returnTarget, setReturnTarget] = useState<"home" | "chat">("home");
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(
     null,
   );
@@ -63,7 +61,7 @@ export default function App() {
       status: "draft",
       createdAt: new Date(),
     };
-    setProposals([newProposal, ...proposals]);
+    setProposals([newProposal, ...(proposals || [])]);
     setView("list");
   };
 
@@ -72,15 +70,64 @@ export default function App() {
       let proposals = await post_request("get_proposals", { page: curr_page });
 
       if (proposals.ok) {
-        setProposals(proposals.data);
+        const proposalsData = proposals.data ?? [];
+        const storedProposals = readStoredGeneratedProposals();
+        const storedOnlyProposals = storedProposals.filter(
+          (storedProposal) =>
+            !proposalsData.some(
+              (proposal: Proposal) =>
+                proposal._id === storedProposal._id ||
+                proposal.id === storedProposal.id ||
+                proposal._id === storedProposal.id ||
+                proposal.id === storedProposal._id,
+            ),
+        );
+
+        setProposals([...storedOnlyProposals, ...proposalsData]);
       }
     };
 
     get_proposals();
   }, []);
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setReturnTarget(searchParams.get("from") === "chat" ? "chat" : "home");
+  }, []);
+
+  useEffect(() => {
+    if (!proposals || typeof window === "undefined") return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const proposalId = searchParams.get("proposal");
+    if (!proposalId) return;
+
+    const proposal =
+      proposals.find((item) => item._id === proposalId || item.id === proposalId) ??
+      readStoredGeneratedProposal(proposalId);
+
+    if (!proposal) return;
+
+    setSelectedProposal(proposal);
+    setView("detail");
+  }, [proposals]);
+
+  const getProposalId = (proposal: Proposal) => proposal._id ?? proposal.id ?? "";
+
+  const getProposalTimestamp = (proposal: Proposal) => {
+    const dateValue =
+      proposal.updatedAt ??
+      proposal.updated ??
+      proposal.modifiedAt ??
+      proposal.modified ??
+      proposal.createdAt ??
+      proposal.created;
+    const timestamp = dateValue ? new Date(dateValue).getTime() : 0;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+
   const handleViewProposal = (_id: string) => {
-    const proposal = proposals.find((p) => p._id === _id);
+    const proposal = proposals?.find((p) => getProposalId(p) === _id);
     if (proposal) {
       setSelectedProposal(proposal);
       setView("detail");
@@ -88,7 +135,7 @@ export default function App() {
   };
 
   const handleDeleteProposal = async (_id: string) => {
-    setProposals((prev) => prev.filter((p) => p._id !== _id));
+    setProposals((prev) => (prev || []).filter((p) => getProposalId(p) !== _id));
 
     await post_request("delete_proposal", {
       proposal: _id,
@@ -96,7 +143,7 @@ export default function App() {
   };
 
   const handleEditProposal = (_id: string) => {
-    const proposal = proposals.find((p) => p._id === _id);
+    const proposal = proposals?.find((p) => getProposalId(p) === _id);
     if (proposal) {
       setSelectedProposal(proposal);
       setView("edit");
@@ -115,10 +162,18 @@ export default function App() {
   const apiBaseUrl = isLocalDev ? "/api" : "https://trimerge-iq.onrender.com";
   const toolEndpoint = `${apiBaseUrl}/tools/6a0f6fb93995d6cbe80d82e9`;
 
-  const draftProposals = null;
-  const filteredProposals = proposals;
+  const draftProposals = null as Proposal[] | null;
+  const filteredProposals = proposals
+    ? [...proposals].sort((a, b) => getProposalTimestamp(b) - getProposalTimestamp(a))
+    : proposals;
 
-  const formatDate = (date: Date) => {
+  const handleBackToApp = () => {
+    router.push(returnTarget === "chat" ? "/chat" : "/");
+  };
+
+  const formatDate = (date: Date | null) => {
+    if (!date || Number.isNaN(date.getTime())) return "unknown";
+
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -132,11 +187,11 @@ export default function App() {
     return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? "s" : ""} ago`;
   };
 
-  const on_delete_section = (proposal) => {
+  const on_delete_section = (proposal?: string) => {
     setProposals((prev) => {
-      return prev.map((p) => {
+      return (prev || []).map((p) => {
         if (p._id === proposal) {
-          p.sections -= 1;
+          p.sections = (p.sections || 0) - 1;
         }
 
         return p;
@@ -167,13 +222,60 @@ export default function App() {
         sx={{
           flex: 1,
           ml: "240px",
-          p: 4,
+          px: { xs: 2, md: 4 },
+          py: 3,
           bgcolor: "#070c2b",
           background:
             "radial-gradient(ellipse 70% 55% at 50% 0%, rgba(124,92,255,0.18), transparent 60%), radial-gradient(ellipse 70% 50% at 100% 100%, rgba(43,197,255,0.08), transparent 60%), #070c2b",
           minHeight: "100vh",
         }}
       >
+        <Box
+          component="header"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            mb: 3,
+            py: 1,
+          }}
+        >
+          <Button
+            onClick={handleBackToApp}
+            startIcon={<ArrowLeft size={18} />}
+            sx={{
+              color: "#e6e9f5",
+              border: "1px solid rgba(142,151,255,0.22)",
+              bgcolor: "rgba(255,255,255,0.04)",
+              borderRadius: "12px",
+              textTransform: "none",
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 600,
+              px: 2,
+              py: 1,
+              "&:hover": {
+                bgcolor: "rgba(124,92,255,0.16)",
+                borderColor: "rgba(142,151,255,0.42)",
+              },
+            }}
+          >
+            {returnTarget === "chat" ? "Back to Chat" : "Back to Home"}
+          </Button>
+          <Typography
+            sx={{
+              color: "#8b92b8",
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "12px",
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+            }}
+          >
+            Proposal Hub
+          </Typography>
+        </Box>
+
         {(view === "list" || view === "drafts") && (
           <>
             <Box sx={{ mb: 3, display: "flex", gap: 2, alignItems: "stretch" }}>
@@ -413,7 +515,7 @@ export default function App() {
                         };
                         return (
                           <TableRow
-                            key={proposal._id}
+                            key={getProposalId(proposal)}
                             sx={{
                               "&:hover": {
                                 bgcolor: "rgba(124,92,255,0.08)",
@@ -445,7 +547,7 @@ export default function App() {
                                       "0 0 18px rgba(124,92,255,0.38)",
                                   },
                                 }}
-                                onClick={() => handleViewProposal(proposal._id)}
+                                onClick={() => handleViewProposal(getProposalId(proposal))}
                               >
                                 {proposal.title}
                                 {/* {proposal.status === "draft" &&
@@ -492,7 +594,11 @@ export default function App() {
                                 py: 2.5,
                               }}
                             >
-                              {formatDate(new Date(proposal.created))}
+                              {formatDate(
+                                getProposalTimestamp(proposal)
+                                  ? new Date(getProposalTimestamp(proposal))
+                                  : null,
+                              )}
                             </TableCell>
                             <TableCell
                               align="right"
@@ -578,7 +684,7 @@ export default function App() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={4}
                           sx={{ borderBottom: "none", py: 8 }}
                         >
                           <Box
@@ -643,12 +749,13 @@ export default function App() {
                 ...proposalDraft,
               };
               setProposals((prev) => {
-                let exists = prev.find((pr) => pr._id === newProposal._id);
+                let list = prev || [];
+                let exists = list.find((pr) => pr._id === newProposal._id);
                 if (exists)
-                  return prev.map((p) =>
+                  return list.map((p) =>
                     p._id === newProposal._id ? newProposal : p,
                   );
-                return [newProposal, ...prev];
+                return [newProposal, ...list];
               });
               setSelectedProposal(newProposal);
               setView("detail");
@@ -660,7 +767,8 @@ export default function App() {
           <ToolGenerator
             endpoint={toolEndpoint}
             on_generated={(proposal) => {
-              setProposals((current) => [proposal, ...current]);
+              rememberGeneratedProposal(proposal);
+              setProposals((current) => [proposal, ...(current || [])]);
             }}
             on_view_proposal={(proposal) => {
               setView("detail");
@@ -741,8 +849,8 @@ export default function App() {
               initialData={selectedProposal}
               onSubmit={(data) => {
                 setProposals(
-                  proposals.map((p) =>
-                    p.id === selectedProposal.id
+                  (proposals || []).map((p) =>
+                    p.id === selectedProposal?.id
                       ? { ...p, ...data, createdAt: new Date() }
                       : p,
                   ),
@@ -763,7 +871,7 @@ export default function App() {
             onDeleteSection={on_delete_section}
             onSave={(updatedProposal) => {
               setProposals((current) =>
-                current.map((proposal) =>
+                (current || []).map((proposal) =>
                   proposal._id === updatedProposal._id
                     ? updatedProposal
                     : proposal,
@@ -857,7 +965,7 @@ export default function App() {
             variant="contained"
             color="error"
             onClick={async () => {
-              await handleDeleteProposal(deleteTarget._id);
+              await handleDeleteProposal(getProposalId(deleteTarget));
               setDeleteTarget(null);
             }}
             sx={{

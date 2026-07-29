@@ -8,75 +8,24 @@ import {
   useState,
 } from "react";
 import useFeedback, { FeedbackStack } from "./feedback/useFeedback";
+import ProposalAiDrawer from "./ProposalAiDrawer";
 import ProposalExportDropdown from "./ProposalExportDropdown";
+import ProposalSectionsPanel from "./ProposalSectionsPanel";
 import {
   ArrowLeft,
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Check,
-  ChevronRight,
-  Eraser,
-  Download,
-  FileText,
-  GripVertical,
-  IndentDecrease,
-  IndentIncrease,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Plus,
-  Quote,
-  RotateCcw,
   Save,
-  Search,
-  Send,
   Share2,
-  ShieldCheck,
-  Sparkles,
-  PenLine,
-  Rocket,
-  Strikethrough,
-  Table2,
-  Trash2,
-  Underline,
-  X,
 } from "lucide-react";
 import "./proposal-workspace.css";
 import { Box } from "@mui/material";
 import { post_request, TRIMERGE_BACKEND } from "../utils/services";
-
-type ProposalStatus =
-  | "draft"
-  | "submitted"
-  | "in_review"
-  | "changes_requested"
-  | "approved"
-  | "rejected";
-
-interface Proposal {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  budget: string;
-  timeline: string;
-  status: ProposalStatus;
-  createdAt: Date;
-}
-
-interface Section {
-  id: string;
-  title: string;
-  body: string;
-}
+import type { Proposal, ProposalStatus, Section } from "../types";
 
 interface ProposalWorkspaceProps {
-  proposal: Proposal;
+  proposal: Proposal | null;
   onBack: () => void;
   onSave: (proposal: Proposal) => void;
+  onDeleteSection: (proposalId?: string) => void;
   onSubmitForReview?: (proposal: Proposal) => void;
   isNew?: boolean;
 }
@@ -95,7 +44,7 @@ export default function ProposalWorkspace({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [adding_section, set_adding_section] = useState(false);
   const [proposal_id, set_proposal_id] = useState(proposal?._id);
-  const [tool_data, set_tool_data] = useState(null);
+  const [tool_data, set_tool_data] = useState<any>(null);
   const [saving_proposal_data, set_saving_proposal_data] = useState(false);
   const { feedbacks, pushFeedback, removeFeedback } = useFeedback();
 
@@ -184,7 +133,7 @@ export default function ProposalWorkspace({
       }
 
       set_tool_data(res);
-      let propss = {};
+      let propss: Record<string, string> = {};
       for (let p in res.arguments) {
         let arg = res.arguments[p];
 
@@ -197,8 +146,8 @@ export default function ProposalWorkspace({
     new_proposal();
   }, []);
 
-  const clean_proposal = (proposal) => {
-    let pp = { ...proposal };
+  const clean_proposal = (proposal: Proposal | null) => {
+    let pp: Proposal = { ...proposal };
 
     delete pp._id;
     delete pp.created;
@@ -229,7 +178,7 @@ export default function ProposalWorkspace({
   const [savedAt, setSavedAt] = useState(
     isNew ? "Unsaved draft" : "Autosaved 2 min ago",
   );
-  const [sections, setSections] = useState<Section[]>(null);
+  const [sections, setSections] = useState<Section[] | null>(null);
 
   useEffect(() => {
     let get_sections = async () => {
@@ -262,14 +211,16 @@ export default function ProposalWorkspace({
       _id: sec.data._id,
       created: sec.data.created,
     };
-    setSections((current) => [...current, sec]);
+    setSections((current) => [...(current || []), sec]);
 
-    let sections = (proposal.sections || 0) + 1;
+    let sections = (proposal?.sections || 0) + 1;
     onSave({ ...proposal, sections });
   };
 
   const deleteSection = async (id: string) => {
-    setSections((current) => current.filter((section) => section._id !== id));
+    setSections((current) =>
+      (current || []).filter((section) => section._id !== id),
+    );
 
     await post_request("delete_section", {
       section: id,
@@ -281,25 +232,28 @@ export default function ProposalWorkspace({
 
   const moveSection = (id: string) => {
     setSections((current) => {
-      const index = current.findIndex((section) => section._id === id);
-      if (index < 0 || current.length < 2) return current;
-      const next = [...current];
+      const list = current || [];
+      const index = list.findIndex((section) => section._id === id);
+      if (index < 0 || list.length < 2) return list;
+      const next = [...list];
       const [item] = next.splice(index, 1);
-      next.splice(index === current.length - 1 ? 0 : index + 1, 0, item);
+      next.splice(index === list.length - 1 ? 0 : index + 1, 0, item);
       return next;
     });
   };
 
   const buildProposalPayload = (
-    status: ProposalStatus = proposal.status,
-  ): Proposal => {};
+    status: ProposalStatus = proposal?.status || "draft",
+  ): Proposal => {
+    return { ...proposal, status };
+  };
 
   const saveDraft = () => {
     onSave(buildProposalPayload("draft"));
     setSavedAt("Draft saved just now");
   };
 
-  const validate_proposal_data = (proposalData) => {
+  const validate_proposal_data = (proposalData: Record<string, any>) => {
     // If no tool metadata is available, do a minimal check
     if (!tool_data || !tool_data.arguments) {
       // ensure at least one field exists
@@ -411,7 +365,7 @@ export default function ProposalWorkspace({
       res = await post_request("add_proposal", { proposal: proposal_ });
       proposal = res.data;
 
-      set_proposal_id(proposal._id);
+      set_proposal_id(proposal?._id);
     } else {
       res = await post_request("update_proposal", { proposal: proposal_ });
     }
@@ -487,7 +441,7 @@ export default function ProposalWorkspace({
 
     const nextBody = editor.innerHTML;
     setSections((current) =>
-      current.map((item) =>
+      (current || []).map((item) =>
         item.id === sectionId
           ? item.body === nextBody
             ? item
@@ -665,12 +619,12 @@ export default function ProposalWorkspace({
 
     const payload = sections?.filter((s) => dirtySectionsRef.current[s._id]);
 
-    if (payload.length === 0) return;
+    if (!payload || payload.length === 0) return;
 
     set_syncing_dirty(true);
     const res = await post_request("update_sections", {
       sections: payload,
-      proposal_id: proposal._id,
+      proposal_id: proposal?._id,
     });
     set_syncing_dirty(false);
     if (res.ok) {
@@ -701,21 +655,21 @@ export default function ProposalWorkspace({
 
       set_saving_bulk(true);
       let res = await post_request("add_bulk_sections", {
-        proposal: proposal._id,
+        proposal: proposal?._id,
         sections,
       });
 
       if (res.ok) {
         pushFeedback(res.message, "success");
-        setSections((prev) => [...prev, ...res.data.sections]);
-        let secs = (proposal.sections || 0) + res.data.length;
+        setSections((prev) => [...(prev || []), ...res.data.sections]);
+        let secs = (proposal?.sections || 0) + res.data.length;
         onSave({ ...proposal, sections: secs });
       } else {
         throw new Error(res.message);
       }
     } catch (err) {
       console.error(err);
-      pushFeedback(err.message, "error");
+      pushFeedback(err instanceof Error ? err.message : "Something went wrong", "error");
     }
     set_saving_bulk(false);
   };
@@ -880,542 +834,42 @@ export default function ProposalWorkspace({
               </div>
             </Box>
 
-            <div className="proposal-search-row">
-              <label className="proposal-search">
-                <Search size={16} />
-                <input placeholder="Search sections..." />
-              </label>
-            </div>
-
-            {sections ? (
-              sections.map((section, index) => (
-                <article className="proposal-section" key={section._id}>
-                  <div className="proposal-section__head">
-                    <span className="proposal-section__num">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <input
-                      value={section.title}
-                      placeholder={`Section ${index + 1} title`}
-                      onChange={(event) => {
-                        const value = event.target.value;
-
-                        setSections((current) =>
-                          current.map((item) =>
-                            item._id === section._id
-                              ? { ...item, title: value }
-                              : item,
-                          ),
-                        );
-
-                        dirtySectionsRef.current[section._id] = true;
-                      }}
-                    />
-                    <div className="proposal-section__tools">
-                      <button
-                        type="button"
-                        title="Ask AI"
-                        onClick={() => setDrawerOpen(true)}
-                      >
-                        <Sparkles size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Move"
-                        onClick={() => moveSection(section._id)}
-                      >
-                        <GripVertical size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        title="Delete"
-                        onClick={() => deleteSection(section._id)}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="proposal-section__status">
-                    {(() => {
-                      const unsaved = Object.keys(
-                        dirtySectionsRef.current || {},
-                      );
-                      const isDirty = unsaved.includes(section._id);
-                      return (
-                        <>
-                          <span className={isDirty ? "" : "is-done"} />
-                          {isDirty
-                            ? syncing_dirty
-                              ? "Saving..."
-                              : "In progress"
-                            : section.body?.replace(/<[^>]+>/g, "").trim()
-                              ? "Saved"
-                              : "Empty"}
-                        </>
-                      );
-                    })()}
-                  </div>
-                  <div
-                    className="proposal-toolbar"
-                    onMouseDown={(event) => {
-                      const target = event.target as HTMLElement;
-                      if (!target.closest("select")) {
-                        event.preventDefault();
-                      }
-                    }}
-                  >
-                    <select
-                      className="proposal-toolbar__select"
-                      defaultValue="p"
-                      title="Text style"
-                      onChange={(event) =>
-                        runEditorCommand(
-                          section._id,
-                          "formatBlock",
-                          event.target.value,
-                        )
-                      }
-                    >
-                      <option value="p">Paragraph</option>
-                      <option value="h2">Heading 1</option>
-                      <option value="h3">Heading 2</option>
-                    </select>
-                    <span className="proposal-toolbar__divider" />
-                    <button
-                      type="button"
-                      title="Bold"
-                      onClick={() => runEditorCommand(section._id, "bold")}
-                    >
-                      <Bold size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Italic"
-                      onClick={() => runEditorCommand(section._id, "italic")}
-                    >
-                      <Italic size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Underline"
-                      onClick={() => runEditorCommand(section._id, "underline")}
-                    >
-                      <Underline size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Strikethrough"
-                      onClick={() =>
-                        runEditorCommand(section._id, "strikeThrough")
-                      }
-                    >
-                      <Strikethrough size={14} />
-                    </button>
-                    <span className="proposal-toolbar__divider" />
-                    <button
-                      type="button"
-                      title="Bullet list"
-                      onClick={() =>
-                        runEditorCommand(section._id, "insertUnorderedList")
-                      }
-                    >
-                      <List size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Numbered list"
-                      onClick={() =>
-                        runEditorCommand(section._id, "insertOrderedList")
-                      }
-                    >
-                      <ListOrdered size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Decrease indent"
-                      onClick={() => runEditorCommand(section._id, "outdent")}
-                    >
-                      <IndentDecrease size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Increase indent"
-                      onClick={() => runEditorCommand(section._id, "indent")}
-                    >
-                      <IndentIncrease size={14} />
-                    </button>
-                    <span className="proposal-toolbar__divider" />
-                    <button
-                      type="button"
-                      title="Align left"
-                      onClick={() =>
-                        runEditorCommand(section._id, "justifyLeft")
-                      }
-                    >
-                      <AlignLeft size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Align center"
-                      onClick={() =>
-                        runEditorCommand(section._id, "justifyCenter")
-                      }
-                    >
-                      <AlignCenter size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Align right"
-                      onClick={() =>
-                        runEditorCommand(section._id, "justifyRight")
-                      }
-                    >
-                      <AlignRight size={14} />
-                    </button>
-                    <span className="proposal-toolbar__divider" />
-                    <button
-                      type="button"
-                      title="Quote"
-                      onClick={() =>
-                        runEditorCommand(
-                          section._id,
-                          "formatBlock",
-                          "blockquote",
-                        )
-                      }
-                    >
-                      <Quote size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Link"
-                      onClick={() => createEditorLink(section._id)}
-                    >
-                      <Link size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Insert table"
-                      onClick={() => insertEditorTable(section._id)}
-                    >
-                      <Table2 size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Mark complete"
-                      onClick={() =>
-                        runEditorCommand(
-                          section._id,
-                          "insertHTML",
-                          "<strong>Done:</strong> ",
-                        )
-                      }
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Clear formatting"
-                      onClick={() => {
-                        runEditorCommand(section._id, "removeFormat");
-                        runEditorCommand(section._id, "unlink");
-                      }}
-                    >
-                      <Eraser size={14} />
-                    </button>
-                  </div>
-                  <div
-                    ref={(element) => {
-                      editorRefs.current[section._id] = element;
-                    }}
-                    className="proposal-section__body"
-                    contentEditable
-                    suppressContentEditableWarning
-                    data-placeholder="Start writing or paste content..."
-                    onFocus={() => saveEditorSelection(section._id)}
-                    onMouseUp={() => saveEditorSelection(section._id)}
-                    onKeyUp={() => saveEditorSelection(section._id)}
-                    onInput={(event) => {
-                      const nextBody = event.currentTarget.innerHTML;
-
-                      setSections((current) =>
-                        current.map((item) =>
-                          item._id === section._id
-                            ? { ...item, body: nextBody }
-                            : item,
-                        ),
-                      );
-
-                      dirtySectionsRef.current[section._id] = true;
-                    }}
-                  />
-                </article>
-              ))
-            ) : (
-              <>
-                <div className="proposal-sections__loader" aria-live="polite">
-                  <div className="skeleton-grid">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <article className="proposal-section skeleton" key={i}>
-                        <div className="proposal-section__head">
-                          <span className="proposal-section__num skeleton-block" />
-                          <div className="skeleton-line skeleton-title" />
-                          <div className="proposal-section__tools">
-                            <span className="skeleton-icon" />
-                            <span className="skeleton-icon" />
-                            <span className="skeleton-icon" />
-                          </div>
-                        </div>
-                        <div className="proposal-section__status">
-                          <span className="skeleton-dot" />
-                          <span className="skeleton-text short" />
-                        </div>
-                        <div className="proposal-section__body skeleton-block" />
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <button
-              className="proposal-doc__add"
-              type="button"
-              onClick={addSection}
-            >
-              <Plus size={18} />
-              {adding_section ? "Adding section..." : "Add Section"}
-            </button>
-
-            <div
-              className={`proposal-bulk ${show_bulk_sections ? "is-open" : ""}`}
-            >
-              <button
-                className="proposal-doc__add proposal-doc__import"
-                type="button"
-                onClick={() => toggle_bulk_sections(!show_bulk_sections)}
-              >
-                <FileText size={18} />
-
-                <span>
-                  {show_bulk_sections
-                    ? "Close Bulk Import"
-                    : "Import Multiple Sections"}
-                </span>
-              </button>
-
-              {show_bulk_sections && (
-                <div className="proposal-bulk__panel">
-                  <div className="proposal-bulk__head">
-                    <div>
-                      <h3>Bulk Section Import</h3>
-
-                      <p>
-                        Paste a JSON array of proposal sections to instantly
-                        generate multiple sections at once.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="proposal-bulk__example">
-                    <strong>Expected Format</strong>
-
-                    <pre>
-                      {`[
-  {
-    "title": "Executive Summary",
-    "body": "<p>Project overview...</p>"
-  },
-  {
-    "title": "Scope of Work",
-    "body": "<ul><li>...</li></ul>"
-  }
-]`}
-                    </pre>
-                  </div>
-
-                  <label
-                    htmlFor="bulk-json-input"
-                    className="proposal-bulk__label"
-                  >
-                    Section JSON
-                  </label>
-
-                  <textarea
-                    id="bulk-json-input"
-                    className="proposal-bulk__textarea"
-                    value={bulk_json}
-                    onChange={(e) => set_bulk_json(e.target.value)}
-                    placeholder="Paste proposal sections JSON here..."
-                    rows={12}
-                    spellCheck={false}
-                    aria-label="Bulk sections JSON"
-                  />
-
-                  <div className="proposal-bulk__footer">
-                    <div className="proposal-bulk__meta">
-                      {bulk_json?.trim()
-                        ? `${bulk_json.length} characters`
-                        : "No content pasted"}
-                    </div>
-
-                    <div className="proposal-bulk__actions">
-                      <button
-                        type="button"
-                        className="proposal-bulk__ghost"
-                        onClick={() => set_bulk_json("")}
-                      >
-                        Clear
-                      </button>
-
-                      <button
-                        type="button"
-                        className="proposal-bulk__submit"
-                        onClick={() => add_bulk_sections()}
-                      >
-                        <Plus size={16} />
-                        {!saving_bulk ? "Send Sections" : "Sending..."}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ProposalSectionsPanel
+              addingSection={adding_section}
+              addBulkSections={add_bulk_sections}
+              addSection={addSection}
+              bulkJson={bulk_json}
+              createEditorLink={createEditorLink}
+              deleteSection={deleteSection}
+              dirtySectionsRef={dirtySectionsRef}
+              editorRefs={editorRefs}
+              insertEditorTable={insertEditorTable}
+              moveSection={moveSection}
+              runEditorCommand={runEditorCommand}
+              saveEditorSelection={saveEditorSelection}
+              savingBulk={saving_bulk}
+              sections={sections}
+              setBulkJson={set_bulk_json}
+              setDrawerOpen={setDrawerOpen}
+              setSections={setSections}
+              showBulkSections={show_bulk_sections}
+              syncingDirty={syncing_dirty}
+              toggleBulkSections={toggle_bulk_sections}
+            />
           </section>
         </div>
       </main>
 
-      <button
-        ref={fabRef}
-        className="proposal-ai-fab"
-        type="button"
-        onMouseDown={handleFabMouseDown}
-        onTouchStart={handleFabTouchStart}
-        onClick={handleFabClick}
-        style={
-          fabPosition
-            ? {
-                left: fabPosition.x,
-                top: fabPosition.y,
-                right: "auto",
-                bottom: "auto",
-              }
-            : undefined
-        }
-        aria-label="Ask TriMerge IQ"
-      >
-        <Sparkles size={22} />
-      </button>
-      <div
-        className={`proposal-scrim ${drawerOpen ? "is-open" : ""}`}
-        onClick={() => setDrawerOpen(false)}
+      <ProposalAiDrawer
+        drawerOpen={drawerOpen}
+        fabPosition={fabPosition}
+        fabRef={fabRef}
+        onClose={() => setDrawerOpen(false)}
+        onFabClick={handleFabClick}
+        onFabMouseDown={handleFabMouseDown}
+        onFabTouchStart={handleFabTouchStart}
+        onSaveDraft={saveDraft}
       />
-      <aside
-        className={`proposal-ai ${drawerOpen ? "is-open" : ""}`}
-        aria-hidden={!drawerOpen}
-      >
-        <div className="proposal-ai__head">
-          <div className="proposal-ai__brand">
-            <span className="proposal-ai__brand-icon">
-              <Sparkles size={22} />
-            </span>
-            <div>
-              <h3>TriMerge IQ</h3>
-              <p>AI assistant for your proposal</p>
-            </div>
-          </div>
-          <button
-            className="proposal-ai__close"
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            aria-label="Close TriMerge IQ"
-          >
-            <X size={24} />
-          </button>
-          <button type="button" onClick={() => setDrawerOpen(false)}>
-            ×
-          </button>
-        </div>
-        <div className="proposal-ai__body">
-          <section className="proposal-ai__section">
-            <h4>Quick actions</h4>
-            <button
-              className="proposal-ai__action"
-              type="button"
-              onClick={saveDraft}
-            >
-              <span className="proposal-ai__action-icon">
-                <FileText size={20} />
-              </span>
-              <span>
-                <strong>Save as draft</strong>
-                <small>Save your current proposal as a draft.</small>
-              </span>
-              <ChevronRight size={20} />
-            </button>
-            <button className="proposal-ai__action" type="button">
-              <span className="proposal-ai__action-icon">
-                <Sparkles size={20} />
-              </span>
-              <span>
-                <strong>Generate executive summary</strong>
-                <small>Create a concise summary of this proposal.</small>
-              </span>
-              <ChevronRight size={20} />
-            </button>
-            <button className="proposal-ai__action" type="button">
-              <span className="proposal-ai__action-icon">
-                <PenLine size={20} />
-              </span>
-              <span>
-                <strong>Improve grammar and tone</strong>
-                <small>
-                  Refine your writing for clarity, grammar, and tone.
-                </small>
-              </span>
-              <ChevronRight size={20} />
-            </button>
-            <button className="proposal-ai__action" type="button">
-              <span className="proposal-ai__action-icon">
-                <Search size={20} />
-              </span>
-              <span>
-                <strong>Find similar proposals</strong>
-                <small>Discover similar proposals to get inspired.</small>
-              </span>
-              <ChevronRight size={20} />
-            </button>
-          </section>
-
-          <section className="proposal-ai__ask">
-            <h4>Ask TriMerge IQ</h4>
-            <p>Get answers, suggestions, or help improving your proposal.</p>
-          </section>
-
-          <label className="proposal-ai__input">
-            <textarea placeholder="Ask IQ about this proposal..." rows={3} />
-            <button type="button">
-              <Send size={14} />
-            </button>
-          </label>
-          <p className="proposal-ai__privacy">
-            <ShieldCheck size={16} />
-            Your data is secure and private.
-          </p>
-          <button type="button" onClick={saveDraft}>
-            Save as draft
-          </button>
-          <button type="button">Generate executive summary</button>
-          <button type="button">Improve grammar and tone</button>
-          <button type="button">Find similar proposals</button>
-          <label className="proposal-ai__input">
-            <input placeholder="Ask IQ about this proposal..." />
-            <button type="button">
-              <Send size={14} />
-            </button>
-          </label>
-        </div>
-      </aside>
     </div>
   );
 }

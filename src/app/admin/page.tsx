@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AdminRoute from "../components/AdminRoute";
+import AdminRoute from "./_components/AdminRoute";
 
 export const metadata: Metadata = {
   title: "Admin",

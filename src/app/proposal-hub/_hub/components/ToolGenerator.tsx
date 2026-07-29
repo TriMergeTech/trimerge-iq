@@ -13,7 +13,7 @@ import { Send, Sparkles } from "lucide-react";
 import { BACKEND, TRIMERGE_BACKEND } from "../utils/services";
 
 interface ToolArgument {
-  name: string;
+  name?: string;
   label?: string;
   type?: string;
   description?: string;
@@ -25,6 +25,7 @@ interface ToolArgument {
 
 interface ToolDefinition {
   id?: string;
+  _id?: string;
   name?: string;
   description?: string;
   arguments?: ToolArgument[] | Record<string, ToolArgument>;
@@ -34,7 +35,7 @@ interface ToolGeneratorProps {
   endpoint: string;
   onBack?: () => void;
   on_generated?: (proposal: any) => void;
-  on_view_proposl?: (proposal: any) => void;
+  on_view_proposal?: (proposal: any) => void;
 }
 
 const proposalCreationToolFallback: ToolDefinition = {
@@ -136,15 +137,15 @@ const getDisplayName = (toolDefinition: ToolDefinition | null) => {
 
 const getFieldLabel = (argument: ToolArgument) =>
   argument.label ||
-  fieldCopy[argument.name]?.label ||
-  argument.name.replace(/_/g, " ");
+  fieldCopy[argument.name ?? ""]?.label ||
+  (argument.name ?? "").replace(/_/g, " ");
 
 const getFieldDescription = (argument: ToolArgument) =>
-  fieldCopy[argument.name]?.description || argument.description;
+  fieldCopy[argument.name ?? ""]?.description || argument.description;
 
 const getFieldPlaceholder = (argument: ToolArgument, label: string) =>
   argument.placeholder ||
-  fieldCopy[argument.name]?.placeholder ||
+  fieldCopy[argument.name ?? ""]?.placeholder ||
   `Enter ${label}`;
 
 export default function ToolGenerator({
@@ -156,7 +157,7 @@ export default function ToolGenerator({
   const [tool, setTool] = useState<ToolDefinition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [values, setValues] = useState({});
+  const [values, setValues] = useState<Record<string, any>>({});
 
   const [jobState, setJobState] = useState<any>(null);
   const [callbackId, setCallbackId] = useState<string | null>(null);
@@ -164,7 +165,7 @@ export default function ToolGenerator({
     "form",
   );
 
-  const [generated_proposal, set_generated_proposal] = useState(null);
+  const [generated_proposal, set_generated_proposal] = useState<any>(null);
 
   useEffect(() => {
     if (!callbackId || !phase) return;
@@ -200,7 +201,7 @@ export default function ToolGenerator({
           if (data.data.status === "completed") {
             setPhase("done");
             // setTracking(false);
-            on_generated(data.data.proposal);
+            on_generated?.(data.data.proposal);
             set_generated_proposal(data.data.proposal);
             clearInterval(interval);
           }
@@ -356,14 +357,14 @@ export default function ToolGenerator({
     }
   };
 
-  let [exporting, set_exporting] = useState(false);
+  let [exporting, set_exporting] = useState<string | boolean>(false);
 
-  const export_to_doc = async (type) => {
+  const export_to_doc = async (type: string) => {
     if (exporting) return;
 
     try {
       set_exporting(type);
-      let res = await fetch(`${BACKEND}/export_to_document`, {
+      const response = await fetch(`${BACKEND}/export_to_document`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -374,7 +375,7 @@ export default function ToolGenerator({
         }),
       });
 
-      res = await res.json();
+      const res = await response.json();
 
       if (res.ok) {
         // Prefer an explicit download URL if provided
@@ -621,7 +622,7 @@ export default function ToolGenerator({
           <Box sx={{ mt: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
             <Button
               variant="contained"
-              onClick={() => on_view_proposal(generated_proposal)}
+              onClick={() => on_view_proposal?.(generated_proposal)}
               sx={{ bgcolor: "#2e2bff", textTransform: "none" }}
             >
               View Proposal
@@ -785,7 +786,7 @@ export default function ToolGenerator({
           </Paper>
 
           {argumentList.map((argument) => {
-            const fieldValue = values[argument.name] ?? "";
+            const fieldValue = values[argument.name ?? ""] ?? "";
 
             const label = getFieldLabel(argument);
             const placeholder = getFieldPlaceholder(argument, label);
@@ -813,7 +814,7 @@ export default function ToolGenerator({
                     size="small"
                     value={fieldValue}
                     onChange={(event) =>
-                      handleChange(argument.name, event.target.value)
+                      handleChange(argument.name ?? "", event.target.value)
                     }
                     placeholder={placeholder}
                     InputProps={{
@@ -831,7 +832,7 @@ export default function ToolGenerator({
                       },
                     }}
                   >
-                    {argument.options.map((option) => {
+                    {argument.options?.map((option) => {
                       if (typeof option === "string") {
                         return (
                           <MenuItem key={option} value={option}>
@@ -855,7 +856,7 @@ export default function ToolGenerator({
                     minRows={rows}
                     value={fieldValue}
                     onChange={(event) =>
-                      handleChange(argument.name, event.target.value)
+                      handleChange(argument.name ?? "", event.target.value)
                     }
                     placeholder={placeholder}
                     required={argument.required}

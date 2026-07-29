@@ -20,11 +20,11 @@ interface ProposalFormProps {
   }) => void;
   onCancel?: () => void;
   initialData?: {
-    title: string;
-    description: string;
-    category: string;
-    budget: string;
-    timeline: string;
+    title?: string;
+    description?: string;
+    category?: string;
+    budget?: string;
+    timeline?: string;
   };
 }
 
@@ -37,11 +37,11 @@ export default function ProposalForm({ onSubmit, onCancel, initialData }: Propos
 
   useEffect(() => {
     if (initialData) {
-      setTitle(initialData.title);
-      setDescription(initialData.description);
-      setCategory(initialData.category);
-      setBudget(initialData.budget);
-      setTimeline(initialData.timeline);
+      setTitle(initialData.title || '');
+      setDescription(initialData.description || '');
+      setCategory(initialData.category || '');
+      setBudget(initialData.budget || '');
+      setTimeline(initialData.timeline || '');
     }
   }, [initialData]);
 
