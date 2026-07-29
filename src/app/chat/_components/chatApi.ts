@@ -203,8 +203,6 @@ async function postJson<T>(path: string, body: Record<string, unknown>) {
 }
 
 async function projectsApiRequest<T>(path: string, init: RequestInit = {}) {
-  return [];
-
   const accessToken = getAccessToken();
   if (!accessToken) {
     throw new Error("Sign in before managing projects.");
