@@ -1,9 +1,8 @@
+export const ADMIN_API_BASE_URL =
+  process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() ||
+  "https://trimerge-iq.onrender.com";
+
 let DEV = process.env.NEXT_PUBLIC_DEV;
-
-export const ADMIN_API_BASE_URL = DEV
-  ? "http://localhost:8005"
-  : "https://backend.trimergeiq.com";
-
 const PROFILE_SERVICE = DEV
   ? "http://localhost:4000"
   : "https://profile-api.savvyaisolution.com";

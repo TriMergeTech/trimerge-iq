@@ -268,6 +268,103 @@
   color: var(--adm-muted);
 }
 
+.mockModule {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mockModuleHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 22px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.mockBadge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  border-radius: 999px;
+  background: var(--adm-indigo-soft);
+  color: var(--adm-indigo);
+  padding: 5px 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.mockTitle {
+  margin: 12px 0 8px;
+  color: var(--adm-text);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.mockPurpose {
+  margin: 0;
+  max-width: 900px;
+  color: var(--adm-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.mockStats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mockStats span {
+  border-radius: 10px;
+  background: var(--adm-soft);
+  color: var(--adm-muted);
+  padding: 9px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mockFieldList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mockField {
+  border: 1px solid var(--adm-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--adm-muted);
+  padding: 7px 11px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mockNote {
+  margin: 0;
+  border-left: 3px solid var(--adm-indigo);
+  background: #fff;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 16px;
+  color: var(--adm-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* ---- table card ---- */
 .tableCard {
   background: #fff;
@@ -572,5 +669,7 @@
   .shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .pageHead, .content { padding-left: 20px; padding-right: 20px; }
+  .mockModuleHeader { flex-direction: column; }
+  .mockStats { flex-direction: row; flex-wrap: wrap; }
   .th, .td { padding-left: 14px; padding-right: 14px; }
 }

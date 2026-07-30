@@ -1,19 +1,11 @@
-import type {
-  ChatEntityId,
-  Conversation,
-  Message,
-  Project,
-  ProjectFormOption,
-  UploadedFile,
-} from "./chatPageTypes";
+import type { ChatEntityId, Conversation, Message, ProjectFormOption, UploadedFile } from "./chatPageTypes";
 import { readStoredAdminPeople } from "../../_shared/adminRegistryState";
 import { authenticatedAdminFetch } from "../../_shared/adminAuth";
 import { BACKEND as PROPOSAL_HUB_BACKEND } from "../../proposal-hub/_hub/utils/services";
 import type { Proposal } from "../../proposal-hub/_hub/types";
 
-const DEFAULT_CHAT_API_BASE_URL =
-  "https://microserver-agency-v2.trimergeiq.com/v2";
-const DEFAULT_PROJECTS_API_BASE_URL = "https://backend.trimergeiq.com";
+const DEFAULT_CHAT_API_BASE_URL = "https://microserver-agency-v2.trimergeiq.com/v2";
+const DEFAULT_PROJECTS_API_BASE_URL = "https://trimerge-iq.onrender.com";
 const CHAT_PROFILE_STORAGE_KEY = "trimerge_chat_profile";
 const CHAT_MESSAGE_SENDER_STORAGE_KEY = "trimerge_chat_message_senders";
 
@@ -127,17 +119,11 @@ interface ProposalGenerationStatusResponse {
 }
 
 function getChatApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL?.trim() ||
-    DEFAULT_CHAT_API_BASE_URL
-  );
+  return process.env.NEXT_PUBLIC_TRIMERGE_CHAT_API_BASE_URL?.trim() || DEFAULT_CHAT_API_BASE_URL;
 }
 
 function getProjectsApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() ||
-    DEFAULT_PROJECTS_API_BASE_URL
-  );
+  return process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() || DEFAULT_PROJECTS_API_BASE_URL;
 }
 
 function buildChatApiUrl(path: string) {
@@ -153,9 +139,7 @@ function serializeAttachment(file: UploadedFile) {
     name: file.name,
     size: file.size,
     type: file.type,
-    ...(file.extractedRfpData
-      ? { extractedRfpData: file.extractedRfpData }
-      : {}),
+    ...(file.extractedRfpData ? { extractedRfpData: file.extractedRfpData } : {}),
   };
 }
 
@@ -195,9 +179,7 @@ async function postJson<T>(path: string, body: Record<string, unknown>) {
           ? errorPayload.error
           : "";
 
-    throw new Error(
-      `Chat API request failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`,
-    );
+    throw new Error(`Chat API request failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`);
   }
 
   return payload;
@@ -230,16 +212,11 @@ async function projectsApiRequest<T>(path: string, init: RequestInit = {}) {
             ? errorPayload.errors.join(", ")
             : errorPayload?.errors
               ? Object.entries(errorPayload.errors)
-                  .map(
-                    ([key, value]) =>
-                      `${key}: ${Array.isArray(value) ? value.join(", ") : value}`,
-                  )
+                  .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
                   .join("; ")
               : "";
 
-    throw new Error(
-      `Projects API request failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`,
-    );
+    throw new Error(`Projects API request failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`);
   }
 
   return payload;
@@ -272,16 +249,11 @@ async function projectsApiDelete(path: string) {
             ? errorPayload.errors.join(", ")
             : errorPayload?.errors
               ? Object.entries(errorPayload.errors)
-                  .map(
-                    ([key, value]) =>
-                      `${key}: ${Array.isArray(value) ? value.join(", ") : value}`,
-                  )
+                  .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
                   .join("; ")
               : "";
 
-    throw new Error(
-      `Projects API delete failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`,
-    );
+    throw new Error(`Projects API delete failed (${response.status})${errorDetails ? `: ${errorDetails}` : ""}.`);
   }
 
   return { ok: true, alreadyDeleted: false, payload };
@@ -293,13 +265,8 @@ export function getChatProfile() {
   const storedProfile = localStorage.getItem(CHAT_PROFILE_STORAGE_KEY)?.trim();
   if (storedProfile) return storedProfile;
 
-  const email = localStorage
-    .getItem("trimerge_admin_email")
-    ?.trim()
-    .toLowerCase();
-  const normalizedEmail = email
-    ?.replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  const email = localStorage.getItem("trimerge_admin_email")?.trim().toLowerCase();
+  const normalizedEmail = email?.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   const generatedProfile = normalizedEmail || `web_${Date.now()}`;
 
   localStorage.setItem(CHAT_PROFILE_STORAGE_KEY, generatedProfile);
@@ -307,8 +274,7 @@ export function getChatProfile() {
 }
 
 function readSenderMap() {
-  if (typeof window === "undefined")
-    return {} as Record<string, Message["sender"]>;
+  if (typeof window === "undefined") return {} as Record<string, Message["sender"]>;
 
   const rawValue = localStorage.getItem(CHAT_MESSAGE_SENDER_STORAGE_KEY);
   if (!rawValue) return {} as Record<string, Message["sender"]>;
@@ -322,37 +288,22 @@ function readSenderMap() {
 
 function writeSenderMap(senderMap: Record<string, Message["sender"]>) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(
-    CHAT_MESSAGE_SENDER_STORAGE_KEY,
-    JSON.stringify(senderMap),
-  );
+  localStorage.setItem(CHAT_MESSAGE_SENDER_STORAGE_KEY, JSON.stringify(senderMap));
 }
 
-function getSenderMapKey(
-  conversationId: ChatEntityId,
-  messageId: ChatEntityId,
-) {
+function getSenderMapKey(conversationId: ChatEntityId, messageId: ChatEntityId) {
   return `${conversationId}:${messageId}`;
 }
 
 function isUuid(value: ChatEntityId | undefined) {
-  return (
-    typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      value,
-    )
-  );
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 function isMongoObjectId(value: ChatEntityId | undefined) {
   return typeof value === "string" && /^[0-9a-f]{24}$/i.test(value);
 }
 
-export function rememberMessageSender(
-  conversationId: ChatEntityId,
-  messageId: ChatEntityId,
-  sender: Message["sender"],
-) {
+export function rememberMessageSender(conversationId: ChatEntityId, messageId: ChatEntityId, sender: Message["sender"]) {
   const senderMap = readSenderMap();
   senderMap[getSenderMapKey(conversationId, messageId)] = sender;
   writeSenderMap(senderMap);
@@ -376,8 +327,7 @@ function inferMessageSender(
   if (isMongoObjectId(messageId)) return "ai";
 
   if (messageId !== undefined) {
-    const storedSender =
-      readSenderMap()[getSenderMapKey(conversationId, messageId)];
+    const storedSender = readSenderMap()[getSenderMapKey(conversationId, messageId)];
     if (storedSender) return storedSender;
   }
 
@@ -385,9 +335,7 @@ function inferMessageSender(
   return messageIndex % 2 === 0 ? "user" : "ai";
 }
 
-export function mapConversationFromApi(
-  record: ApiConversationRecord,
-): Conversation {
+export function mapConversationFromApi(record: ApiConversationRecord): Conversation {
   return {
     id: record.id ?? Date.now(),
     title: record.title?.trim() || "New chat",
@@ -406,21 +354,8 @@ export function mapConversationFromApi(
 function getRecordLabel(value: unknown) {
   if (typeof value === "string") return value;
   if (value && typeof value === "object") {
-    const record = value as {
-      id?: string;
-      _id?: string;
-      name?: string;
-      title?: string;
-      email?: string;
-    };
-    return (
-      record.name ??
-      record.title ??
-      record.email ??
-      record.id ??
-      record._id ??
-      ""
-    );
+    const record = value as { id?: string; _id?: string; name?: string; title?: string; email?: string };
+    return record.name ?? record.title ?? record.email ?? record.id ?? record._id ?? "";
   }
   return "";
 }
@@ -433,13 +368,8 @@ function extractProjectRecords(payload: unknown): ApiProjectRecord[] {
   if (Array.isArray(payload)) return payload as ApiProjectRecord[];
 
   if (payload && typeof payload === "object") {
-    const typedPayload = payload as {
-      data?: unknown;
-      project?: unknown;
-      projects?: unknown;
-    };
-    if (Array.isArray(typedPayload.projects))
-      return typedPayload.projects as ApiProjectRecord[];
+    const typedPayload = payload as { data?: unknown; project?: unknown; projects?: unknown };
+    if (Array.isArray(typedPayload.projects)) return typedPayload.projects as ApiProjectRecord[];
     if (typedPayload.project && typeof typedPayload.project === "object") {
       return [typedPayload.project as ApiProjectRecord];
     }
@@ -453,20 +383,15 @@ function extractProjectRecords(payload: unknown): ApiProjectRecord[] {
   return [];
 }
 
-function extractLookupRecords(
-  payload: unknown,
-  collectionKeys: string[],
-): ApiLookupRecord[] {
+function extractLookupRecords(payload: unknown, collectionKeys: string[]): ApiLookupRecord[] {
   if (Array.isArray(payload)) return payload as ApiLookupRecord[];
 
   if (payload && typeof payload === "object") {
     const typedPayload = payload as Record<string, unknown>;
 
     for (const key of collectionKeys) {
-      if (Array.isArray(typedPayload[key]))
-        return typedPayload[key] as ApiLookupRecord[];
-      if (typedPayload[key] && typeof typedPayload[key] === "object")
-        return [typedPayload[key] as ApiLookupRecord];
+      if (Array.isArray(typedPayload[key])) return typedPayload[key] as ApiLookupRecord[];
+      if (typedPayload[key] && typeof typedPayload[key] === "object") return [typedPayload[key] as ApiLookupRecord];
     }
 
     const data = typedPayload.data;
@@ -484,27 +409,15 @@ function mapLookupOption(record: ApiLookupRecord): ProjectFormOption | null {
 
   return {
     id: String(id),
-    label:
-      record.name ??
-      record.title ??
-      record.fullName ??
-      record.full_name ??
-      record.email ??
-      String(id),
+    label: record.name ?? record.title ?? record.fullName ?? record.full_name ?? record.email ?? String(id),
   };
 }
 
 function mapCreatedLookupOption(payload: unknown, collectionKeys: string[]) {
-  return (
-    extractLookupRecords(payload, collectionKeys)
-      .map(mapLookupOption)
-      .filter(isProjectFormOption)[0] ?? null
-  );
+  return extractLookupRecords(payload, collectionKeys).map(mapLookupOption).filter(isProjectFormOption)[0] ?? null;
 }
 
-function isProjectFormOption(
-  option: ProjectFormOption | null,
-): option is ProjectFormOption {
+function isProjectFormOption(option: ProjectFormOption | null): option is ProjectFormOption {
   return Boolean(option);
 }
 
@@ -532,16 +445,11 @@ function mapProjectFromApi(record: ApiProjectRecord) {
   return {
     id: record.id ?? record._id ?? Date.now(),
     name: record.name?.trim() || "Untitled project",
-    createdAt:
-      record.createdAt || record.created_at
-        ? new Date(record.createdAt ?? record.created_at ?? "")
-        : new Date(),
+    createdAt: record.createdAt || record.created_at ? new Date(record.createdAt ?? record.created_at ?? "") : new Date(),
     description: record.description ?? "",
     service: getRecordLabel(record.service),
     team: getRecordListLabels(record.team),
-    projectManager: getRecordLabel(
-      record.project_manager ?? record.projectManager,
-    ),
+    projectManager: getRecordLabel(record.project_manager ?? record.projectManager),
     client: getRecordLabel(record.client),
     pinned: record.pinned,
     archived: record.archived,
@@ -558,12 +466,8 @@ function buildProjectPayload(input: {
 }) {
   return {
     ...(input.name !== undefined ? { name: input.name } : {}),
-    ...(input.description !== undefined
-      ? { description: input.description }
-      : {}),
-    ...(input.projectManager !== undefined
-      ? { project_manager: input.projectManager }
-      : {}),
+    ...(input.description !== undefined ? { description: input.description } : {}),
+    ...(input.projectManager !== undefined ? { project_manager: input.projectManager } : {}),
     ...(input.team !== undefined ? { team: input.team } : {}),
     ...(input.client !== undefined ? { client: input.client } : {}),
     ...(input.service !== undefined ? { service: input.service } : {}),
@@ -571,7 +475,11 @@ function buildProjectPayload(input: {
 }
 
 function stripHiddenRfpContext(text: string) {
-  const markers = ["\n\nUploaded RFP:", "\nUploaded RFP:", "Uploaded RFP:"];
+  const markers = [
+    "\n\nUploaded RFP:",
+    "\nUploaded RFP:",
+    "Uploaded RFP:",
+  ];
 
   for (const marker of markers) {
     const markerIndex = text.indexOf(marker);
@@ -581,26 +489,16 @@ function stripHiddenRfpContext(text: string) {
   return text.trim();
 }
 
-export function mapMessagesFromApi(
-  conversationId: ChatEntityId,
-  records: ApiMessageRecord[] | undefined,
-): Message[] {
+export function mapMessagesFromApi(conversationId: ChatEntityId, records: ApiMessageRecord[] | undefined): Message[] {
   const safeRecords = records ?? [];
 
   return safeRecords.map((record, index) => {
-    const sender = inferMessageSender(
-      conversationId,
-      record.id ?? record._id,
-      index,
-      safeRecords.length,
-      record,
-    );
+    const sender = inferMessageSender(conversationId, record.id ?? record._id, index, safeRecords.length, record);
     const rawContent = record.text?.trim() || "";
 
     return {
       id: record.id ?? record._id ?? Date.now() + index,
-      content:
-        sender === "user" ? stripHiddenRfpContext(rawContent) : rawContent,
+      content: sender === "user" ? stripHiddenRfpContext(rawContent) : rawContent,
       sender,
       timestamp: record.created_at ? new Date(record.created_at) : new Date(),
       files: Array.isArray(record.attachment) ? record.attachment : undefined,
@@ -609,9 +507,7 @@ export function mapMessagesFromApi(
   });
 }
 
-function getPendingToolFromApiMessages(
-  records: ApiMessageRecord[] | undefined,
-) {
+function getPendingToolFromApiMessages(records: ApiMessageRecord[] | undefined) {
   const safeRecords = records ?? [];
 
   for (let index = safeRecords.length - 1; index >= 0; index -= 1) {
@@ -623,32 +519,21 @@ function getPendingToolFromApiMessages(
   return undefined;
 }
 
-export async function fetchConversations(
-  profile: string,
-  project?: string | null,
-  page = 1,
-  limit = 100,
-  includeArchived = false,
-) {
-  const payload = await postJson<
-    | ApiConversationRecord[]
-    | {
-        conversations?: ApiConversationRecord[];
-        data?: ApiConversationRecord[];
-      }
-  >("/conversations", {
-    profile,
-    ...(project ? { project } : {}),
-    page,
-    limit,
-    ...(includeArchived ? { include_archived: true } : {}),
-  });
+export async function fetchConversations(profile: string, project?: string | null, page = 1, limit = 100, includeArchived = false) {
+  const payload = await postJson<ApiConversationRecord[] | { conversations?: ApiConversationRecord[]; data?: ApiConversationRecord[] }>(
+    "/conversations",
+    {
+      profile,
+      ...(project ? { project } : {}),
+      page,
+      limit,
+      ...(includeArchived ? { include_archived: true } : {}),
+    },
+  );
 
   if (Array.isArray(payload)) return payload.map(mapConversationFromApi);
-  if (Array.isArray(payload?.conversations))
-    return payload.conversations.map(mapConversationFromApi);
-  if (Array.isArray(payload?.data))
-    return payload.data.map(mapConversationFromApi);
+  if (Array.isArray(payload?.conversations)) return payload.conversations.map(mapConversationFromApi);
+  if (Array.isArray(payload?.data)) return payload.data.map(mapConversationFromApi);
   return [];
 }
 
@@ -659,10 +544,7 @@ export async function createConversation(input: {
   project?: string;
   recent_message?: string;
 }) {
-  const payload = await postJson<ApiConversationRecord>(
-    "/new_conversation",
-    input,
-  );
+  const payload = await postJson<ApiConversationRecord>("/new_conversation", input);
   return mapConversationFromApi(payload ?? {});
 }
 
@@ -682,20 +564,12 @@ export async function createMessage(input: {
   });
 
   if (payload?.error) {
-    throw new Error(
-      payload.details
-        ? `${payload.message ?? "Chat failed"}: ${payload.details}`
-        : (payload.message ?? "Chat failed."),
-    );
+    throw new Error(payload.details ? `${payload.message ?? "Chat failed"}: ${payload.details}` : payload.message ?? "Chat failed.");
   }
 
   const responseMessageId = payload?.id ?? payload?._id;
   if (responseMessageId) {
-    rememberMessageSender(
-      input.conversation,
-      responseMessageId,
-      payload?.agent === false ? "user" : "ai",
-    );
+    rememberMessageSender(input.conversation, responseMessageId, payload?.agent === false ? "user" : "ai");
   }
   return payload;
 }
@@ -711,17 +585,13 @@ export async function extractRfpFromFile(file: File) {
   const payload = await parseJsonSafely<ProposalExtractResponse>(response);
 
   if (!response.ok || payload?.ok === false) {
-    throw new Error(
-      payload?.message ?? `RFP extraction failed (${response.status}).`,
-    );
+    throw new Error(payload?.message ?? `RFP extraction failed (${response.status}).`);
   }
 
   return payload?.data ?? {};
 }
 
-export async function startProposalGeneration(
-  proposalMetadata: Record<string, unknown>,
-) {
+export async function startProposalGeneration(proposalMetadata: Record<string, unknown>) {
   const payload = {
     proposal_metadata: proposalMetadata,
     org_context: {
@@ -749,14 +619,10 @@ export async function startProposalGeneration(
     },
     body: JSON.stringify(payload),
   });
-  const result =
-    await parseJsonSafely<ProposalGenerationStartResponse>(response);
+  const result = await parseJsonSafely<ProposalGenerationStartResponse>(response);
 
   if (!response.ok || !result?.ok || !result.data?.callbackId) {
-    throw new Error(
-      result?.message ??
-        `Proposal generation failed to start (${response.status}).`,
-    );
+    throw new Error(result?.message ?? `Proposal generation failed to start (${response.status}).`);
   }
 
   return result.data.callbackId;
@@ -773,24 +639,16 @@ export async function fetchProposalGenerationStatus(callbackId: string) {
       id: callbackId,
     }),
   });
-  const result =
-    await parseJsonSafely<ProposalGenerationStatusResponse>(response);
+  const result = await parseJsonSafely<ProposalGenerationStatusResponse>(response);
 
   if (!response.ok || !result?.ok || !result.data) {
-    throw new Error(
-      result?.message ??
-        `Unable to fetch proposal status (${response.status}).`,
-    );
+    throw new Error(result?.message ?? `Unable to fetch proposal status (${response.status}).`);
   }
 
   return result.data;
 }
 
-export async function fetchMessages(
-  conversationId: ChatEntityId,
-  page = 1,
-  limit = 100,
-) {
+export async function fetchMessages(conversationId: ChatEntityId, page = 1, limit = 100) {
   const payload = await postJson<ApiMessagesResponse>("/messages", {
     conversation: conversationId,
     page,
@@ -809,12 +667,7 @@ export async function createShareLink(conversationId: ChatEntityId) {
     base_url: typeof window !== "undefined" ? window.location.origin : "",
   });
 
-  const apiShareLink =
-    payload?.share_link ??
-    payload?.share_url ??
-    payload?.link ??
-    payload?.url ??
-    "";
+  const apiShareLink = payload?.share_link ?? payload?.share_url ?? payload?.link ?? payload?.url ?? "";
   const shareId = apiShareLink.match(/\/share\/([^/?#]+)/)?.[1];
 
   if (shareId && typeof window !== "undefined") {
@@ -824,14 +677,17 @@ export async function createShareLink(conversationId: ChatEntityId) {
   return apiShareLink;
 }
 
-export async function fetchProjects(): Promise<Project[]> {
-  return [];
+export async function fetchProjects() {
+  if (!getAccessToken()) return [];
+
+  const payload = await projectsApiRequest<unknown>("/projects");
+  return extractProjectRecords(payload).map(mapProjectFromApi);
 }
 
-export async function fetchProject(
-  projectId: ChatEntityId,
-): Promise<Project | null> {
-  return null;
+export async function fetchProject(projectId: ChatEntityId) {
+  const payload = await projectsApiRequest<unknown>(`/projects/${projectId}`);
+  const project = extractProjectRecords(payload)[0];
+  return project ? mapProjectFromApi(project) : null;
 }
 
 export async function fetchProjectFormOptions() {
@@ -845,34 +701,24 @@ export async function fetchProjectFormOptions() {
     };
   }
 
-  const [clientsResult, servicesResult, usersResult, currentUserResult] =
-    await Promise.allSettled([
-      projectsApiRequest<unknown>("/clients"),
-      projectsApiRequest<unknown>("/services"),
-      projectsApiRequest<unknown>("/staff"),
-      projectsApiRequest<unknown>("/auth/me"),
-    ]);
+  const [clientsResult, servicesResult, usersResult, currentUserResult] = await Promise.allSettled([
+    projectsApiRequest<unknown>("/clients"),
+    projectsApiRequest<unknown>("/services"),
+    projectsApiRequest<unknown>("/staff"),
+    projectsApiRequest<unknown>("/auth/me"),
+  ]);
 
   const clients =
     clientsResult.status === "fulfilled"
-      ? extractLookupRecords(clientsResult.value, ["clients", "client"])
-          .map(mapLookupOption)
-          .filter(isProjectFormOption)
+      ? extractLookupRecords(clientsResult.value, ["clients", "client"]).map(mapLookupOption).filter(isProjectFormOption)
       : [];
   const services =
     servicesResult.status === "fulfilled"
-      ? extractLookupRecords(servicesResult.value, ["services", "service"])
-          .map(mapLookupOption)
-          .filter(isProjectFormOption)
+      ? extractLookupRecords(servicesResult.value, ["services", "service"]).map(mapLookupOption).filter(isProjectFormOption)
       : [];
   const staffFromUsers =
     usersResult.status === "fulfilled"
-      ? extractLookupRecords(usersResult.value, [
-          "staff",
-          "staffs",
-          "members",
-          "user",
-        ])
+      ? extractLookupRecords(usersResult.value, ["staff", "staffs", "members", "user"])
           .filter((record) => {
             const role = (record.profile ?? record.role ?? "").toLowerCase();
             return role !== "client";
@@ -882,16 +728,9 @@ export async function fetchProjectFormOptions() {
       : [];
   const staffFromCurrentUser =
     currentUserResult.status === "fulfilled"
-      ? extractLookupRecords(currentUserResult.value, [
-          "user",
-          "profile",
-          "data",
-        ])
-          .map(mapLookupOption)
-          .filter(isProjectFormOption)
+      ? extractLookupRecords(currentUserResult.value, ["user", "profile", "data"]).map(mapLookupOption).filter(isProjectFormOption)
       : [];
-  const staff =
-    staffFromUsers.length > 0 ? staffFromUsers : staffFromCurrentUser;
+  const staff = staffFromUsers.length > 0 ? staffFromUsers : staffFromCurrentUser;
 
   return {
     clients: uniqueOptions(clients),
@@ -917,10 +756,7 @@ export async function createProject(input: {
   return project ? mapProjectFromApi(project) : null;
 }
 
-export async function createClientOption(input: {
-  name: string;
-  about: string;
-}) {
+export async function createClientOption(input: { name: string; about: string }) {
   const payload = await projectsApiRequest<unknown>("/clients", {
     method: "POST",
     body: JSON.stringify(input),
@@ -955,45 +791,31 @@ export async function deleteProject(projectId: ChatEntityId) {
     return { ok: true, localOnly: true };
   }
 
-  return projectsApiDelete(
-    `/projects/${encodeURIComponent(normalizedProjectId)}`,
-  );
+  return projectsApiDelete(`/projects/${encodeURIComponent(normalizedProjectId)}`);
 }
 
-export async function renameConversation(
-  conversationId: ChatEntityId,
-  title: string,
-) {
+export async function renameConversation(conversationId: ChatEntityId, title: string) {
   return postJson<unknown>("/rename_conversation", {
     conversation: conversationId,
     title,
   });
 }
 
-export async function archiveConversation(
-  conversationId: ChatEntityId,
-  archived = true,
-) {
+export async function archiveConversation(conversationId: ChatEntityId, archived = true) {
   return postJson<unknown>("/archive_conversation", {
     conversation: conversationId,
     archived,
   });
 }
 
-export async function pinConversation(
-  conversationId: ChatEntityId,
-  pinned: boolean,
-) {
+export async function pinConversation(conversationId: ChatEntityId, pinned: boolean) {
   return postJson<unknown>("/pin_chat", {
     conversation: conversationId,
     pinned,
   });
 }
 
-export async function deleteConversation(
-  conversationId: ChatEntityId,
-  hardDelete = false,
-) {
+export async function deleteConversation(conversationId: ChatEntityId, hardDelete = false) {
   return postJson<unknown>("/delete_conversation", {
     conversation: conversationId,
     hard_delete: hardDelete,

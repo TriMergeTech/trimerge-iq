@@ -8,7 +8,16 @@ export type AdminSection =
   | "company_overview"
   | "services"
   | "clients"
-  | "platforms";
+  | "platforms"
+  | "projects"
+  | "contracts"
+  | "corporate_experience"
+  | "opportunities"
+  | "partners"
+  | "proposals"
+  | "business_operations"
+  | "lessons_learned"
+  | "methodologies";
 export type CreateModal = AdminSection | null;
 
 export interface StaffMember {
