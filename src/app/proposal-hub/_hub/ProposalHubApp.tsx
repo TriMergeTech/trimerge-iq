@@ -23,7 +23,15 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
-import { ArrowLeft, Plus, FileText, Search, Download, Edit, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  FileText,
+  Search,
+  Download,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import ProposalForm from "./components/ProposalForm";
 import ProposalWorkspace from "./components/ProposalWorkspace";
@@ -103,8 +111,9 @@ export default function App() {
     if (!proposalId) return;
 
     const proposal =
-      proposals.find((item) => item._id === proposalId || item.id === proposalId) ??
-      readStoredGeneratedProposal(proposalId);
+      proposals.find(
+        (item) => item._id === proposalId || item.id === proposalId,
+      ) ?? readStoredGeneratedProposal(proposalId);
 
     if (!proposal) return;
 
@@ -112,7 +121,8 @@ export default function App() {
     setView("detail");
   }, [proposals]);
 
-  const getProposalId = (proposal: Proposal) => proposal._id ?? proposal.id ?? "";
+  const getProposalId = (proposal: Proposal) =>
+    proposal._id ?? proposal.id ?? "";
 
   const getProposalTimestamp = (proposal: Proposal) => {
     const dateValue =
@@ -135,7 +145,9 @@ export default function App() {
   };
 
   const handleDeleteProposal = async (_id: string) => {
-    setProposals((prev) => (prev || []).filter((p) => getProposalId(p) !== _id));
+    setProposals((prev) =>
+      (prev || []).filter((p) => getProposalId(p) !== _id),
+    );
 
     await post_request("delete_proposal", {
       proposal: _id,
@@ -159,12 +171,14 @@ export default function App() {
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1");
-  const apiBaseUrl = isLocalDev ? "/api" : "https://trimerge-iq.onrender.com";
+  const apiBaseUrl = isLocalDev ? "/api" : "https://backend.trimerge.com";
   const toolEndpoint = `${apiBaseUrl}/tools/6a0f6fb93995d6cbe80d82e9`;
 
   const draftProposals = null as Proposal[] | null;
   const filteredProposals = proposals
-    ? [...proposals].sort((a, b) => getProposalTimestamp(b) - getProposalTimestamp(a))
+    ? [...proposals].sort(
+        (a, b) => getProposalTimestamp(b) - getProposalTimestamp(a),
+      )
     : proposals;
 
   const handleBackToApp = () => {
@@ -547,7 +561,9 @@ export default function App() {
                                       "0 0 18px rgba(124,92,255,0.38)",
                                   },
                                 }}
-                                onClick={() => handleViewProposal(getProposalId(proposal))}
+                                onClick={() =>
+                                  handleViewProposal(getProposalId(proposal))
+                                }
                               >
                                 {proposal.title}
                                 {/* {proposal.status === "draft" &&
