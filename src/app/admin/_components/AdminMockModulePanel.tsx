@@ -20,16 +20,28 @@ export default function AdminMockModulePanel({
   searchQuery,
 }: AdminMockModulePanelProps) {
   const mockModule = mockAdminModules[activeSection];
-  if (!mockModule) return null;
 
   const [editing, setEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
 
   const initialModule = useMemo(
-    () => ({ ...mockModule, rows: [...mockModule.rows] }),
+    () =>
+      mockModule
+        ? { ...mockModule, rows: [...mockModule.rows] }
+        : {
+            id: "",
+            title: "",
+            purpose: "",
+            fields: [],
+            rows: [],
+            note: "",
+          },
     [mockModule],
   );
+
+  if (!mockModule) return null;
+
   const [moduleData, setModuleData] = useState(initialModule);
 
   const query = searchQuery.trim().toLowerCase();
