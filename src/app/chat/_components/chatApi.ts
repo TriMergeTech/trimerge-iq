@@ -826,7 +826,7 @@ export async function createShareLink(conversationId: ChatEntityId) {
 export async function fetchProjects() {
   if (!getAccessToken()) return [];
 
-  const payload = await projectsApiRequest<unknown>("/projects");
+  const payload = [] || (await projectsApiRequest<unknown>("/projects"));
   return extractProjectRecords(payload).map(mapProjectFromApi);
 }
 
