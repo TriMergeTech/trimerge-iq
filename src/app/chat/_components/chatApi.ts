@@ -12,7 +12,7 @@ import type { Proposal } from "../../proposal-hub/_hub/types";
 
 const DEFAULT_CHAT_API_BASE_URL =
   "https://microserver-agency-v2.trimergeiq.com/v2";
-const DEFAULT_PROJECTS_API_BASE_URL = "https://backend.trimerge.com";
+const DEFAULT_PROJECTS_API_BASE_URL = "https://api.trimergeiq.com";
 const CHAT_PROFILE_STORAGE_KEY = "trimerge_chat_profile";
 const CHAT_MESSAGE_SENDER_STORAGE_KEY = "trimerge_chat_message_senders";
 

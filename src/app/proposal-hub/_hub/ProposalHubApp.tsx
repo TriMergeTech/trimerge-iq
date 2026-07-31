@@ -171,7 +171,7 @@ export default function App() {
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1");
-  const apiBaseUrl = isLocalDev ? "/api" : "https://backend.trimerge.com";
+  const apiBaseUrl = isLocalDev ? "/api" : "https://api.trimergeiq.com";
   const toolEndpoint = `${apiBaseUrl}/tools/6a0f6fb93995d6cbe80d82e9`;
 
   const draftProposals = null as Proposal[] | null;

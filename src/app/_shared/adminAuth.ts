@@ -1,6 +1,6 @@
 export const ADMIN_API_BASE_URL =
   process.env.NEXT_PUBLIC_TRIMERGE_PROJECTS_API_BASE_URL?.trim() ||
-  "https://backend.trimerge.com";
+  "https://api.trimergeiq.com";
 
 let DEV = process.env.NEXT_PUBLIC_DEV;
 const PROFILE_SERVICE = DEV
