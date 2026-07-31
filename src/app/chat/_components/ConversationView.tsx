@@ -1,7 +1,19 @@
 "use client";
 
 import type { RefObject } from "react";
-import { Archive as ArchiveIcon, Eraser, ExternalLink, FileText, Image as ImageIcon, Link2, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import {
+  Archive as ArchiveIcon,
+  Eraser,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  Trash2,
+} from "lucide-react";
 
 import ConversationMenuItem from "./ConversationMenuItem";
 import type { ChatEntityId, Conversation } from "./chatPageTypes";
@@ -11,7 +23,10 @@ interface ConversationViewProps {
   formatFileSize: (bytes: number) => string;
   isTyping: boolean;
   isWorkspaceMenuOpen: boolean;
-  onArchiveConversation: (conversationId: ChatEntityId, archived?: boolean) => void;
+  onArchiveConversation: (
+    conversationId: ChatEntityId,
+    archived?: boolean,
+  ) => void;
   onClearActiveChat: () => void;
   onDeleteConversation: (conversationId: ChatEntityId) => void;
   onPinConversation: (conversationId: ChatEntityId) => void;
@@ -73,19 +88,47 @@ export default function ConversationView({
 
               {isWorkspaceMenuOpen && (
                 <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-[#d4af37]/26 bg-[#0b111a]/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-fade-rise">
-                  <ConversationMenuItem icon={<Link2 className="h-4 w-4" />} label="Share" onClick={() => onShareConversation(activeConversation)} />
-                  <ConversationMenuItem icon={<Pencil className="h-4 w-4" />} label="Rename" onClick={() => onRenameConversation(activeConversation)} />
                   <ConversationMenuItem
-                    icon={activeConversation.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                    label={activeConversation.pinned ? "Unpin chat" : "Pin chat"}
+                    icon={<Link2 className="h-4 w-4" />}
+                    label="Share"
+                    onClick={() => onShareConversation(activeConversation)}
+                  />
+                  <ConversationMenuItem
+                    icon={<Pencil className="h-4 w-4" />}
+                    label="Rename"
+                    onClick={() => onRenameConversation(activeConversation)}
+                  />
+                  <ConversationMenuItem
+                    icon={
+                      activeConversation.pinned ? (
+                        <PinOff className="h-4 w-4" />
+                      ) : (
+                        <Pin className="h-4 w-4" />
+                      )
+                    }
+                    label={
+                      activeConversation.pinned ? "Unpin chat" : "Pin chat"
+                    }
                     onClick={() => onPinConversation(activeConversation.id)}
                   />
                   <ConversationMenuItem
                     icon={<ArchiveIcon className="h-4 w-4" />}
-                    label={activeConversation.archived ? "Unarchive" : "Archive"}
-                    onClick={() => onArchiveConversation(activeConversation.id, !activeConversation.archived)}
+                    label={
+                      activeConversation.archived ? "Unarchive" : "Archive"
+                    }
+                    onClick={() =>
+                      onArchiveConversation(
+                        activeConversation.id,
+                        !activeConversation.archived,
+                      )
+                    }
                   />
-                  <ConversationMenuItem icon={<Trash2 className="h-4 w-4" />} label="Delete" danger onClick={() => onDeleteConversation(activeConversation.id)} />
+                  <ConversationMenuItem
+                    icon={<Trash2 className="h-4 w-4" />}
+                    label="Delete"
+                    danger
+                    onClick={() => onDeleteConversation(activeConversation.id)}
+                  />
                 </div>
               )}
             </div>
@@ -112,7 +155,7 @@ export default function ConversationView({
                 <span
                   className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${message.sender === "user" ? "bg-white/20 text-white" : "bg-[#d4af37]/14 text-[#f4e4a4]"}`}
                 >
-                  {message.sender === "user" ? "U" : "AI"}
+                  {message.sender === "user" ? "U" : "TRIA"}
                 </span>
                 {message.timestamp.toLocaleTimeString()}
               </div>
@@ -122,7 +165,8 @@ export default function ConversationView({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#f6edd0]">
-                        {message.generatedProposal.title ?? "Generated proposal"}
+                        {message.generatedProposal.title ??
+                          "Generated proposal"}
                       </p>
                       <p className="mt-1 text-xs text-white/52">
                         {message.generatedProposal.status === "completed"
@@ -132,33 +176,48 @@ export default function ConversationView({
                             : "Generating in Proposal Hub"}
                       </p>
                     </div>
-                    {message.generatedProposal.url && message.generatedProposal.status === "completed" && (
-                      <a
-                        href={message.generatedProposal.url}
-                        className="interactive-button inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#d4af37]/28 bg-[#d4af37]/12 px-3 py-2 text-xs font-semibold text-[#f6edd0] hover:bg-[#d4af37]/18"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Open
-                      </a>
-                    )}
+                    {message.generatedProposal.url &&
+                      message.generatedProposal.status === "completed" && (
+                        <a
+                          href={message.generatedProposal.url}
+                          className="interactive-button inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#d4af37]/28 bg-[#d4af37]/12 px-3 py-2 text-xs font-semibold text-[#f6edd0] hover:bg-[#d4af37]/18"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Open
+                        </a>
+                      )}
                   </div>
-                  {message.generatedProposal.status !== "completed" && message.generatedProposal.status !== "failed" && (
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-[#d4af37] transition-all"
-                        style={{ width: `${Math.max(5, Math.min(100, message.generatedProposal.progress ?? 10))}%` }}
-                      />
-                    </div>
-                  )}
+                  {message.generatedProposal.status !== "completed" &&
+                    message.generatedProposal.status !== "failed" && (
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-[#d4af37] transition-all"
+                          style={{
+                            width: `${Math.max(5, Math.min(100, message.generatedProposal.progress ?? 10))}%`,
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
               )}
               {message.files && message.files.length > 0 && (
                 <div className="mt-5 space-y-2">
                   {message.files.map((file) => (
-                    <div key={`${message.id}-${file.name}`} className="flex items-center gap-2 rounded-2xl bg-white/8 px-3 py-2.5">
-                      {file.type.startsWith("image/") ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                      <span className="flex-1 truncate text-sm">{file.name}</span>
-                      <span className="text-xs text-white/50">{formatFileSize(file.size)}</span>
+                    <div
+                      key={`${message.id}-${file.name}`}
+                      className="flex items-center gap-2 rounded-2xl bg-white/8 px-3 py-2.5"
+                    >
+                      {file.type.startsWith("image/") ? (
+                        <ImageIcon className="h-4 w-4" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                      <span className="flex-1 truncate text-sm">
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-white/50">
+                        {formatFileSize(file.size)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -172,7 +231,7 @@ export default function ConversationView({
             <div className="rounded-[30px] border border-[#d4af37]/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-7 py-6 shadow-[0_16px_40px_rgba(0,0,0,0.16)]">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d4af37]/14 font-bold text-[#f4e4a4]">
-                  AI
+                  TRIA
                 </span>
                 <div className="flex gap-1">
                   <span className="h-2 w-2 animate-bounce rounded-full bg-[#d4af37]/70" />
